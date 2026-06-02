@@ -1,0 +1,1146 @@
+/* =====================================================
+   eFOOTBALL FRIENDS LEAGUE — SCRIPT.JS
+   Full league management logic
+===================================================== */
+
+'use strict';
+
+// ===== CONSTANTS =====
+const PLAYERS = ['Wael', 'Omar', 'Abdul Rahim', 'Mohammad', 'Mustafa'];
+
+const ACHIEVEMENT_DEFS = [
+  { id: 'first_win',   icon: '🥇', name: 'First Win',         desc: 'Win your first match',         check: (s) => s.wins >= 1 },
+  { id: 'wins10',      icon: '🏆', name: '10 Wins',           desc: 'Win 10 matches',                check: (s) => s.wins >= 10 },
+  { id: 'goals50',     icon: '⚽', name: '50 Goals',          desc: 'Score 50 goals',                check: (s) => s.goalsFor >= 50 },
+  { id: 'goals100',    icon: '💯', name: '100 Goals',         desc: 'Score 100 goals',               check: (s) => s.goalsFor >= 100 },
+  { id: 'streak5',     icon: '🔥', name: '5 Win Streak',      desc: 'Win 5 matches in a row',        check: (s) => s.bestStreak >= 5 },
+  { id: 'champion',    icon: '👑', name: 'Champion',          desc: 'Win a season',                  check: (s) => s.seasonWins >= 1 },
+  { id: 'played20',    icon: '🎮', name: '20 Matches',        desc: 'Play 20 matches',               check: (s) => s.played >= 20 },
+  { id: 'clean5',      icon: '🧱', name: '5 Clean Sheets',    desc: 'Keep 5 clean sheets',           check: (s) => s.cleanSheets >= 5 },
+];
+
+// ===== STATE =====
+let currentUser = null;
+let db = loadDB();
+
+// ===== DB HELPERS =====
+function loadDB() {
+  const raw = localStorage.getItem('efl_db');
+  if (raw) {
+    try { return JSON.parse(raw); } catch(e) {}
+  }
+  return {
+    accounts: {},
+    matches: [],
+    seasons: [{ id: 's1', name: 'Season 1', active: true, created: Date.now() }],
+    nextMatchId: 1,
+    nextSeasonId: 2,
+  };
+}
+
+function saveDB() {
+  localStorage.setItem('efl_db', JSON.stringify(db));
+}
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+  spawnParticles();
+  setDefaultDate();
+
+  const saved = localStorage.getItem('efl_user');
+  if (saved) {
+    currentUser = saved;
+    enterApp();
+  } else {
+    showLogin();
+  }
+});
+
+function setDefaultDate() {
+  const d = document.getElementById('matchDate');
+  if (d) d.value = new Date().toISOString().split('T')[0];
+}
+
+// ===== PARTICLES =====
+function spawnParticles() {
+  const container = document.getElementById('loginParticles');
+  if (!container) return;
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.animationDuration = (6 + Math.random() * 12) + 's';
+    p.style.animationDelay = (Math.random() * 10) + 's';
+    p.style.width = p.style.height = (2 + Math.random() * 3) + 'px';
+    container.appendChild(p);
+  }
+}
+
+// ===== AUTH =====
+function showLogin() {
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('registerScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.add('hidden');
+}
+
+function showRegister() {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('registerScreen').classList.remove('hidden');
+}
+
+function handleLogin() {
+  const username = document.getElementById('loginUsername').value;
+  const password = document.getElementById('loginPassword').value;
+  const err = document.getElementById('loginError');
+
+  if (!username) return showError(err, 'Please select your name.');
+  if (!password) return showError(err, 'Please enter your password.');
+
+  const acc = db.accounts[username];
+  if (!acc) return showError(err, 'Account not found. Please register first.');
+  if (acc.password !== password) return showError(err, 'Incorrect password.');
+
+  err.classList.add('hidden');
+  currentUser = username;
+  localStorage.setItem('efl_user', username);
+  enterApp();
+}
+
+function handleRegister() {
+  const username = document.getElementById('regUsername').value;
+  const pw1 = document.getElementById('regPassword').value;
+  const pw2 = document.getElementById('regPassword2').value;
+  const err = document.getElementById('regError');
+
+  if (!username) return showError(err, 'Please select your name.');
+  if (!pw1) return showError(err, 'Please create a password.');
+  if (pw1.length < 4) return showError(err, 'Password must be at least 4 characters.');
+  if (pw1 !== pw2) return showError(err, 'Passwords do not match.');
+  if (db.accounts[username]) return showError(err, 'Account already exists. Please login.');
+
+  db.accounts[username] = { username, password: pw1, created: Date.now() };
+  saveDB();
+  err.classList.add('hidden');
+  showToast('Account created! Please login.');
+  showLogin();
+}
+
+function handleLogout() {
+  currentUser = null;
+  localStorage.removeItem('efl_user');
+  showLogin();
+}
+
+function enterApp() {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('registerScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+
+  updateSidebarPlayer();
+  populateSeasonDropdowns();
+  navigateTo('dashboard', document.querySelector('.nav-item[data-page="dashboard"]'));
+}
+
+function updateSidebarPlayer() {
+  if (!currentUser) return;
+  document.getElementById('sidebarPlayerName').textContent = currentUser;
+  document.getElementById('sidebarAvatar').textContent = currentUser.charAt(0).toUpperCase();
+  document.getElementById('topbarPlayer').textContent = currentUser;
+
+  const table = computeLeagueTable('all');
+  const rank = table.findIndex(r => r.player === currentUser) + 1;
+  document.getElementById('sidebarPlayerRank').textContent = rank ? '#' + rank : '#—';
+}
+
+// ===== NAVIGATION =====
+function navigateTo(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  const target = document.getElementById('page-' + page);
+  if (target) {
+    target.classList.remove('hidden');
+    target.classList.add('active');
+  }
+
+  if (el) el.classList.add('active');
+
+  const titles = {
+    dashboard: 'Dashboard', recordMatch: 'Record Match',
+    matchHistory: 'Match History', leagueTable: 'League Table',
+    playerProfile: 'Player Profiles', headToHead: 'Head to Head',
+    seasons: 'Seasons', awards: 'Awards', achievements: 'Achievements',
+    rivalries: 'Rivalries', statistics: 'Statistics', settings: 'Settings'
+  };
+  document.getElementById('topbarTitle').textContent = titles[page] || page;
+
+  const activeSeason = getActiveSeason();
+  document.getElementById('topbarSeason').textContent = activeSeason ? activeSeason.name : 'No Season';
+
+  closeSidebar();
+
+  switch(page) {
+    case 'dashboard': renderDashboard(); break;
+    case 'matchHistory': renderHistory(); break;
+    case 'leagueTable': renderLeagueTable(); break;
+    case 'playerProfile': selectProfilePlayer('Wael', document.querySelector('.player-tab')); break;
+    case 'seasons': renderSeasons(); break;
+    case 'awards': renderAwards(); break;
+    case 'achievements': selectAchievementsPlayer('Wael', document.querySelector('#page-achievements .player-tab')); break;
+    case 'rivalries': renderRivalries(); break;
+    case 'statistics': renderStatistics(); break;
+    case 'recordMatch': initRecordForm(); break;
+    case 'headToHead': renderH2H(); break;
+  }
+}
+
+// ===== SIDEBAR TOGGLE =====
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  const o = document.getElementById('sidebarOverlay');
+  s.classList.toggle('open');
+  o.classList.toggle('visible');
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('visible');
+}
+
+// ===== SEASONS =====
+function getActiveSeason() {
+  return db.seasons.find(s => s.active) || db.seasons[db.seasons.length - 1] || null;
+}
+
+function populateSeasonDropdowns() {
+  const dropdowns = ['matchSeason', 'historyFilterSeason', 'tableSeasonFilter',
+                     'awardsSeasonFilter', 'statsSeasonFilter', 'editSeason'];
+  dropdowns.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const prev = el.value;
+    el.innerHTML = '';
+
+    if (id === 'historyFilterSeason' || id === 'tableSeasonFilter' ||
+        id === 'awardsSeasonFilter' || id === 'statsSeasonFilter') {
+      const all = document.createElement('option');
+      all.value = 'all';
+      all.textContent = id === 'tableSeasonFilter' || id === 'statsSeasonFilter' ? 'All Seasons' : 'All Seasons (Overall)';
+      el.appendChild(all);
+    }
+
+    db.seasons.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.name + (s.active ? ' ★' : '');
+      el.appendChild(opt);
+    });
+
+    if (id === 'matchSeason' || id === 'editSeason') {
+      const active = getActiveSeason();
+      if (active) el.value = active.id;
+    } else {
+      if (prev && el.querySelector(`option[value="${prev}"]`)) el.value = prev;
+    }
+  });
+}
+
+function createSeason() {
+  const name = document.getElementById('newSeasonName').value.trim();
+  if (!name) return showToast('Please enter a season name.', true);
+
+  const existing = db.seasons.find(s => s.name.toLowerCase() === name.toLowerCase());
+  if (existing) return showToast('Season already exists.', true);
+
+  const id = 's' + db.nextSeasonId++;
+  db.seasons.push({ id, name, active: false, created: Date.now() });
+  saveDB();
+  document.getElementById('newSeasonName').value = '';
+  populateSeasonDropdowns();
+  renderSeasons();
+  showToast('Season "' + name + '" created!');
+}
+
+function setActiveSeason(id) {
+  db.seasons.forEach(s => s.active = (s.id === id));
+  saveDB();
+  populateSeasonDropdowns();
+  renderSeasons();
+  updateSidebarPlayer();
+  showToast('Active season updated!');
+}
+
+function deleteSeason(id) {
+  const season = db.seasons.find(s => s.id === id);
+  if (!season) return;
+  const matchCount = db.matches.filter(m => m.season === id).length;
+  showConfirm(
+    'Delete Season',
+    `Delete "${season.name}"? This will also delete ${matchCount} match(es).`,
+    () => {
+      db.matches = db.matches.filter(m => m.season !== id);
+      db.seasons = db.seasons.filter(s => s.id !== id);
+      if (db.seasons.length > 0 && !db.seasons.find(s => s.active)) {
+        db.seasons[db.seasons.length - 1].active = true;
+      }
+      saveDB();
+      populateSeasonDropdowns();
+      renderSeasons();
+      showToast('Season deleted.');
+    }
+  );
+}
+
+function renderSeasons() {
+  const cont = document.getElementById('seasonsList');
+  if (!cont) return;
+  if (db.seasons.length === 0) {
+    cont.innerHTML = '<div class="empty-state">No seasons yet. Create one above.</div>';
+    return;
+  }
+  cont.innerHTML = db.seasons.map(s => {
+    const matchCount = db.matches.filter(m => m.season === s.id).length;
+    return `
+      <div class="season-card">
+        <div class="season-card-info">
+          <h4>${esc(s.name)}</h4>
+          <p>${matchCount} match${matchCount !== 1 ? 'es' : ''} recorded</p>
+        </div>
+        <div class="season-card-actions">
+          ${s.active ? '<span class="season-badge-active">ACTIVE</span>' :
+            `<button class="btn-sm" onclick="setActiveSeason('${s.id}')">Set Active</button>`}
+          <button class="btn-sm delete" onclick="deleteSeason('${s.id}')">Delete</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ===== RECORD MATCH =====
+function initRecordForm() {
+  document.getElementById('matchDate').value = new Date().toISOString().split('T')[0];
+  populateSeasonDropdowns();
+  clearMatchForm();
+}
+
+function clearMatchForm() {
+  document.getElementById('matchPlayer1').value = '';
+  document.getElementById('matchPlayer2').value = '';
+  document.getElementById('matchGoals1').value = '0';
+  document.getElementById('matchGoals2').value = '0';
+  document.getElementById('matchDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('matchFormError').classList.add('hidden');
+  updateMatchPreview();
+  const active = getActiveSeason();
+  if (active) document.getElementById('matchSeason').value = active.id;
+}
+
+function updateMatchPreview() {
+  const p1 = document.getElementById('matchPlayer1').value;
+  const p2 = document.getElementById('matchPlayer2').value;
+  const g1 = parseInt(document.getElementById('matchGoals1').value) || 0;
+  const g2 = parseInt(document.getElementById('matchGoals2').value) || 0;
+
+  document.getElementById('scoreLabel1').textContent = p1 ? p1 + ' Goals' : 'Goals';
+  document.getElementById('scoreLabel2').textContent = p2 ? p2 + ' Goals' : 'Goals';
+
+  if (!p1 || !p2) {
+    document.getElementById('previewResult').textContent = '— vs —';
+    return;
+  }
+
+  let result = '';
+  if (g1 > g2) result = `🏆 ${p1} WINS`;
+  else if (g2 > g1) result = `🏆 ${p2} WINS`;
+  else result = `🤝 DRAW`;
+
+  document.getElementById('previewResult').textContent = `${p1} ${g1} — ${g2} ${p2}  |  ${result}`;
+}
+
+function saveMatch() {
+  const p1 = document.getElementById('matchPlayer1').value;
+  const p2 = document.getElementById('matchPlayer2').value;
+  const g1 = parseInt(document.getElementById('matchGoals1').value);
+  const g2 = parseInt(document.getElementById('matchGoals2').value);
+  const date = document.getElementById('matchDate').value;
+  const season = document.getElementById('matchSeason').value;
+  const errEl = document.getElementById('matchFormError');
+
+  if (!p1 || !p2) return showError(errEl, 'Please select both players.');
+  if (p1 === p2) return showError(errEl, 'A player cannot play against themselves.');
+  if (isNaN(g1) || isNaN(g2) || g1 < 0 || g2 < 0) return showError(errEl, 'Goals cannot be negative.');
+  if (!date) return showError(errEl, 'Please select a match date.');
+  if (!season) return showError(errEl, 'Please select a season.');
+
+  errEl.classList.add('hidden');
+
+  const match = {
+    id: 'm' + db.nextMatchId++,
+    player1: p1, player2: p2,
+    goals1: g1, goals2: g2,
+    date, season,
+    timestamp: Date.now()
+  };
+
+  db.matches.push(match);
+  saveDB();
+  updateSidebarPlayer();
+  checkAchievements();
+  showToast(`Match saved! ${p1} ${g1}–${g2} ${p2}`);
+  clearMatchForm();
+}
+
+// ===== MATCH HISTORY =====
+function renderHistory() {
+  const search = (document.getElementById('historySearch')?.value || '').toLowerCase();
+  const filterPlayer = document.getElementById('historyFilterPlayer')?.value || '';
+  const filterSeason = document.getElementById('historyFilterSeason')?.value || '';
+  const sort = document.getElementById('historySort')?.value || 'newest';
+
+  let matches = [...db.matches];
+
+  if (search) matches = matches.filter(m =>
+    m.player1.toLowerCase().includes(search) || m.player2.toLowerCase().includes(search));
+  if (filterPlayer) matches = matches.filter(m => m.player1 === filterPlayer || m.player2 === filterPlayer);
+  if (filterSeason && filterSeason !== 'all') matches = matches.filter(m => m.season === filterSeason);
+
+  matches.sort((a, b) => sort === 'newest' ? b.timestamp - a.timestamp : a.timestamp - b.timestamp);
+
+  document.getElementById('historyCount').textContent = `${matches.length} match${matches.length !== 1 ? 'es' : ''} found`;
+
+  const container = document.getElementById('matchList');
+  if (matches.length === 0) {
+    container.innerHTML = `<div class="match-list-empty">
+      <span class="empty-icon">⚽</span>
+      <p>No matches found. Record your first match!</p>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = matches.map(m => matchCardHTML(m)).join('');
+}
+
+function matchCardHTML(m) {
+  const season = db.seasons.find(s => s.id === m.season);
+  const seasonName = season ? season.name : 'Unknown Season';
+  const date = m.date ? new Date(m.date).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : '—';
+
+  let resultBadge = `<span class="win-badge draw">DRAW</span>`;
+  if (m.goals1 > m.goals2) resultBadge = `<span class="win-badge win">${esc(m.player1)} W</span>`;
+  else if (m.goals2 > m.goals1) resultBadge = `<span class="win-badge win">${esc(m.player2)} W</span>`;
+
+  return `
+    <div class="match-card" id="match-card-${m.id}">
+      <div class="match-card-header">
+        <span>📅 ${date}</span>
+        <span>|</span>
+        <span>🏆 ${esc(seasonName)}</span>
+        <span>|</span>
+        ${resultBadge}
+      </div>
+      <div class="match-card-result">
+        <div class="match-player">${esc(m.player1)}</div>
+        <div class="match-score">${m.goals1} — ${m.goals2}</div>
+        <div class="match-player right">${esc(m.player2)}</div>
+      </div>
+      <div class="match-card-actions">
+        <button class="btn-sm edit" onclick="openEditModal('${m.id}')">✏️ Edit</button>
+        <button class="btn-sm delete" onclick="deleteMatch('${m.id}')">🗑️ Delete</button>
+      </div>
+    </div>`;
+}
+
+function deleteMatch(id) {
+  showConfirm('Delete Match', 'Are you sure you want to delete this match? This cannot be undone.', () => {
+    db.matches = db.matches.filter(m => m.id !== id);
+    saveDB();
+    renderHistory();
+    updateSidebarPlayer();
+    showToast('Match deleted.');
+  });
+}
+
+function openEditModal(id) {
+  const m = db.matches.find(x => x.id === id);
+  if (!m) return;
+
+  populateSeasonDropdowns();
+
+  document.getElementById('editMatchId').value = m.id;
+  document.getElementById('editPlayer1').value = m.player1;
+  document.getElementById('editPlayer2').value = m.player2;
+  document.getElementById('editGoals1').value = m.goals1;
+  document.getElementById('editGoals2').value = m.goals2;
+  document.getElementById('editDate').value = m.date;
+  document.getElementById('editSeason').value = m.season;
+
+  document.getElementById('editMatchModal').classList.remove('hidden');
+}
+
+function closeEditModal() {
+  document.getElementById('editMatchModal').classList.add('hidden');
+}
+
+function saveEditMatch() {
+  const id = document.getElementById('editMatchId').value;
+  const p1 = document.getElementById('editPlayer1').value;
+  const p2 = document.getElementById('editPlayer2').value;
+  const g1 = parseInt(document.getElementById('editGoals1').value);
+  const g2 = parseInt(document.getElementById('editGoals2').value);
+  const date = document.getElementById('editDate').value;
+  const season = document.getElementById('editSeason').value;
+  const errEl = document.getElementById('editError');
+
+  if (!p1 || !p2) return showError(errEl, 'Please select both players.');
+  if (p1 === p2) return showError(errEl, 'A player cannot play against themselves.');
+  if (isNaN(g1) || isNaN(g2) || g1 < 0 || g2 < 0) return showError(errEl, 'Goals cannot be negative.');
+  if (!date) return showError(errEl, 'Please select a match date.');
+
+  errEl.classList.add('hidden');
+
+  const idx = db.matches.findIndex(m => m.id === id);
+  if (idx === -1) return;
+
+  db.matches[idx] = { ...db.matches[idx], player1: p1, player2: p2, goals1: g1, goals2: g2, date, season };
+  saveDB();
+  closeEditModal();
+  renderHistory();
+  updateSidebarPlayer();
+  showToast('Match updated!');
+}
+
+// ===== STATS ENGINE =====
+function computePlayerStats(playerName, seasonFilter = 'all') {
+  let matches = db.matches.filter(m =>
+    (m.player1 === playerName || m.player2 === playerName) &&
+    (seasonFilter === 'all' || m.season === seasonFilter)
+  );
+
+  let played = 0, wins = 0, draws = 0, losses = 0;
+  let goalsFor = 0, goalsAgainst = 0, cleanSheets = 0;
+  let biggestWin = null, biggestLoss = null;
+  let currentStreak = 0, bestStreak = 0, tempStreak = 0;
+  let seasonWins = 0;
+
+  const chronological = [...matches].sort((a, b) => a.timestamp - b.timestamp);
+
+  chronological.forEach(m => {
+    played++;
+    const isP1 = m.player1 === playerName;
+    const gf = isP1 ? m.goals1 : m.goals2;
+    const ga = isP1 ? m.goals2 : m.goals1;
+    const diff = gf - ga;
+
+    goalsFor += gf;
+    goalsAgainst += ga;
+    if (ga === 0) cleanSheets++;
+
+    if (diff > 0) {
+      wins++;
+      tempStreak++;
+      if (tempStreak > bestStreak) bestStreak = tempStreak;
+      if (!biggestWin || diff > biggestWin.diff)
+        biggestWin = { opp: isP1 ? m.player2 : m.player1, gf, ga, diff, id: m.id };
+    } else if (diff === 0) {
+      draws++;
+      tempStreak = 0;
+    } else {
+      losses++;
+      tempStreak = 0;
+      if (!biggestLoss || diff < biggestLoss.diff)
+        biggestLoss = { opp: isP1 ? m.player2 : m.player1, gf, ga, diff, id: m.id };
+    }
+  });
+
+  currentStreak = tempStreak;
+
+  // Season wins
+  db.seasons.forEach(s => {
+    const sTable = computeLeagueTable(s.id);
+    if (sTable.length > 0 && sTable[0].player === playerName) seasonWins++;
+  });
+
+  const winRate = played > 0 ? ((wins / played) * 100).toFixed(1) : '0.0';
+  const avgGoals = played > 0 ? (goalsFor / played).toFixed(2) : '0.00';
+
+  return {
+    played, wins, draws, losses,
+    goalsFor, goalsAgainst,
+    goalDiff: goalsFor - goalsAgainst,
+    cleanSheets,
+    winRate, avgGoals,
+    currentStreak, bestStreak, seasonWins,
+    biggestWin, biggestLoss,
+    points: wins * 3 + draws
+  };
+}
+
+function computeLeagueTable(seasonFilter = 'all') {
+  const table = PLAYERS.map(p => {
+    const s = computePlayerStats(p, seasonFilter);
+    return {
+      player: p,
+      played: s.played, wins: s.wins, draws: s.draws, losses: s.losses,
+      goalsFor: s.goalsFor, goalsAgainst: s.goalsAgainst,
+      goalDiff: s.goalDiff,
+      points: s.points
+    };
+  });
+
+  table.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.goalDiff !== a.goalDiff) return b.goalDiff - a.goalDiff;
+    return b.goalsFor - a.goalsFor;
+  });
+
+  return table;
+}
+
+// ===== DASHBOARD =====
+function renderDashboard() {
+  const activeSeason = getActiveSeason();
+  document.getElementById('dashCurrentSeason').textContent =
+    activeSeason ? `${activeSeason.name} — Active` : 'No Active Season';
+
+  const table = computeLeagueTable('all');
+  const seasonMatches = activeSeason ? db.matches.filter(m => m.season === activeSeason.id) : [];
+
+  // Leader
+  const leader = table[0];
+  setStatCard('sc-leader', leader ? leader.player : '—', leader ? leader.points + ' pts' : '0 pts');
+
+  // Top scorer
+  const scorers = PLAYERS.map(p => ({ player: p, goals: computePlayerStats(p).goalsFor }))
+                         .sort((a, b) => b.goals - a.goals);
+  setStatCard('sc-scorer', scorers[0].goals > 0 ? scorers[0].player : '—',
+              scorers[0].goals + ' goals');
+
+  // Best defense (fewest conceded among those who played)
+  const defenders = PLAYERS.map(p => { const s = computePlayerStats(p); return { player: p, ga: s.goalsAgainst, played: s.played }; })
+    .filter(p => p.played > 0).sort((a, b) => a.ga - b.ga);
+  setStatCard('sc-defense', defenders[0] ? defenders[0].player : '—',
+              defenders[0] ? defenders[0].ga + ' conceded' : '0 conceded');
+
+  // Best attack
+  const attackers = [...scorers];
+  setStatCard('sc-attack', attackers[0].goals > 0 ? attackers[0].player : '—',
+              attackers[0].goals + ' scored');
+
+  // Most wins
+  const winPlayers = PLAYERS.map(p => { const s = computePlayerStats(p); return { player: p, wins: s.wins }; })
+                             .sort((a, b) => b.wins - a.wins);
+  setStatCard('sc-wins', winPlayers[0].wins > 0 ? winPlayers[0].player : '—',
+              winPlayers[0].wins + ' wins');
+
+  // Total matches
+  setStatCard('sc-matches', seasonMatches.length.toString(), 'this season');
+
+  // Recent matches
+  const recent = [...db.matches].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
+  const recentEl = document.getElementById('dashRecentMatches');
+  if (recent.length === 0) {
+    recentEl.innerHTML = '<div class="empty-state">No matches yet</div>';
+  } else {
+    recentEl.innerHTML = recent.map(m => `
+      <div class="recent-match-mini">
+        <span>${esc(m.player1)} <span class="recent-match-score">${m.goals1}—${m.goals2}</span> ${esc(m.player2)}</span>
+      </div>`).join('');
+  }
+
+  // Mini standings
+  const standingsEl = document.getElementById('dashMiniStandings');
+  if (table.every(t => t.played === 0)) {
+    standingsEl.innerHTML = '<div class="empty-state">No data yet</div>';
+  } else {
+    standingsEl.innerHTML = table.map((r, i) => `
+      <div class="mini-standings-row">
+        <span class="mini-rank">${i + 1}</span>
+        <span class="mini-name">${esc(r.player)}</span>
+        <span class="mini-pts">${r.points} pts</span>
+      </div>`).join('');
+  }
+}
+
+function setStatCard(id, value, sub) {
+  const valEl = document.getElementById(id + '-val');
+  const subEl = document.getElementById(id + '-sub');
+  if (valEl) valEl.textContent = value;
+  if (subEl) subEl.textContent = sub;
+}
+
+// ===== LEAGUE TABLE =====
+function renderLeagueTable() {
+  populateSeasonDropdowns();
+  const filter = document.getElementById('tableSeasonFilter')?.value || 'all';
+  const table = computeLeagueTable(filter);
+  const tbody = document.getElementById('leagueTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = table.map((r, i) => {
+    const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+    const badge = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : 'rn';
+    const gdStr = r.goalDiff > 0 ? `<span class="gd-pos">+${r.goalDiff}</span>` :
+                  r.goalDiff < 0 ? `<span class="gd-neg">${r.goalDiff}</span>` : '0';
+    return `
+      <tr class="${rankClass}">
+        <td><span class="rank-badge ${badge}">${i + 1}</span></td>
+        <td>${esc(r.player)}</td>
+        <td>${r.played}</td>
+        <td>${r.wins}</td>
+        <td>${r.draws}</td>
+        <td>${r.losses}</td>
+        <td>${r.goalsFor}</td>
+        <td>${r.goalsAgainst}</td>
+        <td>${gdStr}</td>
+        <td><span class="pts-cell">${r.points}</span></td>
+      </tr>`;
+  }).join('');
+}
+
+// ===== PLAYER PROFILE =====
+function selectProfilePlayer(name, btn) {
+  document.querySelectorAll('#page-playerProfile .player-tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const s = computePlayerStats(name);
+  const matches = db.matches.filter(m => m.player1 === name || m.player2 === name);
+  const recentMatches = [...matches].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
+
+  const html = `
+    <div class="profile-header">
+      <div class="profile-avatar">${name.charAt(0)}</div>
+      <div class="profile-info">
+        <h3>${esc(name)}</h3>
+        <div class="profile-rank">${s.winRate}% win rate · ${s.points} points</div>
+      </div>
+    </div>
+    <div class="profile-stats-grid">
+      ${statItem('PLAYED', s.played)}
+      ${statItem('WINS', s.wins, 'neon')}
+      ${statItem('DRAWS', s.draws)}
+      ${statItem('LOSSES', s.losses, 'red')}
+      ${statItem('GOALS SCORED', s.goalsFor, 'neon')}
+      ${statItem('GOALS CONCEDED', s.goalsAgainst, 'red')}
+      ${statItem('GOAL DIFF', (s.goalDiff >= 0 ? '+' : '') + s.goalDiff, s.goalDiff >= 0 ? 'neon' : 'red')}
+      ${statItem('WIN RATE', s.winRate + '%', 'gold')}
+      ${statItem('AVG GOALS/MATCH', s.avgGoals)}
+      ${statItem('WIN STREAK', s.currentStreak)}
+      ${statItem('BEST STREAK', s.bestStreak)}
+      ${statItem('CLEAN SHEETS', s.cleanSheets)}
+      ${statItem('POINTS', s.points, 'neon')}
+      ${statItem('SEASON TITLES', s.seasonWins, 'gold')}
+      ${s.biggestWin ? statItem('BIGGEST WIN', `${s.biggestWin.gf}–${s.biggestWin.ga} vs ${s.biggestWin.opp}`, 'neon') : statItem('BIGGEST WIN', '—')}
+      ${s.biggestLoss ? statItem('BIGGEST LOSS', `${s.biggestLoss.gf}–${s.biggestLoss.ga} vs ${s.biggestLoss.opp}`, 'red') : statItem('BIGGEST LOSS', '—')}
+    </div>
+    ${recentMatches.length > 0 ? `
+    <div class="panel mt-16">
+      <div class="panel-header">⚽ RECENT MATCHES</div>
+      <div class="panel-body">
+        ${recentMatches.map(m => `
+          <div class="recent-match-mini">
+            <strong>${esc(m.player1)}</strong>
+            <span class="recent-match-score"> ${m.goals1}–${m.goals2} </span>
+            <strong>${esc(m.player2)}</strong>
+            <span class="text-dim" style="float:right;font-size:.8em">${formatDate(m.date)}</span>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}`;
+
+  document.getElementById('profileContent').innerHTML = html;
+}
+
+function statItem(label, value, color = '') {
+  const colorClass = color === 'neon' ? 'text-neon' : color === 'red' ? 'text-red' : color === 'gold' ? 'text-gold' : '';
+  return `<div class="profile-stat-item">
+    <div class="psi-label">${label}</div>
+    <div class="psi-value ${colorClass}">${esc(String(value))}</div>
+  </div>`;
+}
+
+// ===== HEAD TO HEAD =====
+function renderH2H() {
+  const p1 = document.getElementById('h2hPlayer1')?.value;
+  const p2 = document.getElementById('h2hPlayer2')?.value;
+  const cont = document.getElementById('h2hContent');
+  if (!cont) return;
+
+  if (!p1 || !p2) {
+    cont.innerHTML = '<div class="empty-state">Select two players to compare</div>';
+    return;
+  }
+  if (p1 === p2) {
+    cont.innerHTML = '<div class="empty-state">Please select two different players</div>';
+    return;
+  }
+
+  const matches = db.matches.filter(m =>
+    (m.player1 === p1 && m.player2 === p2) || (m.player1 === p2 && m.player2 === p1)
+  ).sort((a, b) => b.timestamp - a.timestamp);
+
+  let p1wins = 0, p2wins = 0, draws = 0, p1goals = 0, p2goals = 0;
+
+  matches.forEach(m => {
+    const isP1first = m.player1 === p1;
+    const g1 = isP1first ? m.goals1 : m.goals2;
+    const g2 = isP1first ? m.goals2 : m.goals1;
+    p1goals += g1; p2goals += g2;
+    if (g1 > g2) p1wins++;
+    else if (g2 > g1) p2wins++;
+    else draws++;
+  });
+
+  const total = matches.length;
+
+  cont.innerHTML = `
+    <div class="h2h-panel">
+      <div class="panel-header">⚔️ OVERALL RECORD</div>
+      <div class="panel-body">
+        <div class="h2h-stat-grid">
+          <div class="h2h-player-col">
+            <h3>${esc(p1)}</h3>
+            <div class="h2h-big-stat">${p1wins}</div>
+            <div class="text-dim">Wins</div>
+          </div>
+          <div class="h2h-vs-col">
+            <div style="margin-bottom:4px">TOTAL<br><span style="font-size:1.5rem;color:var(--neon)">${total}</span></div>
+            <div>DRAWS<br><span style="font-size:1.2rem;color:var(--gold)">${draws}</span></div>
+          </div>
+          <div class="h2h-player-col">
+            <h3>${esc(p2)}</h3>
+            <div class="h2h-big-stat">${p2wins}</div>
+            <div class="text-dim">Wins</div>
+          </div>
+        </div>
+        <div class="h2h-row">
+          <div>${p1goals}</div>
+          <div class="label">GOALS</div>
+          <div>${p2goals}</div>
+        </div>
+        <div class="h2h-row">
+          <div>${total > 0 ? (p1goals / total).toFixed(1) : '0'}</div>
+          <div class="label">AVG GOALS/M</div>
+          <div>${total > 0 ? (p2goals / total).toFixed(1) : '0'}</div>
+        </div>
+        <div class="h2h-row">
+          <div>${total > 0 ? ((p1wins / total) * 100).toFixed(0) : '0'}%</div>
+          <div class="label">WIN RATE</div>
+          <div>${total > 0 ? ((p2wins / total) * 100).toFixed(0) : '0'}%</div>
+        </div>
+      </div>
+    </div>
+    ${matches.length > 0 ? `
+    <div class="h2h-panel">
+      <div class="panel-header">📋 LAST MATCHES</div>
+      <div class="panel-body">
+        ${matches.slice(0, 8).map(m => {
+          const isP1first = m.player1 === p1;
+          const g1 = isP1first ? m.goals1 : m.goals2;
+          const g2 = isP1first ? m.goals2 : m.goals1;
+          let badge = `<span class="win-badge draw">DRAW</span>`;
+          if (g1 > g2) badge = `<span class="win-badge win">${esc(p1)} W</span>`;
+          else if (g2 > g1) badge = `<span class="win-badge win">${esc(p2)} W</span>`;
+          return `<div class="match-card" style="margin-bottom:8px">
+            <div class="match-card-header"><span>${formatDate(m.date)}</span> | ${badge}</div>
+            <div class="match-card-result">
+              <div class="match-player">${esc(p1)}</div>
+              <div class="match-score">${g1} — ${g2}</div>
+              <div class="match-player right">${esc(p2)}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : '<div class="empty-state">No matches between these players yet</div>'}`;
+}
+
+// ===== AWARDS =====
+function renderAwards() {
+  populateSeasonDropdowns();
+  const filter = document.getElementById('awardsSeasonFilter')?.value || 'all';
+  const cont = document.getElementById('awardsContent');
+  if (!cont) return;
+
+  const table = computeLeagueTable(filter);
+  const hasData = table.some(t => t.played > 0);
+
+  const scorers = PLAYERS.map(p => ({ player: p, goals: computePlayerStats(p, filter).goalsFor }))
+                         .sort((a, b) => b.goals - a.goals);
+  const defenders = PLAYERS.map(p => { const s = computePlayerStats(p, filter); return { player: p, ga: s.goalsAgainst, played: s.played }; })
+    .filter(p => p.played > 0).sort((a, b) => a.ga - b.ga);
+  const winners = PLAYERS.map(p => ({ player: p, wins: computePlayerStats(p, filter).wins }))
+                         .sort((a, b) => b.wins - a.wins);
+
+  // MVP: points * 0.5 + goals * 0.3 + wins * 0.2
+  const mvpScores = PLAYERS.map(p => {
+    const s = computePlayerStats(p, filter);
+    const score = s.points * 0.5 + s.goalsFor * 0.3 + s.wins * 0.2;
+    return { player: p, score, played: s.played };
+  }).filter(p => p.played > 0).sort((a, b) => b.score - a.score);
+
+  const awards = [
+    { icon: '🏆', title: 'CHAMPION', winner: hasData && table[0].played > 0 ? table[0].player : null, desc: hasData ? `${table[0].points} points` : 'No matches yet' },
+    { icon: '⚽', title: 'TOP SCORER', winner: scorers[0].goals > 0 ? scorers[0].player : null, desc: `${scorers[0].goals} goals` },
+    { icon: '🧱', title: 'BEST DEFENSE', winner: defenders[0] ? defenders[0].player : null, desc: defenders[0] ? `${defenders[0].ga} goals conceded` : 'No matches yet' },
+    { icon: '🔥', title: 'MOST WINS', winner: winners[0].wins > 0 ? winners[0].player : null, desc: `${winners[0].wins} wins` },
+    { icon: '👑', title: 'MVP', winner: mvpScores[0] ? mvpScores[0].player : null, desc: mvpScores[0] ? `Score: ${mvpScores[0].score.toFixed(1)}` : 'No matches yet' },
+  ];
+
+  cont.innerHTML = `<div class="awards-grid">
+    ${awards.map(a => `
+      <div class="award-card">
+        <span class="award-icon">${a.icon}</span>
+        <div class="award-title">${a.title}</div>
+        <div class="award-winner">${a.winner ? esc(a.winner) : '—'}</div>
+        <div class="award-desc">${a.desc}</div>
+      </div>`).join('')}
+  </div>`;
+}
+
+// ===== ACHIEVEMENTS =====
+function selectAchievementsPlayer(name, btn) {
+  document.querySelectorAll('#page-achievements .player-tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const s = computePlayerStats(name);
+  const unlocked = ACHIEVEMENT_DEFS.filter(a => a.check(s));
+  const unlockedIds = unlocked.map(a => a.id);
+
+  document.getElementById('achievementsContent').innerHTML = `
+    <div class="achievements-grid">
+      ${ACHIEVEMENT_DEFS.map(a => {
+        const isUnlocked = unlockedIds.includes(a.id);
+        return `<div class="achievement-badge ${isUnlocked ? 'unlocked' : 'locked'}">
+          ${isUnlocked ? '<span class="unlocked-stamp">✓</span>' : ''}
+          <span class="achievement-icon">${a.icon}</span>
+          <div class="achievement-name">${a.name}</div>
+          <div class="achievement-desc">${a.desc}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function checkAchievements() {
+  // Called after saving a match — could trigger notifications in future
+}
+
+// ===== RIVALRIES =====
+function renderRivalries() {
+  const cont = document.getElementById('rivalriesContent');
+  if (!cont) return;
+
+  const pairs = {};
+  db.matches.forEach(m => {
+    const key = [m.player1, m.player2].sort().join('|');
+    if (!pairs[key]) pairs[key] = { p1: m.player1.localeCompare(m.player2) <= 0 ? m.player1 : m.player2,
+                                    p2: m.player1.localeCompare(m.player2) <= 0 ? m.player2 : m.player1,
+                                    matches: [], totalGoals: 0, wins1: 0, wins2: 0, draws: 0 };
+    pairs[key].matches.push(m);
+  });
+
+  Object.values(pairs).forEach(pair => {
+    pair.matches.forEach(m => {
+      const isP1 = m.player1 === pair.p1 || m.player2 === pair.p2 ? m.player1 === pair.p1 : false;
+      const g1 = (m.player1 === pair.p1) ? m.goals1 : m.goals2;
+      const g2 = (m.player2 === pair.p2) ? m.goals2 : m.goals1;
+      pair.totalGoals += m.goals1 + m.goals2;
+      if (m.goals1 > m.goals2) {
+        if (m.player1 === pair.p1) pair.wins1++; else pair.wins2++;
+      } else if (m.goals2 > m.goals1) {
+        if (m.player2 === pair.p2) pair.wins2++; else pair.wins1++;
+      } else {
+        pair.draws++;
+      }
+    });
+    pair.count = pair.matches.length;
+    pair.winDiff = Math.abs(pair.wins1 - pair.wins2);
+    pair.avgGoals = pair.count > 0 ? pair.totalGoals / pair.count : 0;
+  });
+
+  const pairArr = Object.values(pairs).filter(p => p.count > 0);
+  if (pairArr.length === 0) {
+    cont.innerHTML = '<div class="empty-state">No matches recorded yet. Rivalries will appear automatically.</div>';
+    return;
+  }
+
+  const mostPlayed = [...pairArr].sort((a, b) => b.count - a.count)[0];
+  const closest = [...pairArr].sort((a, b) => a.winDiff - b.winDiff)[0];
+  const highestScoring = [...pairArr].sort((a, b) => b.avgGoals - a.avgGoals)[0];
+
+  const rivalryCard = (icon, title, pair, desc) => `
+    <div class="rivalry-card">
+      <div class="rivalry-title">${icon} ${title}</div>
+      <div class="rivalry-matchup">${esc(pair.p1)} vs ${esc(pair.p2)}</div>
+      <div class="rivalry-stats">
+        <span>${esc(pair.p1)} wins: <span>${pair.wins1}</span></span>
+        <span>${esc(pair.p2)} wins: <span>${pair.wins2}</span></span>
+        <span>Draws: <span>${pair.draws}</span></span>
+        <span>Total Matches: <span>${pair.count}</span></span>
+        <span>${desc}</span>
+      </div>
+    </div>`;
+
+  cont.innerHTML = `
+    ${rivalryCard('⚡', 'MOST PLAYED RIVALRY', mostPlayed, `${mostPlayed.count} matches total`)}
+    ${rivalryCard('⚔️', 'CLOSEST RIVALRY', closest, `Win difference: ${closest.winDiff}`)}
+    ${rivalryCard('🎯', 'HIGHEST SCORING RIVALRY', highestScoring, `Avg ${highestScoring.avgGoals.toFixed(1)} goals/match`)}
+    ${pairArr.length > 3 ? `<div class="panel mt-16">
+      <div class="panel-header">📊 ALL RIVALRIES</div>
+      <div class="panel-body">
+        ${pairArr.sort((a,b)=>b.count-a.count).map(pair=>`
+          <div class="mini-standings-row">
+            <span class="mini-name">${esc(pair.p1)} vs ${esc(pair.p2)}</span>
+            <span style="color:var(--text-secondary);font-size:.8em;font-family:'Share Tech Mono'">${pair.count} matches</span>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}`;
+}
+
+// ===== STATISTICS =====
+function renderStatistics() {
+  populateSeasonDropdowns();
+  const filter = document.getElementById('statsSeasonFilter')?.value || 'all';
+  const cont = document.getElementById('statsContent');
+  if (!cont) return;
+
+  const stats = PLAYERS.map(p => {
+    const s = computePlayerStats(p, filter);
+    return { player: p, goals: s.goalsFor, wins: s.wins, points: s.points, goalDiff: s.goalDiff, played: s.played };
+  });
+
+  const maxGoals = Math.max(...stats.map(s => s.goals), 1);
+  const maxWins = Math.max(...stats.map(s => s.wins), 1);
+  const maxPts = Math.max(...stats.map(s => s.points), 1);
+  const maxGD = Math.max(...stats.map(s => Math.abs(s.goalDiff)), 1);
+
+  const barChart = (data, maxVal, valueKey, color) => `
+    <div class="chart-bar-container">
+      ${data.sort((a, b) => b[valueKey] - a[valueKey]).map(d => {
+        const pct = maxVal > 0 ? (Math.max(d[valueKey], 0) / maxVal) * 100 : 0;
+        return `<div class="chart-bar-row">
+          <div class="chart-bar-label">${esc(d.player)}</div>
+          <div class="chart-bar-track">
+            <div class="chart-bar-fill ${color}" style="width:${pct}%" data-val="${d[valueKey]}"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  cont.innerHTML = `
+    <div class="stats-grid">
+      <div class="chart-section">
+        <div class="chart-title">⚽ GOALS SCORED</div>
+        ${barChart(stats, maxGoals, 'goals', '')}
+      </div>
+      <div class="chart-section">
+        <div class="chart-title">🏆 WINS</div>
+        ${barChart(stats, maxWins, 'wins', 'blue')}
+      </div>
+      <div class="chart-section">
+        <div class="chart-title">📊 POINTS</div>
+        ${barChart(stats, maxPts, 'points', 'orange')}
+      </div>
+      <div class="chart-section">
+        <div class="chart-title">📈 GOAL DIFFERENCE</div>
+        ${barChart(stats, maxGD, 'goalDiff', 'purple')}
+      </div>
+    </div>`;
+}
+
+// ===== SETTINGS =====
+function exportData() {
+  const data = JSON.stringify(db, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'efootball_league_backup_' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Data exported successfully!');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.matches || !data.seasons) throw new Error('Invalid format');
+      showConfirm('Import Data', 'This will REPLACE all current data with the imported backup. Are you sure?', () => {
+        db = data;
+        saveDB();
+        populateSeasonDropdowns();
+        updateSidebarPlayer();
+        navigateTo('dashboard', document.querySelector('.nav-item[data-page="dashboard"]'));
+        showToast('Data imported successfully!');
+      });
+    } catch(err) {
+      showToast('Invalid backup file.', true);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function confirmResetSeason() {
+  const active = getActiveSeason();
+  if (!active) return showToast('No active season to reset.', true);
+  const count = db.matches.filter(m => m.season === active.id).length;
+  showConfirm('Reset Season', `Delete all ${count} match(es) from "${active.name}"? This cannot be undone.`, () => {
+    db.matches = db.matches.filter(m => m.season !== active.id);
+    saveDB();
+    updateSidebarPlayer();
+    showToast('Season reset.');
+  });
+}
+
+function confirmResetAll() {
+  showConfirm('⚠️ RESET ALL DATA', 'This will permanently delete ALL matches, seasons, and accounts. This CANNOT be undone!', () => {
+    localStorage.removeItem('efl_db');
+    localStorage.removeItem('efl_user');
+    db = loadDB();
+    currentUser = null;
+    showToast('All data has been reset.');
+    setTimeout(() => showLogin(), 1000);
+  });
+}
+
+// ===== HELPERS =====
+function showError(el, msg) {
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function showToast(msg, isError = false) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast' + (isError ? ' error' : '');
+  toast.classList.remove('hidden');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
+}
+
+function showConfirm(title, message, onConfirm) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMessage').textContent = message;
+  document.getElementById('confirmModal').classList.remove('hidden');
+  document.getElementById('confirmYes').onclick = () => {
+    closeConfirmModal();
+    onConfirm();
+  };
+}
+
+function closeConfirmModal() {
+  document.getElementById('confirmModal').classList.add('hidden');
+}
+
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  try {
+    return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch { return dateStr; }
+}
