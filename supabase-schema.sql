@@ -120,4 +120,16 @@ end $$;
 -- =====================================================
 insert into public.seasons (name, active) values ('Season 1', true);
 
+-- =====================================================
+--  SEED — pre-created accounts (password: 2003)
+--  Each friend can log in straight away with their name + 2003.
+-- =====================================================
+insert into public.players (name, password) values
+  ('Wael',        '2003'),
+  ('Omar',        '2003'),
+  ('Abdul Rahim', '2003'),
+  ('Mohammad',    '2003'),
+  ('Mustafa',     '2003')
+on conflict (name) do update set password = excluded.password;
+
 -- Done. Your tables are ready.

@@ -11,6 +11,6 @@
 ===================================================== */
 
 const SUPABASE_CONFIG = {
-  url: 'YOUR_SUPABASE_URL',          // e.g. https://abcdefgh.supabase.co
-  anonKey: 'YOUR_SUPABASE_ANON_KEY', // e.g. eyJhbGciOiJIUzI1NiIsInR5cCI6...
+  url: 'https://hyqedsydyqbcgusjthcj.supabase.co',
+  anonKey: 'sb_publishable_F2AndZb1gX44IwjsWdh5Gg_-K2gevC3',
 };
