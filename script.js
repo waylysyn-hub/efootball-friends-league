@@ -278,6 +278,10 @@ function enterApp() {
   updateSidebarPlayer();
   populateSeasonDropdowns();
   navigateTo('dashboard', document.querySelector('.nav-item[data-page="dashboard"]'));
+
+  // Keep the stored league table / achievements in sync with the latest
+  // matches (self-heals if a previous write was interrupted). Fire-and-forget.
+  if (sb) syncDerivedData().catch(() => {});
 }
 
 function updateSidebarPlayer() {
@@ -686,7 +690,9 @@ async function saveEditMatch() {
 }
 
 // ===== STATS ENGINE =====
-function computePlayerStats(playerName, seasonFilter = 'all') {
+// `countSeasonWins` is set to false when called from computeLeagueTable to
+// prevent infinite mutual recursion (table -> stats -> table -> ...).
+function computePlayerStats(playerName, seasonFilter = 'all', countSeasonWins = true) {
   let matches = db.matches.filter(m =>
     (m.player1 === playerName || m.player2 === playerName) &&
     (seasonFilter === 'all' || m.season === seasonFilter)
@@ -730,11 +736,13 @@ function computePlayerStats(playerName, seasonFilter = 'all') {
 
   currentStreak = tempStreak;
 
-  // Season wins
-  db.seasons.forEach(s => {
-    const sTable = computeLeagueTable(s.id);
-    if (sTable.length > 0 && sTable[0].player === playerName) seasonWins++;
-  });
+  // Season wins (count how many seasons this player topped the table).
+  if (countSeasonWins) {
+    db.seasons.forEach(s => {
+      const sTable = computeLeagueTable(s.id);
+      if (sTable.length > 0 && sTable[0].player === playerName) seasonWins++;
+    });
+  }
 
   const winRate = played > 0 ? ((wins / played) * 100).toFixed(1) : '0.0';
   const avgGoals = played > 0 ? (goalsFor / played).toFixed(2) : '0.00';
@@ -753,7 +761,7 @@ function computePlayerStats(playerName, seasonFilter = 'all') {
 
 function computeLeagueTable(seasonFilter = 'all') {
   const table = PLAYERS.map(p => {
-    const s = computePlayerStats(p, seasonFilter);
+    const s = computePlayerStats(p, seasonFilter, false);
     return {
       player: p,
       played: s.played, wins: s.wins, draws: s.draws, losses: s.losses,
