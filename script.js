@@ -21,40 +21,173 @@ const ACHIEVEMENT_DEFS = [
 
 // ===== STATE =====
 let currentUser = null;
-let db = loadDB();
+// In-memory mirror of the Supabase data. Every render/compute function reads
+// from this object synchronously; writes go to Supabase and then update it.
+let db = { accounts: {}, matches: [], seasons: [] };
+let currentPage = 'dashboard';
 
-// ===== DB HELPERS =====
-function loadDB() {
-  const raw = localStorage.getItem('efl_db');
-  if (raw) {
-    try { return JSON.parse(raw); } catch(e) {}
-  }
+// ===== SUPABASE CLIENT =====
+function isConfigured() {
+  return typeof SUPABASE_CONFIG !== 'undefined' &&
+    SUPABASE_CONFIG.url && !SUPABASE_CONFIG.url.includes('YOUR_') &&
+    SUPABASE_CONFIG.anonKey && !SUPABASE_CONFIG.anonKey.includes('YOUR_');
+}
+
+const sb = (typeof window !== 'undefined' && window.supabase && isConfigured())
+  ? window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey)
+  : null;
+
+// ===== ROW MAPPERS (Supabase row -> in-memory shape) =====
+function mapSeason(row) {
+  return { id: row.id, name: row.name, active: !!row.active, created: Number(row.created) || Date.now() };
+}
+function mapMatch(row) {
   return {
-    accounts: {},
-    matches: [],
-    seasons: [{ id: 's1', name: 'Season 1', active: true, created: Date.now() }],
-    nextMatchId: 1,
-    nextSeasonId: 2,
+    id: row.id,
+    player1: row.player1, player2: row.player2,
+    goals1: row.goals1, goals2: row.goals2,
+    date: row.date, season: row.season_id,
+    timestamp: Number(row.timestamp) || (row.created_at ? new Date(row.created_at).getTime() : Date.now())
   };
 }
 
-function saveDB() {
-  localStorage.setItem('efl_db', JSON.stringify(db));
+// ===== DATA FETCH =====
+async function fetchAllData() {
+  if (!sb) throw new Error('Supabase not configured');
+  const [players, seasons, matches] = await Promise.all([
+    sb.from('players').select('*'),
+    sb.from('seasons').select('*').order('created', { ascending: true }),
+    sb.from('matches').select('*'),
+  ]);
+  if (players.error || seasons.error || matches.error) {
+    throw players.error || seasons.error || matches.error;
+  }
+
+  db.accounts = {};
+  (players.data || []).forEach(p => {
+    db.accounts[p.name] = { username: p.name, password: p.password, created: Number(p.created) };
+  });
+  db.seasons = (seasons.data || []).map(mapSeason);
+  db.matches = (matches.data || []).map(mapMatch);
+
+  cacheDB();
+}
+
+// ===== OPTIONAL LOCAL CACHE (for fast first paint only) =====
+function cacheDB() {
+  try { localStorage.setItem('efl_cache', JSON.stringify({ accounts: db.accounts, seasons: db.seasons, matches: db.matches })); } catch (e) {}
+}
+function loadCache() {
+  try {
+    const raw = localStorage.getItem('efl_cache');
+    if (raw) {
+      const c = JSON.parse(raw);
+      if (c && c.seasons && c.matches) db = { accounts: c.accounts || {}, seasons: c.seasons, matches: c.matches };
+    }
+  } catch (e) {}
+}
+
+// ===== STANDINGS + ACHIEVEMENTS PERSISTENCE =====
+// Recomputes the league table (overall + per season) and stores it in Supabase.
+// Called automatically whenever matches change so the stored league table
+// always stays in sync for every user.
+async function persistStandings() {
+  if (!sb) return;
+  const rows = [];
+  const scopes = ['all', ...db.seasons.map(s => s.id)];
+  scopes.forEach(scope => {
+    const table = computeLeagueTable(scope);
+    table.forEach((r, i) => rows.push({
+      season: String(scope), player: r.player,
+      played: r.played, wins: r.wins, draws: r.draws, losses: r.losses,
+      goals_for: r.goalsFor, goals_against: r.goalsAgainst,
+      goal_diff: r.goalDiff, points: r.points, rank: i + 1,
+      updated_at: new Date().toISOString()
+    }));
+  });
+  await sb.from('standings').delete().neq('player', '');
+  if (rows.length) await sb.from('standings').insert(rows);
+}
+
+async function persistAchievements() {
+  if (!sb) return;
+  const rows = [];
+  PLAYERS.forEach(p => {
+    const s = computePlayerStats(p);
+    ACHIEVEMENT_DEFS.filter(a => a.check(s)).forEach(a => rows.push({ player: p, achievement_id: a.id }));
+  });
+  await sb.from('achievements').delete().neq('player', '');
+  if (rows.length) await sb.from('achievements').insert(rows);
+}
+
+// Convenience: recompute everything derived from matches and refresh the UI.
+async function syncDerivedData() {
+  await persistStandings();
+  await persistAchievements();
 }
 
 // ===== INIT =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   spawnParticles();
   setDefaultDate();
 
+  if (!isConfigured() || !sb) {
+    showLogin();
+    showConfigWarning();
+    return;
+  }
+
+  // Optional: paint instantly from last cache while we fetch fresh data.
+  loadCache();
+
+  try {
+    await fetchAllData();
+  } catch (e) {
+    showToast('Could not reach Supabase. Check your config / connection.', true);
+  }
+
+  subscribeRealtime();
+
   const saved = localStorage.getItem('efl_user');
-  if (saved) {
+  if (saved && db.accounts[saved]) {
     currentUser = saved;
     enterApp();
   } else {
     showLogin();
   }
 });
+
+function showConfigWarning() {
+  const err = document.getElementById('loginError');
+  if (err) showError(err, 'Supabase is not configured yet. Edit supabase-config.js with your project URL and anon key.');
+}
+
+// ===== REALTIME (multi-user live sync) =====
+let _refreshTimer = null;
+function subscribeRealtime() {
+  if (!sb) return;
+  try {
+    sb.channel('efl-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'seasons' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, scheduleRefresh)
+      .subscribe();
+  } catch (e) { /* realtime optional */ }
+}
+
+function scheduleRefresh() {
+  clearTimeout(_refreshTimer);
+  _refreshTimer = setTimeout(refreshFromRemote, 400);
+}
+
+async function refreshFromRemote() {
+  try { await fetchAllData(); } catch (e) { return; }
+  if (!currentUser) return;
+  populateSeasonDropdowns();
+  updateSidebarPlayer();
+  // Avoid clobbering a form the user may be filling in.
+  if (currentPage !== 'recordMatch') renderPage(currentPage);
+}
 
 function setDefaultDate() {
   const d = document.getElementById('matchDate');
@@ -106,20 +239,26 @@ function handleLogin() {
   enterApp();
 }
 
-function handleRegister() {
+async function handleRegister() {
   const username = document.getElementById('regUsername').value;
   const pw1 = document.getElementById('regPassword').value;
   const pw2 = document.getElementById('regPassword2').value;
   const err = document.getElementById('regError');
 
+  if (!sb) return showError(err, 'Supabase is not configured. See supabase-config.js.');
   if (!username) return showError(err, 'Please select your name.');
   if (!pw1) return showError(err, 'Please create a password.');
   if (pw1.length < 4) return showError(err, 'Password must be at least 4 characters.');
   if (pw1 !== pw2) return showError(err, 'Passwords do not match.');
   if (db.accounts[username]) return showError(err, 'Account already exists. Please login.');
 
-  db.accounts[username] = { username, password: pw1, created: Date.now() };
-  saveDB();
+  const { error } = await sb.from('players').insert({ name: username, password: pw1, created: Date.now() });
+  if (error) {
+    if (error.code === '23505') return showError(err, 'Account already exists. Please login.');
+    return showError(err, 'Could not create account. Please try again.');
+  }
+
+  await fetchAllData();
   err.classList.add('hidden');
   showToast('Account created! Please login.');
   showLogin();
@@ -178,12 +317,18 @@ function navigateTo(page, el) {
   document.getElementById('topbarSeason').textContent = activeSeason ? activeSeason.name : 'No Season';
 
   closeSidebar();
+  currentPage = page;
+  renderPage(page);
+}
 
+// Renders a page's content. Kept separate from navigateTo so realtime updates
+// can re-render the page the user is currently viewing.
+function renderPage(page) {
   switch(page) {
     case 'dashboard': renderDashboard(); break;
     case 'matchHistory': renderHistory(); break;
     case 'leagueTable': renderLeagueTable(); break;
-    case 'playerProfile': selectProfilePlayer('Wael', document.querySelector('.player-tab')); break;
+    case 'playerProfile': selectProfilePlayer('Wael', document.querySelector('#page-playerProfile .player-tab')); break;
     case 'seasons': renderSeasons(); break;
     case 'awards': renderAwards(); break;
     case 'achievements': selectAchievementsPlayer('Wael', document.querySelector('#page-achievements .player-tab')); break;
@@ -245,25 +390,36 @@ function populateSeasonDropdowns() {
   });
 }
 
-function createSeason() {
+async function createSeason() {
   const name = document.getElementById('newSeasonName').value.trim();
+  if (!sb) return showToast('Supabase is not configured.', true);
   if (!name) return showToast('Please enter a season name.', true);
 
   const existing = db.seasons.find(s => s.name.toLowerCase() === name.toLowerCase());
   if (existing) return showToast('Season already exists.', true);
 
-  const id = 's' + db.nextSeasonId++;
-  db.seasons.push({ id, name, active: false, created: Date.now() });
-  saveDB();
+  const { data, error } = await sb.from('seasons')
+    .insert({ name, active: false, created: Date.now() })
+    .select().single();
+  if (error) return showToast('Could not create season.', true);
+
+  db.seasons.push(mapSeason(data));
+  cacheDB();
+  await persistStandings();
   document.getElementById('newSeasonName').value = '';
   populateSeasonDropdowns();
   renderSeasons();
   showToast('Season "' + name + '" created!');
 }
 
-function setActiveSeason(id) {
+async function setActiveSeason(id) {
+  if (!sb) return showToast('Supabase is not configured.', true);
+  const r1 = await sb.from('seasons').update({ active: false }).neq('created', -1);
+  const r2 = await sb.from('seasons').update({ active: true }).eq('id', id);
+  if (r1.error || r2.error) return showToast('Could not update active season.', true);
+
   db.seasons.forEach(s => s.active = (s.id === id));
-  saveDB();
+  cacheDB();
   populateSeasonDropdowns();
   renderSeasons();
   updateSidebarPlayer();
@@ -277,15 +433,23 @@ function deleteSeason(id) {
   showConfirm(
     'Delete Season',
     `Delete "${season.name}"? This will also delete ${matchCount} match(es).`,
-    () => {
+    async () => {
+      if (!sb) return showToast('Supabase is not configured.', true);
+      const { error } = await sb.from('seasons').delete().eq('id', id);
+      if (error) return showToast('Could not delete season.', true);
+
       db.matches = db.matches.filter(m => m.season !== id);
       db.seasons = db.seasons.filter(s => s.id !== id);
       if (db.seasons.length > 0 && !db.seasons.find(s => s.active)) {
-        db.seasons[db.seasons.length - 1].active = true;
+        const last = db.seasons[db.seasons.length - 1];
+        last.active = true;
+        await sb.from('seasons').update({ active: true }).eq('id', last.id);
       }
-      saveDB();
+      cacheDB();
+      await syncDerivedData();
       populateSeasonDropdowns();
       renderSeasons();
+      updateSidebarPlayer();
       showToast('Season deleted.');
     }
   );
@@ -356,7 +520,7 @@ function updateMatchPreview() {
   document.getElementById('previewResult').textContent = `${p1} ${g1} — ${g2} ${p2}  |  ${result}`;
 }
 
-function saveMatch() {
+async function saveMatch() {
   const p1 = document.getElementById('matchPlayer1').value;
   const p2 = document.getElementById('matchPlayer2').value;
   const g1 = parseInt(document.getElementById('matchGoals1').value);
@@ -371,20 +535,20 @@ function saveMatch() {
   if (!date) return showError(errEl, 'Please select a match date.');
   if (!season) return showError(errEl, 'Please select a season.');
 
+  if (!sb) return showError(errEl, 'Supabase is not configured. See supabase-config.js.');
+
   errEl.classList.add('hidden');
 
-  const match = {
-    id: 'm' + db.nextMatchId++,
-    player1: p1, player2: p2,
-    goals1: g1, goals2: g2,
-    date, season,
-    timestamp: Date.now()
-  };
+  const { data, error } = await sb.from('matches')
+    .insert({ player1: p1, player2: p2, goals1: g1, goals2: g2, date, season_id: season, timestamp: Date.now() })
+    .select().single();
+  if (error) return showError(errEl, 'Could not save match to Supabase.');
 
-  db.matches.push(match);
-  saveDB();
+  db.matches.push(mapMatch(data));
+  cacheDB();
   updateSidebarPlayer();
-  checkAchievements();
+  // Automatically recompute & store the league table and achievements.
+  await syncDerivedData();
   showToast(`Match saved! ${p1} ${g1}–${g2} ${p2}`);
   clearMatchForm();
 }
@@ -450,9 +614,14 @@ function matchCardHTML(m) {
 }
 
 function deleteMatch(id) {
-  showConfirm('Delete Match', 'Are you sure you want to delete this match? This cannot be undone.', () => {
+  showConfirm('Delete Match', 'Are you sure you want to delete this match? This cannot be undone.', async () => {
+    if (!sb) return showToast('Supabase is not configured.', true);
+    const { error } = await sb.from('matches').delete().eq('id', id);
+    if (error) return showToast('Could not delete match.', true);
+
     db.matches = db.matches.filter(m => m.id !== id);
-    saveDB();
+    cacheDB();
+    await syncDerivedData();
     renderHistory();
     updateSidebarPlayer();
     showToast('Match deleted.');
@@ -480,7 +649,7 @@ function closeEditModal() {
   document.getElementById('editMatchModal').classList.add('hidden');
 }
 
-function saveEditMatch() {
+async function saveEditMatch() {
   const id = document.getElementById('editMatchId').value;
   const p1 = document.getElementById('editPlayer1').value;
   const p2 = document.getElementById('editPlayer2').value;
@@ -495,13 +664,21 @@ function saveEditMatch() {
   if (isNaN(g1) || isNaN(g2) || g1 < 0 || g2 < 0) return showError(errEl, 'Goals cannot be negative.');
   if (!date) return showError(errEl, 'Please select a match date.');
 
+  if (!sb) return showError(errEl, 'Supabase is not configured.');
+
   errEl.classList.add('hidden');
 
   const idx = db.matches.findIndex(m => m.id === id);
   if (idx === -1) return;
 
+  const { error } = await sb.from('matches')
+    .update({ player1: p1, player2: p2, goals1: g1, goals2: g2, date, season_id: season })
+    .eq('id', id);
+  if (error) return showError(errEl, 'Could not update match.');
+
   db.matches[idx] = { ...db.matches[idx], player1: p1, player2: p2, goals1: g1, goals2: g2, date, season };
-  saveDB();
+  cacheDB();
+  await syncDerivedData();
   closeEditModal();
   renderHistory();
   updateSidebarPlayer();
@@ -917,10 +1094,6 @@ function selectAchievementsPlayer(name, btn) {
     </div>`;
 }
 
-function checkAchievements() {
-  // Called after saving a match — could trigger notifications in future
-}
-
 // ===== RIVALRIES =====
 function renderRivalries() {
   const cont = document.getElementById('rivalriesContent');
@@ -1065,13 +1238,45 @@ function importData(event) {
     try {
       const data = JSON.parse(e.target.result);
       if (!data.matches || !data.seasons) throw new Error('Invalid format');
-      showConfirm('Import Data', 'This will REPLACE all current data with the imported backup. Are you sure?', () => {
-        db = data;
-        saveDB();
-        populateSeasonDropdowns();
-        updateSidebarPlayer();
-        navigateTo('dashboard', document.querySelector('.nav-item[data-page="dashboard"]'));
-        showToast('Data imported successfully!');
+      showConfirm('Import Data', 'This will REPLACE all current data in Supabase with the imported backup. Are you sure?', async () => {
+        if (!sb) return showToast('Supabase is not configured.', true);
+        try {
+          await wipeAllData();
+
+          // Insert seasons (Supabase assigns fresh ids) and map old -> new ids.
+          const seasonIdMap = {};
+          for (const s of data.seasons) {
+            const { data: row, error } = await sb.from('seasons')
+              .insert({ name: s.name, active: !!s.active, created: s.created || Date.now() })
+              .select().single();
+            if (error) throw error;
+            seasonIdMap[s.id] = row.id;
+          }
+
+          if (data.accounts) {
+            const accs = Object.values(data.accounts).map(a => ({
+              name: a.username, password: a.password, created: a.created || Date.now()
+            }));
+            if (accs.length) await sb.from('players').insert(accs);
+          }
+
+          const ms = data.matches.map(m => ({
+            player1: m.player1, player2: m.player2,
+            goals1: m.goals1, goals2: m.goals2,
+            date: m.date, season_id: seasonIdMap[m.season] || null,
+            timestamp: m.timestamp || Date.now()
+          }));
+          if (ms.length) await sb.from('matches').insert(ms);
+
+          await fetchAllData();
+          await syncDerivedData();
+          populateSeasonDropdowns();
+          updateSidebarPlayer();
+          navigateTo('dashboard', document.querySelector('.nav-item[data-page="dashboard"]'));
+          showToast('Data imported successfully!');
+        } catch (err) {
+          showToast('Import failed. Please check the backup file.', true);
+        }
       });
     } catch(err) {
       showToast('Invalid backup file.', true);
@@ -1081,24 +1286,48 @@ function importData(event) {
   event.target.value = '';
 }
 
+// Deletes every row from all data tables. Used by import + reset all.
+async function wipeAllData() {
+  if (!sb) return;
+  await sb.from('matches').delete().neq('timestamp', -1);
+  await sb.from('seasons').delete().neq('created', -1);
+  await sb.from('players').delete().neq('name', '');
+  await sb.from('standings').delete().neq('player', '');
+  await sb.from('achievements').delete().neq('player', '');
+}
+
 function confirmResetSeason() {
   const active = getActiveSeason();
   if (!active) return showToast('No active season to reset.', true);
   const count = db.matches.filter(m => m.season === active.id).length;
-  showConfirm('Reset Season', `Delete all ${count} match(es) from "${active.name}"? This cannot be undone.`, () => {
+  showConfirm('Reset Season', `Delete all ${count} match(es) from "${active.name}"? This cannot be undone.`, async () => {
+    if (!sb) return showToast('Supabase is not configured.', true);
+    const { error } = await sb.from('matches').delete().eq('season_id', active.id);
+    if (error) return showToast('Could not reset season.', true);
+
     db.matches = db.matches.filter(m => m.season !== active.id);
-    saveDB();
+    cacheDB();
+    await syncDerivedData();
     updateSidebarPlayer();
+    renderPage(currentPage);
     showToast('Season reset.');
   });
 }
 
 function confirmResetAll() {
-  showConfirm('⚠️ RESET ALL DATA', 'This will permanently delete ALL matches, seasons, and accounts. This CANNOT be undone!', () => {
-    localStorage.removeItem('efl_db');
-    localStorage.removeItem('efl_user');
-    db = loadDB();
+  showConfirm('⚠️ RESET ALL DATA', 'This will permanently delete ALL matches, seasons, and accounts. This CANNOT be undone!', async () => {
+    if (!sb) return showToast('Supabase is not configured.', true);
+    try {
+      await wipeAllData();
+      // Re-seed one active season so the app stays usable.
+      const { data } = await sb.from('seasons').insert({ name: 'Season 1', active: true }).select().single();
+      db = { accounts: {}, matches: [], seasons: data ? [mapSeason(data)] : [] };
+    } catch (e) {
+      return showToast('Could not reset data.', true);
+    }
     currentUser = null;
+    localStorage.removeItem('efl_user');
+    try { localStorage.removeItem('efl_cache'); } catch (e) {}
     showToast('All data has been reset.');
     setTimeout(() => showLogin(), 1000);
   });
