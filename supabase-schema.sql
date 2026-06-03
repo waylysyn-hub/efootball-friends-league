@@ -4,6 +4,8 @@
 -- =====================================================
 
 -- ---------- Clean start (safe to re-run) ----------
+drop table if exists public.answers      cascade;
+drop table if exists public.questions    cascade;
 drop table if exists public.achievements cascade;
 drop table if exists public.standings   cascade;
 drop table if exists public.matches      cascade;
@@ -58,6 +60,28 @@ create table public.standings (
   primary key (season, player)
 );
 
+-- ---------- LEAGUE Q&A ----------
+create table public.questions (
+  id                 uuid primary key default gen_random_uuid(),
+  author             text not null,
+  body               text not null,
+  closed             boolean not null default false,
+  correct_answer_id  uuid,
+  created_at         timestamptz not null default now(),
+  timestamp          bigint not null default (extract(epoch from now()) * 1000)::bigint
+);
+
+create table public.answers (
+  id           uuid primary key default gen_random_uuid(),
+  question_id  uuid not null references public.questions(id) on delete cascade,
+  author       text not null,
+  body         text not null,
+  created_at   timestamptz not null default now(),
+  timestamp    bigint not null default (extract(epoch from now()) * 1000)::bigint
+);
+
+create index if not exists answers_question_idx on public.answers(question_id);
+
 -- ---------- ACHIEVEMENTS (unlocked badges per player) ----------
 create table public.achievements (
   player         text not null,
@@ -77,11 +101,13 @@ alter table public.seasons      enable row level security;
 alter table public.matches      enable row level security;
 alter table public.standings    enable row level security;
 alter table public.achievements enable row level security;
+alter table public.questions    enable row level security;
+alter table public.answers      enable row level security;
 
 do $$
 declare t text;
 begin
-  foreach t in array array['players','seasons','matches','standings','achievements']
+  foreach t in array array['players','seasons','matches','standings','achievements','questions','answers']
   loop
     execute format('drop policy if exists "public_all_%1$s" on public.%1$s;', t);
     execute format(
@@ -112,6 +138,16 @@ end $$;
 do $$
 begin
   alter publication supabase_realtime add table public.standings;
+  exception when duplicate_object then null;
+end $$;
+do $$
+begin
+  alter publication supabase_realtime add table public.questions;
+  exception when duplicate_object then null;
+end $$;
+do $$
+begin
+  alter publication supabase_realtime add table public.answers;
   exception when duplicate_object then null;
 end $$;
 

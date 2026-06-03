@@ -68,8 +68,9 @@ const ACHIEVEMENT_DEFS = [
 let currentUser = null;
 // In-memory mirror of the Supabase data. Every render/compute function reads
 // from this object synchronously; writes go to Supabase and then update it.
-let db = { accounts: {}, matches: [], seasons: [] };
+let db = { accounts: {}, matches: [], seasons: [], questions: [], answers: [] };
 let currentPage = 'dashboard';
+let qaSelectedId = null;
 
 // ===== SUPABASE CLIENT =====
 function isConfigured() {
@@ -95,18 +96,47 @@ function mapMatch(row) {
     timestamp: Number(row.timestamp) || (row.created_at ? new Date(row.created_at).getTime() : Date.now())
   };
 }
+function mapQuestion(row) {
+  return {
+    id: row.id,
+    author: row.author,
+    body: row.body,
+    closed: !!row.closed,
+    correctAnswerId: row.correct_answer_id || null,
+    timestamp: Number(row.timestamp) || (row.created_at ? new Date(row.created_at).getTime() : Date.now())
+  };
+}
+function mapAnswer(row) {
+  return {
+    id: row.id,
+    questionId: row.question_id,
+    author: row.author,
+    body: row.body,
+    timestamp: Number(row.timestamp) || (row.created_at ? new Date(row.created_at).getTime() : Date.now())
+  };
+}
 
 // ===== DATA FETCH =====
 async function fetchAllData() {
   if (!sb) throw new Error('Supabase not configured');
-  const [players, seasons, matches] = await Promise.all([
+  const [players, seasons, matches, questions, answers] = await Promise.all([
     sb.from('players').select('*'),
     sb.from('seasons').select('*').order('created', { ascending: true }),
     sb.from('matches').select('*'),
+    sb.from('questions').select('*').order('timestamp', { ascending: false }),
+    sb.from('answers').select('*').order('timestamp', { ascending: true }),
   ]);
   if (players.error || seasons.error || matches.error) {
     throw players.error || seasons.error || matches.error;
   }
+  // Q&A tables are optional until migration is run in Supabase.
+  if (!questions.error) db.questions = (questions.data || []).map(mapQuestion);
+  else if (questions.error.code === '42P01') db.questions = [];
+  else throw questions.error;
+
+  if (!answers.error) db.answers = (answers.data || []).map(mapAnswer);
+  else if (answers.error.code === '42P01') db.answers = [];
+  else throw answers.error;
 
   db.accounts = {};
   (players.data || []).forEach(p => {
@@ -120,14 +150,24 @@ async function fetchAllData() {
 
 // ===== OPTIONAL LOCAL CACHE (for fast first paint only) =====
 function cacheDB() {
-  try { localStorage.setItem('efl_cache', JSON.stringify({ accounts: db.accounts, seasons: db.seasons, matches: db.matches })); } catch (e) {}
+  try {
+    localStorage.setItem('efl_cache', JSON.stringify({
+      accounts: db.accounts, seasons: db.seasons, matches: db.matches,
+      questions: db.questions || [], answers: db.answers || []
+    }));
+  } catch (e) {}
 }
 function loadCache() {
   try {
     const raw = localStorage.getItem('efl_cache');
     if (raw) {
       const c = JSON.parse(raw);
-      if (c && c.seasons && c.matches) db = { accounts: c.accounts || {}, seasons: c.seasons, matches: c.matches };
+      if (c && c.seasons && c.matches) {
+        db = {
+          accounts: c.accounts || {}, seasons: c.seasons, matches: c.matches,
+          questions: c.questions || [], answers: c.answers || []
+        };
+      }
     }
   } catch (e) {}
 }
@@ -220,6 +260,8 @@ function subscribeRealtime() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'seasons' }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'questions' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'answers' }, scheduleRefresh)
       .subscribe();
   } catch (e) { /* realtime optional */ }
 }
@@ -235,7 +277,13 @@ async function refreshFromRemote() {
   populateSeasonDropdowns();
   updateSidebarPlayer();
   // Avoid clobbering a form the user may be filling in.
-  if (currentPage !== 'recordMatch') renderPage(currentPage);
+  if (currentPage !== 'recordMatch' && !isQaFormActive()) renderPage(currentPage);
+}
+
+function isQaFormActive() {
+  if (currentPage !== 'questions') return false;
+  const el = document.activeElement;
+  return el && (el.id === 'qaAskBody' || el.id === 'qaAnswerBody');
 }
 
 function setDefaultDate() {
@@ -385,7 +433,8 @@ function navigateTo(page, el) {
     matchHistory: 'Match History', leagueTable: 'League Table',
     playerProfile: 'Player Profiles', headToHead: 'Head to Head',
     seasons: 'Seasons', awards: 'Awards', achievements: 'Achievements',
-    rivalries: 'Rivalries', statistics: 'Statistics', settings: 'Settings'
+    rivalries: 'Rivalries', statistics: 'Statistics', questions: 'League Q&A',
+    settings: 'Settings'
   };
   const topTitle = document.getElementById('topbarTitle');
   if (topTitle) topTitle.textContent = titles[page] || page;
@@ -395,6 +444,7 @@ function navigateTo(page, el) {
   if (topSeason) topSeason.textContent = activeSeason ? activeSeason.name : 'No Season';
 
   closeSidebar();
+  if (page !== 'questions') qaSelectedId = null;
   currentPage = page;
   try {
     renderPage(page);
@@ -419,6 +469,7 @@ function renderPage(page) {
     case 'statistics': renderStatistics(); break;
     case 'recordMatch': initRecordForm(); break;
     case 'headToHead': renderH2H(); break;
+    case 'questions': renderQuestions(); break;
   }
 }
 
@@ -1312,6 +1363,202 @@ function renderStatistics() {
     </div>`;
 }
 
+// ===== LEAGUE Q&A =====
+function getQuestionAnswers(questionId) {
+  return db.answers.filter(a => a.questionId === questionId)
+    .sort((a, b) => a.timestamp - b.timestamp);
+}
+
+function renderQuestions() {
+  const cont = document.getElementById('qaContent');
+  if (!cont) return;
+
+  if (!sb) {
+    cont.innerHTML = '<div class="empty-state">Supabase is not configured.</div>';
+    return;
+  }
+
+  if (qaSelectedId) {
+    renderQuestionDetail(qaSelectedId);
+    return;
+  }
+
+  const open = db.questions.filter(q => !q.closed);
+  const closed = db.questions.filter(q => q.closed);
+
+  const card = (q) => {
+    const n = getQuestionAnswers(q.id).length;
+    return `<div class="qa-card" onclick="openQuestion('${q.id}')">
+      <div class="qa-card-top">
+        <span class="qa-author">${esc(q.author)}</span>
+        ${q.closed
+          ? '<span class="qa-badge closed">CLOSED</span>'
+          : '<span class="qa-badge open">OPEN</span>'}
+      </div>
+      <p class="qa-card-body">${esc(q.body)}</p>
+      <div class="qa-card-meta">${n} answer${n !== 1 ? 's' : ''} · ${formatDate(q.timestamp)}</div>
+    </div>`;
+  };
+
+  cont.innerHTML = `
+    <div class="qa-list-view">
+      <div class="panel qa-ask-panel">
+        <div class="panel-header">❓ ASK A QUESTION</div>
+        <div class="panel-body">
+          <textarea id="qaAskBody" rows="3" placeholder="Write your question for the league..."></textarea>
+          <div id="qaAskError" class="login-error hidden"></div>
+          <button class="btn-primary" onclick="submitQuestion()">POST QUESTION</button>
+        </div>
+      </div>
+      <h3 class="qa-section-title">Open (${open.length})</h3>
+      <div class="qa-list">${open.length ? open.map(card).join('') : '<div class="empty-state">No open questions yet.</div>'}</div>
+      ${closed.length ? `<h3 class="qa-section-title">Closed (${closed.length})</h3>
+        <div class="qa-list">${closed.map(card).join('')}</div>` : ''}
+    </div>`;
+}
+
+function openQuestion(id) {
+  qaSelectedId = id;
+  renderQuestionDetail(id);
+}
+
+function backToQuestions() {
+  qaSelectedId = null;
+  renderQuestions();
+}
+
+function renderQuestionDetail(id) {
+  const cont = document.getElementById('qaContent');
+  const q = db.questions.find(x => x.id === id);
+  if (!cont || !q) { qaSelectedId = null; renderQuestions(); return; }
+
+  const answers = getQuestionAnswers(id);
+  const isAuthor = q.author === currentUser;
+  const canAnswer = !q.closed;
+
+  const answerHtml = answers.length ? answers.map(a => {
+    const isCorrect = q.correctAnswerId === a.id;
+    const markBtn = (isAuthor && !q.closed)
+      ? `<button class="btn-sm qa-mark-correct" onclick="event.stopPropagation();markCorrectAnswer('${q.id}','${a.id}')">✓ Mark Correct</button>`
+      : '';
+    return `<div class="qa-answer ${isCorrect ? 'correct' : ''}">
+      <div class="qa-answer-top">
+        <span class="qa-author">${esc(a.author)}</span>
+        ${isCorrect ? '<span class="qa-badge correct">✓ CORRECT</span>' : ''}
+      </div>
+      <p class="qa-answer-body">${esc(a.body)}</p>
+      <div class="qa-answer-foot">
+        <span class="qa-card-meta">${formatDate(a.timestamp)}</span>
+        ${markBtn}
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty-state">No answers yet. Be the first!</div>';
+
+  cont.innerHTML = `
+    <div class="qa-detail-view">
+      <button class="btn-sm qa-back" onclick="backToQuestions()">← All Questions</button>
+      <div class="panel qa-question-panel">
+        <div class="panel-header">
+          <span>Question by ${esc(q.author)}</span>
+          ${q.closed ? '<span class="qa-badge closed">CLOSED</span>' : '<span class="qa-badge open">OPEN</span>'}
+        </div>
+        <div class="panel-body">
+          <p class="qa-question-body">${esc(q.body)}</p>
+          ${q.closed && isAuthor ? '<p class="qa-hint">You picked the correct answer. No more replies.</p>' : ''}
+          ${!q.closed && isAuthor ? '<p class="qa-hint">Pick one answer as correct to close this question.</p>' : ''}
+        </div>
+      </div>
+      <h3 class="qa-section-title">Answers (${answers.length})</h3>
+      <div class="qa-answers">${answerHtml}</div>
+      ${canAnswer ? `
+      <div class="panel qa-answer-panel">
+        <div class="panel-header">💬 YOUR ANSWER</div>
+        <div class="panel-body">
+          <textarea id="qaAnswerBody" rows="3" placeholder="Write your answer..."></textarea>
+          <div id="qaAnswerError" class="login-error hidden"></div>
+          <button class="btn-primary" onclick="submitAnswer('${q.id}')">SUBMIT ANSWER</button>
+        </div>
+      </div>` : '<div class="qa-closed-note">🔒 This question is closed — no more answers.</div>'}
+    </div>`;
+}
+
+async function submitQuestion() {
+  const err = document.getElementById('qaAskError');
+  const body = (document.getElementById('qaAskBody')?.value || '').trim();
+  if (!sb) return showError(err, 'Supabase is not configured.');
+  if (!currentUser) return showError(err, 'Please log in.');
+  if (!body) return showError(err, 'Please write a question.');
+  if (body.length < 3) return showError(err, 'Question is too short.');
+
+  const { data, error } = await sb.from('questions')
+    .insert({ author: currentUser, body, timestamp: Date.now() })
+    .select().single();
+  if (error) {
+    if (error.code === '42P01') return showError(err, 'Q&A tables missing. Run supabase-questions-migration.sql in Supabase.');
+    return showError(err, 'Could not post question.');
+  }
+
+  db.questions.unshift(mapQuestion(data));
+  cacheDB();
+  err?.classList.add('hidden');
+  showToast('Question posted!');
+  qaSelectedId = null;
+  renderQuestions();
+}
+
+async function submitAnswer(questionId) {
+  const err = document.getElementById('qaAnswerError');
+  const body = (document.getElementById('qaAnswerBody')?.value || '').trim();
+  const q = db.questions.find(x => x.id === questionId);
+  if (!sb) return showError(err, 'Supabase is not configured.');
+  if (!currentUser) return showError(err, 'Please log in.');
+  if (!q) return;
+  if (q.closed) return showError(err, 'This question is closed.');
+  if (!body) return showError(err, 'Please write an answer.');
+  if (body.length < 2) return showError(err, 'Answer is too short.');
+
+  const { data, error } = await sb.from('answers')
+    .insert({ question_id: questionId, author: currentUser, body, timestamp: Date.now() })
+    .select().single();
+  if (error) {
+    if (error.code === '42P01') return showError(err, 'Q&A tables missing. Run supabase-questions-migration.sql in Supabase.');
+    return showError(err, 'Could not post answer.');
+  }
+
+  db.answers.push(mapAnswer(data));
+  cacheDB();
+  err?.classList.add('hidden');
+  showToast('Answer posted!');
+  renderQuestionDetail(questionId);
+}
+
+function markCorrectAnswer(questionId, answerId) {
+  const q = db.questions.find(x => x.id === questionId);
+  if (!q) return;
+  if (q.author !== currentUser) return showToast('Only the person who asked can pick the correct answer.', true);
+  if (q.closed) return showToast('This question is already closed.', true);
+  const ans = db.answers.find(a => a.id === answerId && a.questionId === questionId);
+  if (!ans) return showToast('Answer not found.', true);
+
+  showConfirm(
+    'Mark Correct Answer',
+    `Mark ${ans.author}'s answer as correct? The question will close and no one can reply anymore.`,
+    async () => {
+      if (!sb) return showToast('Supabase is not configured.', true);
+      const { error } = await sb.from('questions')
+        .update({ closed: true, correct_answer_id: answerId })
+        .eq('id', questionId);
+      if (error) return showToast('Could not close question.', true);
+
+      q.closed = true;
+      q.correctAnswerId = answerId;
+      cacheDB();
+      showToast('Correct answer chosen — question closed!');
+      renderQuestionDetail(questionId);
+    }
+  );
+}
+
 // ===== SETTINGS =====
 function exportData() {
   const data = JSON.stringify(db, null, 2);
@@ -1390,6 +1637,10 @@ async function wipeAllData() {
   await sb.from('players').delete().neq('name', '');
   await sb.from('standings').delete().neq('player', '');
   await sb.from('achievements').delete().neq('player', '');
+  try {
+    await sb.from('answers').delete().neq('timestamp', -1);
+    await sb.from('questions').delete().neq('timestamp', -1);
+  } catch (e) { /* Q&A tables may not exist yet */ }
 }
 
 function confirmResetSeason() {
