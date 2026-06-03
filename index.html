@@ -260,8 +260,12 @@
           <div class="panel match-stats-panel">
             <div class="panel-header">📊 PLAYERS IN THIS MATCH</div>
             <div class="panel-body">
-              <p class="match-stats-hint">Tick everyone who played and enter goals &amp; assists. Awards are calculated automatically.</p>
-              <div id="matchStatsGrid" class="match-stats-grid"></div>
+              <p class="match-stats-hint">Add each player who played — Player 1 &amp; 2 are added automatically from the score above.</p>
+              <div id="matchStatsGrid" class="match-stats-roster"></div>
+              <div class="ms-add-row">
+                <select id="matchStatsAddPlayer"><option value="">— Add player who played —</option></select>
+                <button type="button" class="btn-sm" onclick="addMatchStatPlayer('matchStatsGrid')">+ ADD PLAYER</button>
+              </div>
               <div class="match-awards-preview-wrap">
                 <span class="match-stats-hint">Preview:</span>
                 <div id="matchAwardsPreview" class="match-awards-preview"></div>
@@ -557,7 +561,11 @@
       <div class="panel match-stats-panel compact">
         <div class="panel-header">📊 PLAYER STATS</div>
         <div class="panel-body">
-          <div id="editMatchStatsGrid" class="match-stats-grid"></div>
+          <div id="editMatchStatsGrid" class="match-stats-roster"></div>
+          <div class="ms-add-row">
+            <select id="editMatchStatsAddPlayer"><option value="">— Add player who played —</option></select>
+            <button type="button" class="btn-sm" onclick="addMatchStatPlayer('editMatchStatsGrid')">+ ADD</button>
+          </div>
           <div id="editMatchAwardsPreview" class="match-awards-preview"></div>
         </div>
       </div>

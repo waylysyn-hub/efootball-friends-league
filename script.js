@@ -324,7 +324,8 @@ async function refreshFromRemote() {
 function isMatchStatsFormActive() {
   if (currentPage !== 'recordMatch') return false;
   const el = document.activeElement;
-  return el && (el.classList.contains('ms-goals') || el.classList.contains('ms-assists') || el.classList.contains('ms-active'));
+  return el && (el.classList.contains('ms-goals') || el.classList.contains('ms-assists')
+    || el.id === 'matchStatsAddPlayer');
 }
 
 function isQaFormActive() {
@@ -714,27 +715,94 @@ function matchStatsTableHTML(matchId) {
   </div>`;
 }
 
-function renderMatchStatsGrid(containerId, existing) {
+function matchStatsAddSelectId(containerId) {
+  return containerId === 'matchStatsGrid' ? 'matchStatsAddPlayer' : 'editMatchStatsAddPlayer';
+}
+
+function collectMatchStatsFromGrid(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return [];
+  const rows = [];
+  el.querySelectorAll('.ms-row').forEach(row => {
+    const player = row.dataset.player;
+    if (!player) return;
+    const gEl = row.querySelector('.ms-goals');
+    const aEl = row.querySelector('.ms-assists');
+    rows.push({
+      player,
+      goals: parseInt(gEl?.value) || 0,
+      assists: parseInt(aEl?.value) || 0
+    });
+  });
+  return rows;
+}
+
+function renderMatchStatRows(containerId, rows) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  const map = {};
-  (existing || []).forEach(s => { map[s.player] = s; });
-
-  el.innerHTML = `
-    <div class="ms-header">
-      <span>Played</span><span>Player</span><span>Goals</span><span>Assists</span>
-    </div>
-    ${PLAYERS.map(p => {
-      const s = map[p] || { goals: 0, assists: 0 };
-      const active = !!map[p];
-      return `<div class="ms-row">
-        <input type="checkbox" class="ms-active" data-player="${esc(p)}" ${active ? 'checked' : ''} onchange="updateMatchStatsPreview('${containerId}')">
-        <span class="ms-name">${esc(p)}</span>
-        <input type="number" class="ms-goals" data-player="${esc(p)}" min="0" value="${s.goals}" oninput="updateMatchStatsPreview('${containerId}')">
-        <input type="number" class="ms-assists" data-player="${esc(p)}" min="0" value="${s.assists}" oninput="updateMatchStatsPreview('${containerId}')">
-      </div>`;
-    }).join('')}`;
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty-state ms-empty">No players added yet — use the dropdown below.</div>';
+  } else {
+    el.innerHTML = `
+      <div class="ms-header">
+        <span>Player</span><span>Goals</span><span>Assists</span><span></span>
+      </div>
+      ${rows.map(s => `
+        <div class="ms-row" data-player="${esc(s.player)}">
+          <span class="ms-name">${esc(s.player)}</span>
+          <input type="number" class="ms-goals" min="0" value="${s.goals}" oninput="updateMatchStatsPreview('${containerId}')">
+          <input type="number" class="ms-assists" min="0" value="${s.assists}" oninput="updateMatchStatsPreview('${containerId}')">
+          <button type="button" class="btn-sm delete ms-remove" data-player="${esc(s.player)}" onclick="removeMatchStatPlayer('${containerId}', this.dataset.player)" title="Remove">✕</button>
+        </div>`).join('')}`;
+  }
+  populateMatchStatsAddSelect(containerId);
   updateMatchStatsPreview(containerId);
+}
+
+function renderMatchStatsGrid(containerId, existing) {
+  const rows = (existing || []).map(s => ({ player: s.player, goals: s.goals, assists: s.assists }));
+  renderMatchStatRows(containerId, rows);
+}
+
+function populateMatchStatsAddSelect(containerId) {
+  const sel = document.getElementById(matchStatsAddSelectId(containerId));
+  if (!sel) return;
+  const inRoster = new Set(collectMatchStatsFromGrid(containerId).map(r => r.player));
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Add player who played —</option>';
+  PLAYERS.filter(p => !inRoster.has(p)).forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p;
+    sel.appendChild(opt);
+  });
+  if (prev && sel.querySelector(`option[value="${prev}"]`)) sel.value = prev;
+}
+
+function addMatchStatPlayer(containerId) {
+  const sel = document.getElementById(matchStatsAddSelectId(containerId));
+  const name = sel?.value;
+  if (!name) return showToast('Select a player to add.', true);
+  const rows = collectMatchStatsFromGrid(containerId);
+  if (rows.some(r => r.player === name)) return showToast('Player already in the list.', true);
+  rows.push({ player: name, goals: 0, assists: 0 });
+  renderMatchStatRows(containerId, rows);
+  if (sel) sel.value = '';
+  showToast(name + ' added.');
+}
+
+function removeMatchStatPlayer(containerId, player) {
+  const rows = collectMatchStatsFromGrid(containerId).filter(r => r.player !== player);
+  renderMatchStatRows(containerId, rows);
+}
+
+function upsertRosterPlayer(containerId, player, goals, assists) {
+  if (!player) return;
+  let rows = collectMatchStatsFromGrid(containerId);
+  const i = rows.findIndex(r => r.player === player);
+  if (i === -1) rows.push({ player, goals, assists });
+  else rows[i] = { player, goals, assists };
+  renderMatchStatRows(containerId, rows);
 }
 
 function syncMatchStatsFromScore(containerId) {
@@ -742,34 +810,9 @@ function syncMatchStatsFromScore(containerId) {
   const p2 = document.getElementById('matchPlayer2')?.value || document.getElementById('editPlayer2')?.value;
   const g1 = parseInt(document.getElementById('matchGoals1')?.value || document.getElementById('editGoals1')?.value) || 0;
   const g2 = parseInt(document.getElementById('matchGoals2')?.value || document.getElementById('editGoals2')?.value) || 0;
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  PLAYERS.forEach(p => {
-    const cb = el.querySelector(`.ms-active[data-player="${p}"]`);
-    const g = el.querySelector(`.ms-goals[data-player="${p}"]`);
-    if (!cb || !g) return;
-    if (p === p1) { cb.checked = true; g.value = g1; }
-    if (p === p2) { cb.checked = true; g.value = g2; }
-  });
+  if (p1) upsertRosterPlayer(containerId, p1, g1, collectMatchStatsFromGrid(containerId).find(r => r.player === p1)?.assists || 0);
+  if (p2) upsertRosterPlayer(containerId, p2, g2, collectMatchStatsFromGrid(containerId).find(r => r.player === p2)?.assists || 0);
   updateMatchStatsPreview(containerId);
-}
-
-function collectMatchStatsFromGrid(containerId) {
-  const el = document.getElementById(containerId);
-  if (!el) return [];
-  const rows = [];
-  PLAYERS.forEach(p => {
-    const cb = el.querySelector(`.ms-active[data-player="${p}"]`);
-    const gEl = el.querySelector(`.ms-goals[data-player="${p}"]`);
-    const aEl = el.querySelector(`.ms-assists[data-player="${p}"]`);
-    if (!cb || !gEl || !aEl) return;
-    const goals = parseInt(gEl.value) || 0;
-    const assists = parseInt(aEl.value) || 0;
-    if (cb.checked || goals > 0 || assists > 0) {
-      rows.push({ player: p, goals, assists });
-    }
-  });
-  return rows;
 }
 
 function updateMatchStatsPreview(containerId) {
@@ -777,7 +820,7 @@ function updateMatchStatsPreview(containerId) {
   if (!preview) return;
   const rows = collectMatchStatsFromGrid(containerId);
   if (!rows.length) {
-    preview.innerHTML = '<span class="text-dim">Check players who played to preview awards.</span>';
+    preview.innerHTML = '<span class="text-dim">Add players who played to preview awards.</span>';
     return;
   }
   const fakeId = '__preview__';
@@ -819,7 +862,7 @@ function initRecordForm() {
   document.getElementById('matchDate').value = new Date().toISOString().split('T')[0];
   populateSeasonDropdowns();
   clearMatchForm();
-  if (matchStatsTablesReady) renderMatchStatsGrid('matchStatsGrid', []);
+  if (matchStatsTablesReady) renderMatchStatRows('matchStatsGrid', []);
 }
 
 function clearMatchForm() {
@@ -830,6 +873,7 @@ function clearMatchForm() {
   document.getElementById('matchDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('matchFormError').classList.add('hidden');
   updateMatchPreview();
+  if (matchStatsTablesReady) renderMatchStatRows('matchStatsGrid', []);
   const active = getActiveSeason();
   if (active) document.getElementById('matchSeason').value = active.id;
 }

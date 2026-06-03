@@ -847,9 +847,28 @@ select option { background: #0f1f17; color: var(--text-primary); }
   gap: 6px;
   margin-bottom: 12px;
 }
+.ms-add-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.ms-add-row select {
+  flex: 1;
+  min-width: 160px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: 'Rajdhani', sans-serif;
+}
+.ms-empty { padding: 16px !important; font-size: 0.9rem; }
+
 .ms-header, .ms-row {
   display: grid;
-  grid-template-columns: 36px 1fr 64px 64px;
+  grid-template-columns: 1fr 64px 64px 36px;
   gap: 10px;
   align-items: center;
 }
@@ -876,7 +895,7 @@ select option { background: #0f1f17; color: var(--text-primary); }
   color: var(--neon);
   font-family: 'Share Tech Mono', monospace;
 }
-.ms-active { width: 18px; height: 18px; accent-color: var(--neon); cursor: pointer; }
+.ms-remove { padding: 4px 8px !important; min-width: 36px; }
 .match-awards-preview-wrap { margin-top: 8px; }
 .match-awards-preview { min-height: 28px; }
 
