@@ -8,16 +8,27 @@
 // ===== CONSTANTS =====
 const PLAYERS = ['Wael', 'Omar', 'Abdul Rahim', 'Mohammad', 'Mustafa', 'Abdul Qader'];
 
-// Each player's legend nickname, shown next to their name across the app.
+// Each player's legend nickname + signature icon, shown as a glowing chip
+// next to their name across the app.
 const NICKNAMES = {
-  'Wael':        'Zlatan',
-  'Mustafa':     'Ronaldinho',
-  'Abdul Rahim': 'Mbappé',
-  'Mohammad':    'Del Piero',
-  'Omar':        'Drogba',
-  'Abdul Qader': 'Nesta',
+  'Wael':        { nick: 'Zlatan',     icon: '🦁' },
+  'Mustafa':     { nick: 'Ronaldinho', icon: '🪄' },
+  'Abdul Rahim': { nick: 'Mbappé',     icon: '⚡' },
+  'Mohammad':    { nick: 'Del Piero',  icon: '🎯' },
+  'Omar':        { nick: 'Drogba',     icon: '🐘' },
+  'Abdul Qader': { nick: 'Nesta',      icon: '🛡️' },
 };
-function nick(name) { return NICKNAMES[name] || ''; }
+function nick(name) { return NICKNAMES[name] ? NICKNAMES[name].nick : ''; }
+
+// Returns a styled chip element (HTML string). Pass big=true for the large,
+// animated variant used on the player profile.
+function nickChip(name, big = false) {
+  const n = NICKNAMES[name];
+  if (!n) return '';
+  return `<span class="nick-chip${big ? ' lg' : ''}">` +
+    `<span class="nick-chip-icon">${n.icon}</span>` +
+    `<span class="nick-chip-text">${esc(n.nick)}</span></span>`;
+}
 
 const ACHIEVEMENT_DEFS = [
   { id: 'first_win',   icon: '🥇', name: 'First Win',         desc: 'Win your first match',         check: (s) => s.wins >= 1 },
@@ -303,9 +314,9 @@ function updateSidebarPlayer() {
 
   const table = computeLeagueTable('all');
   const rank = table.findIndex(r => r.player === currentUser) + 1;
-  const n = nick(currentUser);
-  document.getElementById('sidebarPlayerRank').textContent =
-    (rank ? '#' + rank : '#—') + (n ? ' · ' + n : '');
+  document.getElementById('sidebarPlayerRank').textContent = rank ? '#' + rank : '#—';
+  const nickEl = document.getElementById('sidebarNick');
+  if (nickEl) nickEl.innerHTML = nickChip(currentUser);
 }
 
 // ===== NAVIGATION =====
@@ -881,7 +892,7 @@ function renderLeagueTable() {
     return `
       <tr class="${rankClass}">
         <td><span class="rank-badge ${badge}">${i + 1}</span></td>
-        <td>${esc(r.player)}${nick(r.player) ? `<span class="player-nick">${esc(nick(r.player))}</span>` : ''}</td>
+        <td><div class="lt-player">${esc(r.player)}${nickChip(r.player) ? `<div class="lt-nick">${nickChip(r.player)}</div>` : ''}</div></td>
         <td>${r.played}</td>
         <td>${r.wins}</td>
         <td>${r.draws}</td>
@@ -908,7 +919,7 @@ function selectProfilePlayer(name, btn) {
       <div class="profile-avatar">${name.charAt(0)}</div>
       <div class="profile-info">
         <h3>${esc(name)}</h3>
-        ${nick(name) ? `<div class="profile-nickname">"${esc(nick(name))}"</div>` : ''}
+        ${nickChip(name, true)}
         <div class="profile-rank">${s.winRate}% win rate · ${s.points} points</div>
       </div>
     </div>
