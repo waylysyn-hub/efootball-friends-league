@@ -68,10 +68,11 @@ const ACHIEVEMENT_DEFS = [
 let currentUser = null;
 // In-memory mirror of the Supabase data. Every render/compute function reads
 // from this object synchronously; writes go to Supabase and then update it.
-let db = { accounts: {}, matches: [], seasons: [], questions: [], answers: [] };
+let db = { accounts: {}, matches: [], seasons: [], questions: [], answers: [], matchStats: [] };
 let currentPage = 'dashboard';
 let qaSelectedId = null;
 let qaTablesReady = false;
+let matchStatsTablesReady = false;
 
 // True when Q&A tables are not created in Supabase yet (REST 404 / PGRST205).
 function isQaTableMissing(err) {
@@ -81,6 +82,7 @@ function isQaTableMissing(err) {
     || msg.includes('could not find') || msg.includes('does not exist')
     || msg.includes('schema cache') || err.status === 404;
 }
+function isMatchStatsTableMissing(err) { return isQaTableMissing(err); }
 
 // ===== SUPABASE CLIENT =====
 function isConfigured() {
@@ -125,16 +127,26 @@ function mapAnswer(row) {
     timestamp: Number(row.timestamp) || (row.created_at ? new Date(row.created_at).getTime() : Date.now())
   };
 }
+function mapMatchStat(row) {
+  return {
+    id: row.id,
+    matchId: row.match_id,
+    player: row.player,
+    goals: row.goals,
+    assists: row.assists
+  };
+}
 
 // ===== DATA FETCH =====
 async function fetchAllData() {
   if (!sb) throw new Error('Supabase not configured');
-  const [players, seasons, matches, questions, answers] = await Promise.all([
+  const [players, seasons, matches, questions, answers, matchStats] = await Promise.all([
     sb.from('players').select('*'),
     sb.from('seasons').select('*').order('created', { ascending: true }),
     sb.from('matches').select('*'),
     sb.from('questions').select('*').order('timestamp', { ascending: false }),
     sb.from('answers').select('*').order('timestamp', { ascending: true }),
+    sb.from('match_stats').select('*'),
   ]);
   if (players.error || seasons.error || matches.error) {
     throw players.error || seasons.error || matches.error;
@@ -152,6 +164,16 @@ async function fetchAllData() {
     throw questions.error || answers.error;
   }
 
+  if (!matchStats.error) {
+    db.matchStats = (matchStats.data || []).map(mapMatchStat);
+    matchStatsTablesReady = true;
+  } else if (isMatchStatsTableMissing(matchStats.error)) {
+    db.matchStats = [];
+    matchStatsTablesReady = false;
+  } else {
+    throw matchStats.error;
+  }
+
   db.accounts = {};
   (players.data || []).forEach(p => {
     db.accounts[p.name] = { username: p.name, password: p.password, created: Number(p.created) };
@@ -167,7 +189,8 @@ function cacheDB() {
   try {
     localStorage.setItem('efl_cache', JSON.stringify({
       accounts: db.accounts, seasons: db.seasons, matches: db.matches,
-      questions: db.questions || [], answers: db.answers || []
+      questions: db.questions || [], answers: db.answers || [],
+      matchStats: db.matchStats || []
     }));
   } catch (e) {}
 }
@@ -179,7 +202,8 @@ function loadCache() {
       if (c && c.seasons && c.matches) {
         db = {
           accounts: c.accounts || {}, seasons: c.seasons, matches: c.matches,
-          questions: c.questions || [], answers: c.answers || []
+          questions: c.questions || [], answers: c.answers || [],
+          matchStats: c.matchStats || []
         };
       }
     }
@@ -276,6 +300,7 @@ function subscribeRealtime() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'questions' }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'answers' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_stats' }, scheduleRefresh)
       .subscribe();
   } catch (e) { /* realtime optional */ }
 }
@@ -291,7 +316,15 @@ async function refreshFromRemote() {
   populateSeasonDropdowns();
   updateSidebarPlayer();
   // Avoid clobbering a form the user may be filling in.
-  if (currentPage !== 'recordMatch' && !isQaFormActive()) renderPage(currentPage);
+  if (currentPage !== 'recordMatch' && !isQaFormActive() && !isMatchStatsFormActive()) {
+    renderPage(currentPage);
+  }
+}
+
+function isMatchStatsFormActive() {
+  if (currentPage !== 'recordMatch') return false;
+  const el = document.activeElement;
+  return el && (el.classList.contains('ms-goals') || el.classList.contains('ms-assists') || el.classList.contains('ms-active'));
 }
 
 function isQaFormActive() {
@@ -630,11 +663,163 @@ function renderSeasons() {
   }).join('');
 }
 
+// ===== MATCH PLAYER STATS & AWARDS =====
+function getMatchStats(matchId) {
+  return db.matchStats.filter(s => s.matchId === matchId);
+}
+
+function computeMatchAwards(matchId) {
+  const stats = getMatchStats(matchId);
+  if (!stats.length) return [];
+  const awards = [];
+  const maxGoals = Math.max(...stats.map(s => s.goals));
+  const maxAssists = Math.max(...stats.map(s => s.assists));
+  const maxMvp = Math.max(...stats.map(s => s.goals * 2 + s.assists));
+
+  if (maxGoals > 0) {
+    stats.filter(s => s.goals === maxGoals).forEach(s => {
+      awards.push({ icon: '⚽', title: 'Match Top Scorer', player: s.player, detail: `${s.goals} goal${s.goals !== 1 ? 's' : ''}` });
+    });
+  }
+  if (maxAssists > 0) {
+    stats.filter(s => s.assists === maxAssists).forEach(s => {
+      awards.push({ icon: '🎯', title: 'Best Playmaker', player: s.player, detail: `${s.assists} assist${s.assists !== 1 ? 's' : ''}` });
+    });
+  }
+  if (maxMvp > 0) {
+    stats.filter(s => s.goals * 2 + s.assists === maxMvp).forEach(s => {
+      awards.push({ icon: '👑', title: 'MVP', player: s.player, detail: `${s.goals}G · ${s.assists}A` });
+    });
+  }
+  stats.filter(s => s.goals >= 3).forEach(s => {
+    awards.push({ icon: '🎩', title: 'Hat-trick', player: s.player, detail: `${s.goals} goals` });
+  });
+  return awards;
+}
+
+function matchAwardsHTML(matchId) {
+  const awards = computeMatchAwards(matchId);
+  if (!awards.length) return '';
+  return `<div class="match-awards">${awards.map(a =>
+    `<span class="match-award-chip" title="${esc(a.title)} — ${esc(a.detail)}">` +
+    `${a.icon} <strong>${esc(a.player)}</strong> <span class="match-award-title">${esc(a.title)}</span></span>`
+  ).join('')}</div>`;
+}
+
+function matchStatsTableHTML(matchId) {
+  const stats = getMatchStats(matchId);
+  if (!stats.length) return '';
+  return `<div class="match-stats-table">
+    ${stats.map(s => `<span class="match-stat-line">${esc(s.player)}: <strong>${s.goals}G</strong> ${s.assists}A</span>`).join('')}
+  </div>`;
+}
+
+function renderMatchStatsGrid(containerId, existing) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const map = {};
+  (existing || []).forEach(s => { map[s.player] = s; });
+
+  el.innerHTML = `
+    <div class="ms-header">
+      <span>Played</span><span>Player</span><span>Goals</span><span>Assists</span>
+    </div>
+    ${PLAYERS.map(p => {
+      const s = map[p] || { goals: 0, assists: 0 };
+      const active = !!map[p];
+      return `<div class="ms-row">
+        <input type="checkbox" class="ms-active" data-player="${esc(p)}" ${active ? 'checked' : ''} onchange="updateMatchStatsPreview('${containerId}')">
+        <span class="ms-name">${esc(p)}</span>
+        <input type="number" class="ms-goals" data-player="${esc(p)}" min="0" value="${s.goals}" oninput="updateMatchStatsPreview('${containerId}')">
+        <input type="number" class="ms-assists" data-player="${esc(p)}" min="0" value="${s.assists}" oninput="updateMatchStatsPreview('${containerId}')">
+      </div>`;
+    }).join('')}`;
+  updateMatchStatsPreview(containerId);
+}
+
+function syncMatchStatsFromScore(containerId) {
+  const p1 = document.getElementById('matchPlayer1')?.value || document.getElementById('editPlayer1')?.value;
+  const p2 = document.getElementById('matchPlayer2')?.value || document.getElementById('editPlayer2')?.value;
+  const g1 = parseInt(document.getElementById('matchGoals1')?.value || document.getElementById('editGoals1')?.value) || 0;
+  const g2 = parseInt(document.getElementById('matchGoals2')?.value || document.getElementById('editGoals2')?.value) || 0;
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  PLAYERS.forEach(p => {
+    const cb = el.querySelector(`.ms-active[data-player="${p}"]`);
+    const g = el.querySelector(`.ms-goals[data-player="${p}"]`);
+    if (!cb || !g) return;
+    if (p === p1) { cb.checked = true; g.value = g1; }
+    if (p === p2) { cb.checked = true; g.value = g2; }
+  });
+  updateMatchStatsPreview(containerId);
+}
+
+function collectMatchStatsFromGrid(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return [];
+  const rows = [];
+  PLAYERS.forEach(p => {
+    const cb = el.querySelector(`.ms-active[data-player="${p}"]`);
+    const gEl = el.querySelector(`.ms-goals[data-player="${p}"]`);
+    const aEl = el.querySelector(`.ms-assists[data-player="${p}"]`);
+    if (!cb || !gEl || !aEl) return;
+    const goals = parseInt(gEl.value) || 0;
+    const assists = parseInt(aEl.value) || 0;
+    if (cb.checked || goals > 0 || assists > 0) {
+      rows.push({ player: p, goals, assists });
+    }
+  });
+  return rows;
+}
+
+function updateMatchStatsPreview(containerId) {
+  const preview = document.getElementById(containerId === 'matchStatsGrid' ? 'matchAwardsPreview' : 'editMatchAwardsPreview');
+  if (!preview) return;
+  const rows = collectMatchStatsFromGrid(containerId);
+  if (!rows.length) {
+    preview.innerHTML = '<span class="text-dim">Check players who played to preview awards.</span>';
+    return;
+  }
+  const fakeId = '__preview__';
+  const prev = db.matchStats.filter(s => s.matchId !== fakeId);
+  db.matchStats = [...prev, ...rows.map(r => ({ id: '', matchId: fakeId, ...r }))];
+  preview.innerHTML = matchAwardsHTML(fakeId) || '<span class="text-dim">No awards yet (need goals or assists).</span>';
+  db.matchStats = prev;
+}
+
+async function persistMatchStats(matchId, rows) {
+  if (!sb || !matchStatsTablesReady) return;
+  await sb.from('match_stats').delete().eq('match_id', matchId);
+  if (!rows.length) {
+    db.matchStats = db.matchStats.filter(s => s.matchId !== matchId);
+    return;
+  }
+  const { data, error } = await sb.from('match_stats')
+    .insert(rows.map(r => ({ match_id: matchId, player: r.player, goals: r.goals, assists: r.assists })))
+    .select();
+  if (error) throw error;
+  db.matchStats = db.matchStats.filter(s => s.matchId !== matchId);
+  (data || []).forEach(row => db.matchStats.push(mapMatchStat(row)));
+}
+
+function getSeasonStatTotals(player, seasonFilter) {
+  const matchIds = new Set(
+    db.matches.filter(m => seasonFilter === 'all' || m.season === seasonFilter).map(m => m.id)
+  );
+  let goals = 0, assists = 0;
+  db.matchStats.filter(s => s.player === player && matchIds.has(s.matchId)).forEach(s => {
+    goals += s.goals;
+    assists += s.assists;
+  });
+  return { goals, assists };
+}
+
 // ===== RECORD MATCH =====
 function initRecordForm() {
   document.getElementById('matchDate').value = new Date().toISOString().split('T')[0];
   populateSeasonDropdowns();
   clearMatchForm();
+  if (matchStatsTablesReady) renderMatchStatsGrid('matchStatsGrid', []);
 }
 
 function clearMatchForm() {
@@ -669,6 +854,7 @@ function updateMatchPreview() {
   else result = `🤝 DRAW`;
 
   document.getElementById('previewResult').textContent = `${p1} ${g1} — ${g2} ${p2}  |  ${result}`;
+  syncMatchStatsFromScore('matchStatsGrid');
 }
 
 async function saveMatch() {
@@ -697,9 +883,14 @@ async function saveMatch() {
   if (error) return showError(errEl, 'Could not save match to Supabase.');
 
   db.matches.push(mapMatch(data));
+  try {
+    const statRows = collectMatchStatsFromGrid('matchStatsGrid');
+    await persistMatchStats(data.id, statRows);
+  } catch (e) {
+    showToast('Match saved but player stats failed to save.', true);
+  }
   cacheDB();
   updateSidebarPlayer();
-  // Automatically recompute & store the league table and achievements.
   await syncDerivedData();
   showToast(`Match saved! ${p1} ${g1}–${g2} ${p2}`);
   clearMatchForm();
@@ -758,6 +949,8 @@ function matchCardHTML(m) {
         <div class="match-score">${m.goals1} — ${m.goals2}</div>
         <div class="match-player right">${esc(m.player2)}</div>
       </div>
+      ${matchStatsTableHTML(m.id)}
+      ${matchAwardsHTML(m.id)}
       ${isAdmin() ? `<div class="match-card-actions">
         <button class="btn-sm edit" onclick="openEditModal('${m.id}')">✏️ Edit</button>
         <button class="btn-sm delete" onclick="deleteMatch('${m.id}')">🗑️ Delete</button>
@@ -773,6 +966,7 @@ function deleteMatch(id) {
     if (error) return showToast('Could not delete match.', true);
 
     db.matches = db.matches.filter(m => m.id !== id);
+    db.matchStats = db.matchStats.filter(s => s.matchId !== id);
     cacheDB();
     await syncDerivedData();
     renderHistory();
@@ -796,6 +990,7 @@ function openEditModal(id) {
   document.getElementById('editDate').value = m.date;
   document.getElementById('editSeason').value = m.season;
 
+  renderMatchStatsGrid('editMatchStatsGrid', getMatchStats(id));
   document.getElementById('editMatchModal').classList.remove('hidden');
 }
 
@@ -832,6 +1027,11 @@ async function saveEditMatch() {
   if (error) return showError(errEl, 'Could not update match.');
 
   db.matches[idx] = { ...db.matches[idx], player1: p1, player2: p2, goals1: g1, goals2: g2, date, season };
+  try {
+    await persistMatchStats(id, collectMatchStatsFromGrid('editMatchStatsGrid'));
+  } catch (e) {
+    showToast('Match updated but player stats failed to save.', true);
+  }
   cacheDB();
   await syncDerivedData();
   closeEditModal();
@@ -1335,13 +1535,19 @@ function renderStatistics() {
 
   const stats = PLAYERS.map(p => {
     const s = computePlayerStats(p, filter);
-    return { player: p, goals: s.goalsFor, wins: s.wins, points: s.points, goalDiff: s.goalDiff, played: s.played };
+    const ms = getSeasonStatTotals(p, filter);
+    return {
+      player: p, goals: s.goalsFor, wins: s.wins, points: s.points, goalDiff: s.goalDiff,
+      played: s.played, assists: ms.assists, sessionGoals: ms.goals
+    };
   });
 
   const maxGoals = Math.max(...stats.map(s => s.goals), 1);
   const maxWins = Math.max(...stats.map(s => s.wins), 1);
   const maxPts = Math.max(...stats.map(s => s.points), 1);
   const maxGD = Math.max(...stats.map(s => Math.abs(s.goalDiff)), 1);
+  const maxAssists = Math.max(...stats.map(s => s.assists), 1);
+  const maxSessionG = Math.max(...stats.map(s => s.sessionGoals), 1);
 
   const barChart = (data, maxVal, valueKey, color) => `
     <div class="chart-bar-container">
@@ -1374,6 +1580,15 @@ function renderStatistics() {
         <div class="chart-title">📈 GOAL DIFFERENCE</div>
         ${barChart(stats, maxGD, 'goalDiff', 'purple')}
       </div>
+      ${matchStatsTablesReady ? `
+      <div class="chart-section">
+        <div class="chart-title">🎯 ASSISTS (match log)</div>
+        ${barChart(stats, maxAssists, 'assists', 'blue')}
+      </div>
+      <div class="chart-section">
+        <div class="chart-title">⚽ SESSION GOALS (match log)</div>
+        ${barChart(stats, maxSessionG, 'sessionGoals', '')}
+      </div>` : ''}
     </div>`;
 }
 
@@ -1754,7 +1969,7 @@ function confirmResetAll() {
       await wipeAllData();
       // Re-seed one active season so the app stays usable.
       const { data } = await sb.from('seasons').insert({ name: 'Season 1', active: true }).select().single();
-      db = { accounts: {}, matches: [], seasons: data ? [mapSeason(data)] : [] };
+      db = { accounts: {}, matches: [], seasons: data ? [mapSeason(data)] : [], questions: [], answers: [], matchStats: [] };
     } catch (e) {
       return showToast('Could not reset data.', true);
     }

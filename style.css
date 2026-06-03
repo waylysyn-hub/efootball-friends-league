@@ -832,6 +832,90 @@ select option { background: #0f1f17; color: var(--text-primary); }
   margin-bottom: 20px;
 }
 
+/* Match player stats & awards */
+.match-stats-panel { margin-top: 20px; }
+.match-stats-panel.compact { margin-top: 16px; }
+.match-stats-hint {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+.match-stats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.ms-header, .ms-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 64px 64px;
+  gap: 10px;
+  align-items: center;
+}
+.ms-header {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.ms-row {
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.ms-name { font-weight: 600; font-size: 0.9rem; }
+.ms-goals, .ms-assists {
+  width: 100%;
+  padding: 6px 8px;
+  text-align: center;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--neon);
+  font-family: 'Share Tech Mono', monospace;
+}
+.ms-active { width: 18px; height: 18px; accent-color: var(--neon); cursor: pointer; }
+.match-awards-preview-wrap { margin-top: 8px; }
+.match-awards-preview { min-height: 28px; }
+
+.match-stats-table {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 10px 0 4px;
+  font-size: 0.82rem;
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--text-secondary);
+}
+.match-stat-line strong { color: var(--neon); }
+
+.match-awards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 10px;
+}
+.match-award-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  color: var(--text-primary);
+}
+.match-award-chip strong { color: var(--gold); }
+.match-award-title {
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .preview-result {
   font-family: 'Orbitron', sans-serif;
   font-size: 1rem; font-weight: 700;

@@ -4,6 +4,7 @@
 -- =====================================================
 
 -- ---------- Clean start (safe to re-run) ----------
+drop table if exists public.match_stats   cascade;
 drop table if exists public.answers      cascade;
 drop table if exists public.questions    cascade;
 drop table if exists public.achievements cascade;
@@ -41,6 +42,18 @@ create table public.matches (
 );
 
 create index if not exists matches_season_idx on public.matches(season_id);
+
+-- ---------- MATCH PLAYER STATS (goals / assists per player per match) ----------
+create table public.match_stats (
+  id         uuid primary key default gen_random_uuid(),
+  match_id   uuid not null references public.matches(id) on delete cascade,
+  player     text not null,
+  goals      integer not null default 0 check (goals >= 0),
+  assists    integer not null default 0 check (assists >= 0),
+  unique (match_id, player)
+);
+
+create index if not exists match_stats_match_idx on public.match_stats(match_id);
 
 -- ---------- STANDINGS (auto-computed league table snapshot) ----------
 -- `season` holds either a season uuid (as text) or the literal 'all' (overall table).
@@ -103,11 +116,12 @@ alter table public.standings    enable row level security;
 alter table public.achievements enable row level security;
 alter table public.questions    enable row level security;
 alter table public.answers      enable row level security;
+alter table public.match_stats  enable row level security;
 
 do $$
 declare t text;
 begin
-  foreach t in array array['players','seasons','matches','standings','achievements','questions','answers']
+  foreach t in array array['players','seasons','matches','standings','achievements','questions','answers','match_stats']
   loop
     execute format('drop policy if exists "public_all_%1$s" on public.%1$s;', t);
     execute format(
@@ -138,6 +152,11 @@ end $$;
 do $$
 begin
   alter publication supabase_realtime add table public.standings;
+  exception when duplicate_object then null;
+end $$;
+do $$
+begin
+  alter publication supabase_realtime add table public.match_stats;
   exception when duplicate_object then null;
 end $$;
 do $$

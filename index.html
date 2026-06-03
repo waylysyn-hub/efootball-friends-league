@@ -205,7 +205,7 @@
     <div class="page hidden" id="page-recordMatch">
       <div class="page-header">
         <h2 class="page-title">RECORD MATCH</h2>
-        <div class="page-subtitle">Enter the result of a real match</div>
+        <div class="page-subtitle">Result + player goals, assists &amp; match awards</div>
       </div>
       <div class="form-container">
         <div class="match-form-card">
@@ -254,6 +254,18 @@
               <label>SEASON</label>
               <select id="matchSeason">
               </select>
+            </div>
+          </div>
+
+          <div class="panel match-stats-panel">
+            <div class="panel-header">📊 PLAYERS IN THIS MATCH</div>
+            <div class="panel-body">
+              <p class="match-stats-hint">Tick everyone who played and enter goals &amp; assists. Awards are calculated automatically.</p>
+              <div id="matchStatsGrid" class="match-stats-grid"></div>
+              <div class="match-awards-preview-wrap">
+                <span class="match-stats-hint">Preview:</span>
+                <div id="matchAwardsPreview" class="match-awards-preview"></div>
+              </div>
             </div>
           </div>
 
@@ -517,7 +529,7 @@
       <div class="match-vs-header">
         <div class="match-player-select">
           <label>PLAYER 1</label>
-          <select id="editPlayer1">
+          <select id="editPlayer1" onchange="syncMatchStatsFromScore('editMatchStatsGrid')">
             <option>Wael</option><option>Omar</option>
             <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
           </select>
@@ -525,7 +537,7 @@
         <div class="vs-badge">VS</div>
         <div class="match-player-select">
           <label>PLAYER 2</label>
-          <select id="editPlayer2">
+          <select id="editPlayer2" onchange="syncMatchStatsFromScore('editMatchStatsGrid')">
             <option>Wael</option><option>Omar</option>
             <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
           </select>
@@ -534,12 +546,19 @@
       <div class="match-score-row">
         <div class="score-input-group">
           <label>Goals P1</label>
-          <input type="number" id="editGoals1" min="0" value="0">
+          <input type="number" id="editGoals1" min="0" value="0" oninput="syncMatchStatsFromScore('editMatchStatsGrid')">
         </div>
         <div class="score-colon">:</div>
         <div class="score-input-group">
           <label>Goals P2</label>
-          <input type="number" id="editGoals2" min="0" value="0">
+          <input type="number" id="editGoals2" min="0" value="0" oninput="syncMatchStatsFromScore('editMatchStatsGrid')">
+        </div>
+      </div>
+      <div class="panel match-stats-panel compact">
+        <div class="panel-header">📊 PLAYER STATS</div>
+        <div class="panel-body">
+          <div id="editMatchStatsGrid" class="match-stats-grid"></div>
+          <div id="editMatchAwardsPreview" class="match-awards-preview"></div>
         </div>
       </div>
       <div class="form-row-two">
