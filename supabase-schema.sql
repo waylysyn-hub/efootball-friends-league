@@ -125,7 +125,7 @@ insert into public.seasons (name, active) values ('Season 1', true);
 --  Each friend can log in straight away with their name + 2003.
 -- =====================================================
 insert into public.players (name, password) values
-  ('Wael',        '2003'),
+  ('Wael',        'waelyasyn02003'),
   ('Omar',        '2003'),
   ('Abdul Rahim', '2003'),
   ('Mohammad',    '2003'),
