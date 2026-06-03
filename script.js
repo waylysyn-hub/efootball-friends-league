@@ -13,7 +13,7 @@ const PLAYERS = ['Wael', 'Omar', 'Abdul Rahim', 'Mohammad', 'Mustafa', 'Abdul Qa
 const NICKNAMES = {
   'Wael':        { nick: 'Zlatan',     icon: '🦁' },
   'Mustafa':     { nick: 'Ronaldinho', icon: '🪄' },
-  'Abdul Rahim': { nick: 'Mbappé',     icon: '⚡' },
+  'Abdul Rahim': { nick: 'Abu Al Wafa', icon: '🤝' },
   'Mohammad':    { nick: 'Del Piero',  icon: '🎯' },
   'Omar':        { nick: 'Drogba',     icon: '🐘' },
   'Abdul Qader': { nick: 'Nesta',      icon: '🛡️' },
