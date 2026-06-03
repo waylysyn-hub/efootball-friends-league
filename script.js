@@ -71,6 +71,16 @@ let currentUser = null;
 let db = { accounts: {}, matches: [], seasons: [], questions: [], answers: [] };
 let currentPage = 'dashboard';
 let qaSelectedId = null;
+let qaTablesReady = false;
+
+// True when Q&A tables are not created in Supabase yet (REST 404 / PGRST205).
+function isQaTableMissing(err) {
+  if (!err) return false;
+  const msg = (err.message || '').toLowerCase();
+  return err.code === '42P01' || err.code === 'PGRST205'
+    || msg.includes('could not find') || msg.includes('does not exist')
+    || msg.includes('schema cache') || err.status === 404;
+}
 
 // ===== SUPABASE CLIENT =====
 function isConfigured() {
@@ -130,13 +140,17 @@ async function fetchAllData() {
     throw players.error || seasons.error || matches.error;
   }
   // Q&A tables are optional until migration is run in Supabase.
-  if (!questions.error) db.questions = (questions.data || []).map(mapQuestion);
-  else if (questions.error.code === '42P01') db.questions = [];
-  else throw questions.error;
-
-  if (!answers.error) db.answers = (answers.data || []).map(mapAnswer);
-  else if (answers.error.code === '42P01') db.answers = [];
-  else throw answers.error;
+  if (!questions.error && !answers.error) {
+    db.questions = (questions.data || []).map(mapQuestion);
+    db.answers = (answers.data || []).map(mapAnswer);
+    qaTablesReady = true;
+  } else if (isQaTableMissing(questions.error) || isQaTableMissing(answers.error)) {
+    db.questions = [];
+    db.answers = [];
+    qaTablesReady = false;
+  } else {
+    throw questions.error || answers.error;
+  }
 
   db.accounts = {};
   (players.data || []).forEach(p => {
@@ -1378,6 +1392,15 @@ function renderQuestions() {
     return;
   }
 
+  if (!qaTablesReady) {
+    cont.innerHTML = `<div class="qa-setup-banner">
+      <h3>⚠️ Q&amp;A tables not set up yet</h3>
+      <p>Open <strong>Supabase → SQL Editor</strong> and run the file <code>supabase-questions-migration.sql</code> from the project (one time only).</p>
+      <p class="qa-hint">After running it, refresh this page (Ctrl+Shift+R).</p>
+    </div>`;
+    return;
+  }
+
   if (qaSelectedId) {
     renderQuestionDetail(qaSelectedId);
     return;
@@ -1494,7 +1517,7 @@ async function submitQuestion() {
     .insert({ author: currentUser, body, timestamp: Date.now() })
     .select().single();
   if (error) {
-    if (error.code === '42P01') return showError(err, 'Q&A tables missing. Run supabase-questions-migration.sql in Supabase.');
+    if (isQaTableMissing(error)) return showError(err, 'Q&A tables missing. Run supabase-questions-migration.sql in Supabase.');
     return showError(err, 'Could not post question.');
   }
 
@@ -1521,7 +1544,7 @@ async function submitAnswer(questionId) {
     .insert({ question_id: questionId, author: currentUser, body, timestamp: Date.now() })
     .select().single();
   if (error) {
-    if (error.code === '42P01') return showError(err, 'Q&A tables missing. Run supabase-questions-migration.sql in Supabase.');
+    if (isQaTableMissing(error)) return showError(err, 'Q&A tables missing. Run supabase-questions-migration.sql in Supabase.');
     return showError(err, 'Could not post answer.');
   }
 
