@@ -5,9 +5,10 @@
 create table if not exists public.match_stats (
   id         uuid primary key default gen_random_uuid(),
   match_id   uuid not null references public.matches(id) on delete cascade,
-  player     text not null,
-  goals      integer not null default 0 check (goals >= 0),
-  assists    integer not null default 0 check (assists >= 0),
+  player          text not null,
+  character_name  text not null default '',
+  goals           integer not null default 0 check (goals >= 0),
+  assists         integer not null default 0 check (assists >= 0),
   unique (match_id, player)
 );
 

@@ -83,6 +83,9 @@
       <a href="#" class="nav-item" data-page="matchHistory" onclick="navigateTo('matchHistory',this)">
         <span class="nav-icon">📋</span><span class="nav-label">Match History</span>
       </a>
+      <a href="#" class="nav-item" data-page="footballStats" onclick="navigateTo('footballStats',this)">
+        <span class="nav-icon">⭐</span><span class="nav-label">Player Performance</span>
+      </a>
       <a href="#" class="nav-item" data-page="leagueTable" onclick="navigateTo('leagueTable',this)">
         <span class="nav-icon">🏆</span><span class="nav-label">League Table</span>
       </a>
@@ -205,7 +208,7 @@
     <div class="page hidden" id="page-recordMatch">
       <div class="page-header">
         <h2 class="page-title">RECORD MATCH</h2>
-        <div class="page-subtitle">Result + player goals, assists &amp; match awards</div>
+        <div class="page-subtitle">Result + goal-by-goal events (scorer, assist, minute)</div>
       </div>
       <div class="form-container">
         <div class="match-form-card">
@@ -257,17 +260,19 @@
             </div>
           </div>
 
-          <div class="panel match-stats-panel">
-            <div class="panel-header">📊 PLAYERS IN THIS MATCH</div>
+          <div id="goalEventsSetupBanner" class="qa-setup-banner hidden"></div>
+          <div class="panel goal-events-panel">
+            <div class="panel-header">⚽ GOAL EVENTS</div>
             <div class="panel-body">
-              <p class="match-stats-hint">Add legends who played (Zlatan, Ronaldinho…) — Player 1 &amp; 2 join automatically from the score.</p>
-              <div id="matchStatsGrid" class="match-stats-roster"></div>
-              <div class="ms-add-row">
-                <select id="matchStatsAddPlayer"><option value="">— Add legend who played —</option></select>
-                <button type="button" class="btn-sm" onclick="addMatchStatPlayer('matchStatsGrid')">+ ADD PLAYER</button>
+              <p class="match-stats-hint">Add each goal: team owner (friend), scorer &amp; assist (football players), and minute. Total goals must match the score above.</p>
+              <div id="goalEventsList" class="goal-events-list"></div>
+              <div class="ge-actions">
+                <button type="button" class="btn-sm btn-ge-add" onclick="addGoalEventRow('goalEventsList')">+ ADD GOAL EVENT</button>
+                <button type="button" class="btn-sm" onclick="syncScoreFromGoalEvents('goalEventsList')">↻ Sync score from goals</button>
               </div>
+              <div id="goalEventsSummary" class="goal-events-summary"></div>
               <div class="match-awards-preview-wrap">
-                <span class="match-stats-hint">Preview:</span>
+                <span class="match-stats-hint">Match awards preview:</span>
                 <div id="matchAwardsPreview" class="match-awards-preview"></div>
               </div>
             </div>
@@ -309,6 +314,43 @@
       <div class="match-list" id="matchList">
         <div class="empty-state">No matches yet. Record your first match!</div>
       </div>
+    </div>
+
+    <!-- MATCH DETAILS PAGE -->
+    <div class="page hidden" id="page-matchDetails">
+      <div class="page-header match-details-header">
+        <button type="button" class="btn-sm back-btn" onclick="backFromMatchDetails()">← Back</button>
+        <div>
+          <h2 class="page-title">MATCH DETAILS</h2>
+          <div class="page-subtitle" id="matchDetailsSubtitle">—</div>
+        </div>
+      </div>
+      <div id="matchDetailsContent" class="match-details-content">
+        <div class="empty-state">Select a match from history.</div>
+      </div>
+    </div>
+
+    <!-- FOOTBALL PLAYER PERFORMANCE PAGE -->
+    <div class="page hidden" id="page-footballStats">
+      <div class="page-header">
+        <h2 class="page-title">PLAYER PERFORMANCE</h2>
+        <div class="page-subtitle">Football player stats from goal events</div>
+      </div>
+      <div class="season-filter-row">
+        <label>Season:</label>
+        <select id="fbStatsSeasonFilter" onchange="renderFootballStats()">
+          <option value="all">All Seasons</option>
+        </select>
+      </div>
+      <div class="fb-search-row">
+        <input type="text" id="fbPlayerSearch" placeholder="🔍 Search football player..." oninput="renderFootballStats()">
+      </div>
+      <div class="fb-leaderboards" id="fbLeaderboards"></div>
+      <div class="panel mt-16">
+        <div class="panel-header">📋 ALL PLAYERS</div>
+        <div class="panel-body" id="fbStatsTable"></div>
+      </div>
+      <div id="fbPlayerDetail" class="fb-player-detail hidden"></div>
     </div>
 
     <!-- LEAGUE TABLE PAGE -->
@@ -533,7 +575,7 @@
       <div class="match-vs-header">
         <div class="match-player-select">
           <label>PLAYER 1</label>
-          <select id="editPlayer1" onchange="syncMatchStatsFromScore('editMatchStatsGrid')">
+          <select id="editPlayer1" onchange="onEditMatchPlayersChange()">
             <option>Wael</option><option>Omar</option>
             <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
           </select>
@@ -541,7 +583,7 @@
         <div class="vs-badge">VS</div>
         <div class="match-player-select">
           <label>PLAYER 2</label>
-          <select id="editPlayer2" onchange="syncMatchStatsFromScore('editMatchStatsGrid')">
+          <select id="editPlayer2" onchange="onEditMatchPlayersChange()">
             <option>Wael</option><option>Omar</option>
             <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
           </select>
@@ -550,22 +592,23 @@
       <div class="match-score-row">
         <div class="score-input-group">
           <label>Goals P1</label>
-          <input type="number" id="editGoals1" min="0" value="0" oninput="syncMatchStatsFromScore('editMatchStatsGrid')">
+          <input type="number" id="editGoals1" min="0" value="0" oninput="updateGoalEventsUI('editGoalEventsList')">
         </div>
         <div class="score-colon">:</div>
         <div class="score-input-group">
           <label>Goals P2</label>
-          <input type="number" id="editGoals2" min="0" value="0" oninput="syncMatchStatsFromScore('editMatchStatsGrid')">
+          <input type="number" id="editGoals2" min="0" value="0" oninput="updateGoalEventsUI('editGoalEventsList')">
         </div>
       </div>
-      <div class="panel match-stats-panel compact">
-        <div class="panel-header">📊 PLAYER STATS</div>
+      <div class="panel goal-events-panel compact">
+        <div class="panel-header">⚽ GOAL EVENTS</div>
         <div class="panel-body">
-          <div id="editMatchStatsGrid" class="match-stats-roster"></div>
-          <div class="ms-add-row">
-            <select id="editMatchStatsAddPlayer"><option value="">— Add legend who played —</option></select>
-            <button type="button" class="btn-sm" onclick="addMatchStatPlayer('editMatchStatsGrid')">+ ADD</button>
+          <div id="editGoalEventsList" class="goal-events-list"></div>
+          <div class="ge-actions">
+            <button type="button" class="btn-sm btn-ge-add" onclick="addGoalEventRow('editGoalEventsList')">+ ADD GOAL</button>
+            <button type="button" class="btn-sm" onclick="syncScoreFromGoalEvents('editGoalEventsList')">↻ Sync score</button>
           </div>
+          <div id="editGoalEventsSummary" class="goal-events-summary"></div>
           <div id="editMatchAwardsPreview" class="match-awards-preview"></div>
         </div>
       </div>

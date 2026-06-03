@@ -27,8 +27,7 @@ function playerLegendLabel(name) {
 }
 
 function matchPlayerLabel(name) {
-  const n = nick(name);
-  return n ? `<span class="match-player-legend">${esc(n)}</span>` : esc(name);
+  return esc(name);
 }
 
 function fillPlayerSelect(selectEl, emptyLabel) {
@@ -38,7 +37,7 @@ function fillPlayerSelect(selectEl, emptyLabel) {
   PLAYERS.forEach(p => {
     const opt = document.createElement('option');
     opt.value = p;
-    opt.textContent = playerLegendLabel(p);
+    opt.textContent = p;
     selectEl.appendChild(opt);
   });
   if (prev && [...selectEl.options].some(o => o.value === prev)) selectEl.value = prev;
@@ -99,11 +98,13 @@ const ACHIEVEMENT_DEFS = [
 let currentUser = null;
 // In-memory mirror of the Supabase data. Every render/compute function reads
 // from this object synchronously; writes go to Supabase and then update it.
-let db = { accounts: {}, matches: [], seasons: [], questions: [], answers: [], matchStats: [] };
+let db = { accounts: {}, matches: [], seasons: [], questions: [], answers: [], matchStats: [], goalEvents: [] };
 let currentPage = 'dashboard';
 let qaSelectedId = null;
+let viewingMatchId = null;
 let qaTablesReady = false;
 let matchStatsTablesReady = false;
+let goalEventsTablesReady = false;
 
 // True when Q&A tables are not created in Supabase yet (REST 404 / PGRST205).
 function isQaTableMissing(err) {
@@ -114,6 +115,7 @@ function isQaTableMissing(err) {
     || msg.includes('schema cache') || err.status === 404;
 }
 function isMatchStatsTableMissing(err) { return isQaTableMissing(err); }
+function isGoalEventsTableMissing(err) { return isQaTableMissing(err); }
 
 // ===== SUPABASE CLIENT =====
 function isConfigured() {
@@ -163,21 +165,35 @@ function mapMatchStat(row) {
     id: row.id,
     matchId: row.match_id,
     player: row.player,
+    characterName: row.character_name || '',
     goals: row.goals,
     assists: row.assists
+  };
+}
+
+function mapGoalEvent(row) {
+  return {
+    id: row.id,
+    matchId: row.match_id,
+    owner: row.owner,
+    scorer: row.scorer,
+    assist: row.assist || '',
+    minute: row.minute ?? 0,
+    sortOrder: row.sort_order ?? 0
   };
 }
 
 // ===== DATA FETCH =====
 async function fetchAllData() {
   if (!sb) throw new Error('Supabase not configured');
-  const [players, seasons, matches, questions, answers, matchStats] = await Promise.all([
+  const [players, seasons, matches, questions, answers, matchStats, goalEvents] = await Promise.all([
     sb.from('players').select('*'),
     sb.from('seasons').select('*').order('created', { ascending: true }),
     sb.from('matches').select('*'),
     sb.from('questions').select('*').order('timestamp', { ascending: false }),
     sb.from('answers').select('*').order('timestamp', { ascending: true }),
     sb.from('match_stats').select('*'),
+    sb.from('match_goal_events').select('*').order('sort_order', { ascending: true }),
   ]);
   if (players.error || seasons.error || matches.error) {
     throw players.error || seasons.error || matches.error;
@@ -205,6 +221,16 @@ async function fetchAllData() {
     throw matchStats.error;
   }
 
+  if (!goalEvents.error) {
+    db.goalEvents = (goalEvents.data || []).map(mapGoalEvent);
+    goalEventsTablesReady = true;
+  } else if (isGoalEventsTableMissing(goalEvents.error)) {
+    db.goalEvents = [];
+    goalEventsTablesReady = false;
+  } else {
+    throw goalEvents.error;
+  }
+
   db.accounts = {};
   (players.data || []).forEach(p => {
     db.accounts[p.name] = { username: p.name, password: p.password, created: Number(p.created) };
@@ -213,6 +239,7 @@ async function fetchAllData() {
   db.matches = (matches.data || []).map(mapMatch);
 
   cacheDB();
+  updateGoalEventsSetupBanner();
 }
 
 // ===== OPTIONAL LOCAL CACHE (for fast first paint only) =====
@@ -221,7 +248,8 @@ function cacheDB() {
     localStorage.setItem('efl_cache', JSON.stringify({
       accounts: db.accounts, seasons: db.seasons, matches: db.matches,
       questions: db.questions || [], answers: db.answers || [],
-      matchStats: db.matchStats || []
+      matchStats: db.matchStats || [],
+      goalEvents: db.goalEvents || []
     }));
   } catch (e) {}
 }
@@ -234,7 +262,8 @@ function loadCache() {
         db = {
           accounts: c.accounts || {}, seasons: c.seasons, matches: c.matches,
           questions: c.questions || [], answers: c.answers || [],
-          matchStats: c.matchStats || []
+          matchStats: c.matchStats || [],
+          goalEvents: c.goalEvents || []
         };
       }
     }
@@ -332,6 +361,7 @@ function subscribeRealtime() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'questions' }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'answers' }, scheduleRefresh)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'match_stats' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_goal_events' }, scheduleRefresh)
       .subscribe();
   } catch (e) { /* realtime optional */ }
 }
@@ -347,16 +377,18 @@ async function refreshFromRemote() {
   populateSeasonDropdowns();
   updateSidebarPlayer();
   // Avoid clobbering a form the user may be filling in.
-  if (currentPage !== 'recordMatch' && !isQaFormActive() && !isMatchStatsFormActive()) {
+  if (currentPage !== 'recordMatch' && currentPage !== 'matchDetails'
+    && !isQaFormActive() && !isGoalEventsFormActive()) {
     renderPage(currentPage);
   }
+  if (currentPage === 'matchDetails' && viewingMatchId) renderMatchDetails();
 }
 
-function isMatchStatsFormActive() {
+function isGoalEventsFormActive() {
   if (currentPage !== 'recordMatch') return false;
   const el = document.activeElement;
-  return el && (el.classList.contains('ms-goals') || el.classList.contains('ms-assists')
-    || el.id === 'matchStatsAddPlayer');
+  return el && (el.classList.contains('ge-scorer') || el.classList.contains('ge-assist')
+    || el.classList.contains('ge-minute') || el.classList.contains('ge-owner'));
 }
 
 function isQaFormActive() {
@@ -509,7 +541,8 @@ function navigateTo(page, el) {
 
   const titles = {
     dashboard: 'Dashboard', recordMatch: 'Record Match',
-    matchHistory: 'Match History', leagueTable: 'League Table',
+    matchHistory: 'Match History', matchDetails: 'Match Details',
+    footballStats: 'Player Performance', leagueTable: 'League Table',
     playerProfile: 'Player Profiles', headToHead: 'Head to Head',
     seasons: 'Seasons', awards: 'Awards', achievements: 'Achievements',
     rivalries: 'Rivalries', statistics: 'Statistics', questions: 'League Q&A',
@@ -539,6 +572,8 @@ function renderPage(page) {
   switch(page) {
     case 'dashboard': renderDashboard(); break;
     case 'matchHistory': renderHistory(); break;
+    case 'matchDetails': renderMatchDetails(); break;
+    case 'footballStats': renderFootballStats(); break;
     case 'leagueTable': renderLeagueTable(); break;
     case 'playerProfile': selectProfilePlayer('Wael', document.querySelector('#page-playerProfile .player-tab')); break;
     case 'seasons': renderSeasons(); break;
@@ -572,7 +607,7 @@ function getActiveSeason() {
 
 function populateSeasonDropdowns() {
   const dropdowns = ['matchSeason', 'historyFilterSeason', 'tableSeasonFilter',
-                     'awardsSeasonFilter', 'statsSeasonFilter', 'editSeason'];
+                     'awardsSeasonFilter', 'statsSeasonFilter', 'fbStatsSeasonFilter', 'editSeason'];
   dropdowns.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -580,7 +615,7 @@ function populateSeasonDropdowns() {
     el.innerHTML = '';
 
     if (id === 'historyFilterSeason' || id === 'tableSeasonFilter' ||
-        id === 'awardsSeasonFilter' || id === 'statsSeasonFilter') {
+        id === 'awardsSeasonFilter' || id === 'statsSeasonFilter' || id === 'fbStatsSeasonFilter') {
       const all = document.createElement('option');
       all.value = 'all';
       all.textContent = id === 'tableSeasonFilter' || id === 'statsSeasonFilter' ? 'All Seasons' : 'All Seasons (Overall)';
@@ -655,6 +690,9 @@ function deleteSeason(id) {
       if (error) return showToast('Could not delete season.', true);
 
       db.matches = db.matches.filter(m => m.season !== id);
+      const keptIds = new Set(db.matches.map(m => m.id));
+      db.goalEvents = db.goalEvents.filter(e => keptIds.has(e.matchId));
+      db.matchStats = db.matchStats.filter(s => keptIds.has(s.matchId));
       db.seasons = db.seasons.filter(s => s.id !== id);
       if (db.seasons.length > 0 && !db.seasons.find(s => s.active)) {
         const last = db.seasons[db.seasons.length - 1];
@@ -695,36 +733,225 @@ function renderSeasons() {
   }).join('');
 }
 
-// ===== MATCH PLAYER STATS & AWARDS =====
-function getMatchStats(matchId) {
-  return db.matchStats.filter(s => s.matchId === matchId);
+// ===== GOAL EVENTS & MATCH AWARDS =====
+function getMatchGoalEvents(matchId) {
+  return db.goalEvents
+    .filter(e => e.matchId === matchId)
+    .sort((a, b) => (a.minute - b.minute) || (a.sortOrder - b.sortOrder));
+}
+
+function getMainMatchPlayers(containerId) {
+  if (containerId === 'editGoalEventsList') {
+    return {
+      p1: document.getElementById('editPlayer1')?.value || '',
+      p2: document.getElementById('editPlayer2')?.value || ''
+    };
+  }
+  return {
+    p1: document.getElementById('matchPlayer1')?.value || '',
+    p2: document.getElementById('matchPlayer2')?.value || ''
+  };
+}
+
+function getMatchScoreFromForm(containerId) {
+  if (containerId === 'editGoalEventsList') {
+    return {
+      g1: parseInt(document.getElementById('editGoals1')?.value) || 0,
+      g2: parseInt(document.getElementById('editGoals2')?.value) || 0
+    };
+  }
+  return {
+    g1: parseInt(document.getElementById('matchGoals1')?.value) || 0,
+    g2: parseInt(document.getElementById('matchGoals2')?.value) || 0
+  };
+}
+
+function goalEventsSummaryId(containerId) {
+  return containerId === 'goalEventsList' ? 'goalEventsSummary' : 'editGoalEventsSummary';
+}
+
+function ownerOptionsHTML(p1, p2, selected) {
+  if (!p1 && !p2) return '<option value="">— Select players above —</option>';
+  let html = '';
+  if (p1) html += `<option value="${esc(p1)}"${selected === p1 ? ' selected' : ''}>${esc(p1)}</option>`;
+  if (p2 && p2 !== p1) html += `<option value="${esc(p2)}"${selected === p2 ? ' selected' : ''}>${esc(p2)}</option>`;
+  return html;
+}
+
+function goalEventRowHTML(e, idx, containerId, p1, p2) {
+  return `<div class="ge-row" data-idx="${idx}">
+    <select class="ge-owner" onchange="updateGoalEventsUI('${containerId}')">${ownerOptionsHTML(p1, p2, e.owner)}</select>
+    <input type="text" class="ge-scorer" placeholder="Scorer" value="${esc(e.scorer || '')}" oninput="updateGoalEventsUI('${containerId}')">
+    <input type="text" class="ge-assist" placeholder="Assist (opt.)" value="${esc(e.assist || '')}" oninput="updateGoalEventsUI('${containerId}')">
+    <input type="number" class="ge-minute" min="0" max="120" placeholder="Min" value="${e.minute ?? ''}" oninput="updateGoalEventsUI('${containerId}')">
+    <button type="button" class="btn-sm delete ge-remove" onclick="removeGoalEventRow('${containerId}', ${idx})" title="Remove">✕</button>
+  </div>`;
+}
+
+function collectGoalEventsFromForm(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return [];
+  const events = [];
+  el.querySelectorAll('.ge-row').forEach((row, i) => {
+    const owner = row.querySelector('.ge-owner')?.value || '';
+    const scorer = (row.querySelector('.ge-scorer')?.value || '').trim();
+    const assist = (row.querySelector('.ge-assist')?.value || '').trim();
+    const minute = parseInt(row.querySelector('.ge-minute')?.value);
+    if (!scorer && !owner) return;
+    events.push({
+      owner,
+      scorer,
+      assist,
+      minute: isNaN(minute) ? 0 : Math.min(120, Math.max(0, minute)),
+      sortOrder: i
+    });
+  });
+  return events;
+}
+
+function renderGoalEventsForm(containerId, events) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const { p1, p2 } = getMainMatchPlayers(containerId);
+  const list = events || [];
+
+  if (!list.length) {
+    el.innerHTML = `<div class="ge-header">
+      <span>Owner</span><span>Scorer</span><span>Assist</span><span>Min</span><span></span>
+    </div>
+    <div class="empty-state ge-empty">No goals yet — click “Add Goal Event”.</div>`;
+  } else {
+    el.innerHTML = `<div class="ge-header">
+      <span>Owner</span><span>Scorer</span><span>Assist</span><span>Min</span><span></span>
+    </div>
+    ${list.map((e, i) => goalEventRowHTML(e, i, containerId, p1, p2)).join('')}`;
+  }
+  updateGoalEventsUI(containerId);
+}
+
+function addGoalEventRow(containerId) {
+  const { p1, p2 } = getMainMatchPlayers(containerId);
+  if (!p1 || !p2) return showToast('Select Player 1 and Player 2 first.', true);
+  const events = collectGoalEventsFromForm(containerId);
+  events.push({ owner: p1, scorer: '', assist: '', minute: 0, sortOrder: events.length });
+  renderGoalEventsForm(containerId, events);
+}
+
+function removeGoalEventRow(containerId, idx) {
+  const events = collectGoalEventsFromForm(containerId);
+  events.splice(idx, 1);
+  renderGoalEventsForm(containerId, events);
+}
+
+function countGoalsByOwner(events, p1, p2) {
+  let c1 = 0, c2 = 0;
+  events.forEach(e => {
+    if (e.owner === p1) c1++;
+    else if (e.owner === p2) c2++;
+  });
+  return { c1, c2 };
+}
+
+function validateGoalEvents(events, p1, p2, g1, g2) {
+  if (!events.length) return null;
+  for (let i = 0; i < events.length; i++) {
+    const e = events[i];
+    if (!e.scorer) return `Goal ${i + 1}: enter a scorer name.`;
+    if (!e.owner) return `Goal ${i + 1}: select team owner.`;
+    if (e.owner !== p1 && e.owner !== p2) return `Goal ${i + 1}: owner must be ${p1} or ${p2}.`;
+  }
+  const { c1, c2 } = countGoalsByOwner(events, p1, p2);
+  if (c1 !== g1 || c2 !== g2) {
+    return `Goal events: ${p1} has ${c1} (need ${g1}), ${p2} has ${c2} (need ${g2}).`;
+  }
+  return null;
+}
+
+function goalEventsSummaryHTML(containerId, events) {
+  const { p1, p2 } = getMainMatchPlayers(containerId);
+  const { g1, g2 } = getMatchScoreFromForm(containerId);
+  const { c1, c2 } = countGoalsByOwner(events, p1, p2);
+  const total = events.length;
+  const expected = g1 + g2;
+  const ok = c1 === g1 && c2 === g2 && total === expected;
+  return `<div class="ms-total-line ${ok ? 'ok' : 'bad'}">
+    Goals: <strong>${esc(p1 || 'P1')} ${c1}/${g1}</strong> · <strong>${esc(p2 || 'P2')} ${c2}/${g2}</strong>
+    · Total <strong>${total}</strong> / <strong>${expected}</strong>
+    ${ok ? ' ✓' : ''}
+  </div>`;
+}
+
+function updateGoalEventsUI(containerId) {
+  const events = collectGoalEventsFromForm(containerId);
+  const summaryEl = document.getElementById(goalEventsSummaryId(containerId));
+  if (summaryEl) summaryEl.innerHTML = events.length ? goalEventsSummaryHTML(containerId, events) : '';
+
+  const previewId = containerId === 'goalEventsList' ? 'matchAwardsPreview' : 'editMatchAwardsPreview';
+  const preview = document.getElementById(previewId);
+  if (!preview) return;
+  if (!events.length) {
+    preview.innerHTML = '<span class="text-dim">Add goal events to preview match awards.</span>';
+    return;
+  }
+  const fakeId = '__preview__';
+  const prevEv = db.goalEvents.filter(e => e.matchId !== fakeId);
+  db.goalEvents = [...prevEv, ...events.map((e, i) => ({ id: '', matchId: fakeId, ...e, sortOrder: i }))];
+  preview.innerHTML = matchAwardsHTML(fakeId) || '<span class="text-dim">No awards yet.</span>';
+  db.goalEvents = prevEv;
+}
+
+function syncScoreFromGoalEvents(containerId) {
+  const { p1, p2 } = getMainMatchPlayers(containerId);
+  const events = collectGoalEventsFromForm(containerId);
+  const { c1, c2 } = countGoalsByOwner(events, p1, p2);
+  if (containerId === 'editGoalEventsList') {
+    document.getElementById('editGoals1').value = c1;
+    document.getElementById('editGoals2').value = c2;
+  } else {
+    document.getElementById('matchGoals1').value = c1;
+    document.getElementById('matchGoals2').value = c2;
+    updateMatchPreview();
+  }
+  updateGoalEventsUI(containerId);
+  showToast('Score updated from goal events.');
+}
+
+function aggregateOwnerStatsFromEvents(matchId) {
+  const byOwner = {};
+  getMatchGoalEvents(matchId).forEach(e => {
+    if (!byOwner[e.owner]) byOwner[e.owner] = { goals: 0, assists: 0 };
+    byOwner[e.owner].goals++;
+    if (e.assist) byOwner[e.owner].assists++;
+  });
+  return byOwner;
 }
 
 function computeMatchAwards(matchId) {
-  const stats = getMatchStats(matchId);
-  if (!stats.length) return [];
+  const byOwner = aggregateOwnerStatsFromEvents(matchId);
+  const owners = Object.keys(byOwner);
+  if (!owners.length) return [];
   const awards = [];
-  const maxGoals = Math.max(...stats.map(s => s.goals));
-  const maxAssists = Math.max(...stats.map(s => s.assists));
-  const maxMvp = Math.max(...stats.map(s => s.goals * 2 + s.assists));
+  const maxGoals = Math.max(...owners.map(o => byOwner[o].goals));
+  const maxAssists = Math.max(...owners.map(o => byOwner[o].assists));
+  const maxMvp = Math.max(...owners.map(o => byOwner[o].goals * 2 + byOwner[o].assists));
 
   if (maxGoals > 0) {
-    stats.filter(s => s.goals === maxGoals).forEach(s => {
-      awards.push({ icon: '⚽', title: 'Match Top Scorer', player: s.player, detail: `${s.goals} goal${s.goals !== 1 ? 's' : ''}` });
+    owners.filter(o => byOwner[o].goals === maxGoals).forEach(o => {
+      awards.push({ icon: '⚽', title: 'Match Top Scorer', player: o, detail: `${byOwner[o].goals} goal${byOwner[o].goals !== 1 ? 's' : ''}` });
     });
   }
   if (maxAssists > 0) {
-    stats.filter(s => s.assists === maxAssists).forEach(s => {
-      awards.push({ icon: '🎯', title: 'Best Playmaker', player: s.player, detail: `${s.assists} assist${s.assists !== 1 ? 's' : ''}` });
+    owners.filter(o => byOwner[o].assists === maxAssists).forEach(o => {
+      awards.push({ icon: '🎯', title: 'Best Playmaker', player: o, detail: `${byOwner[o].assists} assist${byOwner[o].assists !== 1 ? 's' : ''}` });
     });
   }
   if (maxMvp > 0) {
-    stats.filter(s => s.goals * 2 + s.assists === maxMvp).forEach(s => {
-      awards.push({ icon: '👑', title: 'MVP', player: s.player, detail: `${s.goals}G · ${s.assists}A` });
+    owners.filter(o => byOwner[o].goals * 2 + byOwner[o].assists === maxMvp).forEach(o => {
+      awards.push({ icon: '👑', title: 'MVP', player: o, detail: `${byOwner[o].goals}G · ${byOwner[o].assists}A` });
     });
   }
-  stats.filter(s => s.goals >= 3).forEach(s => {
-    awards.push({ icon: '🎩', title: 'Hat-trick', player: s.player, detail: `${s.goals} goals` });
+  owners.filter(o => byOwner[o].goals >= 3).forEach(o => {
+    awards.push({ icon: '🎩', title: 'Hat-trick', player: o, detail: `${byOwner[o].goals} goals` });
   });
   return awards;
 }
@@ -732,149 +959,52 @@ function computeMatchAwards(matchId) {
 function matchAwardsHTML(matchId) {
   const awards = computeMatchAwards(matchId);
   if (!awards.length) return '';
-  return `<div class="match-awards">${awards.map(a => {
-    const label = nick(a.player) || a.player;
-    return `<span class="match-award-chip" title="${esc(a.title)} — ${esc(a.detail)}">` +
-      `${a.icon} <strong>${esc(label)}</strong> <span class="match-award-title">${esc(a.title)}</span></span>`;
+  return `<div class="match-awards">${awards.map(a =>
+    `<span class="match-award-chip" title="${esc(a.title)} — ${esc(a.detail)}">` +
+    `${a.icon} <strong>${esc(a.player)}</strong> <span class="match-award-title">${esc(a.title)}</span></span>`
+  ).join('')}</div>`;
+}
+
+function goalEventTimelineHTML(matchId) {
+  const events = getMatchGoalEvents(matchId);
+  if (!events.length) return '';
+  return `<div class="goal-timeline">${events.map(e => {
+    const min = e.minute > 0 ? `${e.minute}'` : "—";
+    const assist = e.assist
+      ? `<div class="goal-timeline-assist">🎯 ${esc(e.assist)}</div>` : '';
+    return `<div class="goal-timeline-item">
+      <div class="goal-timeline-main">⚽ <span class="goal-min">${min}</span> <strong>${esc(e.scorer)}</strong></div>
+      ${assist}
+      <div class="goal-timeline-owner">${esc(e.owner)}</div>
+    </div>`;
   }).join('')}</div>`;
 }
 
-function matchStatsTableHTML(matchId) {
-  const stats = getMatchStats(matchId);
-  if (!stats.length) return '';
-  return `<div class="match-stats-table">
-    ${stats.map(s => `<span class="match-stat-line">${esc(playerLegendLabel(s.player))}: <strong>${s.goals}G</strong> ${s.assists}A</span>`).join('')}
-  </div>`;
+function matchGoalSummaryHTML(matchId) {
+  const n = getMatchGoalEvents(matchId).length;
+  if (!n) return '';
+  return `<span class="match-goal-count">${n} goal event${n !== 1 ? 's' : ''}</span>`;
 }
 
-function matchStatsAddSelectId(containerId) {
-  return containerId === 'matchStatsGrid' ? 'matchStatsAddPlayer' : 'editMatchStatsAddPlayer';
-}
-
-function collectMatchStatsFromGrid(containerId) {
-  const el = document.getElementById(containerId);
-  if (!el) return [];
-  const rows = [];
-  el.querySelectorAll('.ms-row').forEach(row => {
-    const player = row.dataset.player;
-    if (!player) return;
-    const gEl = row.querySelector('.ms-goals');
-    const aEl = row.querySelector('.ms-assists');
-    rows.push({
-      player,
-      goals: parseInt(gEl?.value) || 0,
-      assists: parseInt(aEl?.value) || 0
-    });
-  });
-  return rows;
-}
-
-function renderMatchStatRows(containerId, rows) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  if (!rows.length) {
-    el.innerHTML = '<div class="empty-state ms-empty">No players added yet — use the dropdown below.</div>';
-  } else {
-    el.innerHTML = `
-      <div class="ms-header">
-        <span>Player</span><span>Goals</span><span>Assists</span><span></span>
-      </div>
-      ${rows.map(s => `
-        <div class="ms-row" data-player="${esc(s.player)}">
-          <span class="ms-name">${nickChip(s.player) || esc(s.player)}</span>
-          <input type="number" class="ms-goals" min="0" value="${s.goals}" oninput="updateMatchStatsPreview('${containerId}')">
-          <input type="number" class="ms-assists" min="0" value="${s.assists}" oninput="updateMatchStatsPreview('${containerId}')">
-          <button type="button" class="btn-sm delete ms-remove" data-player="${esc(s.player)}" onclick="removeMatchStatPlayer('${containerId}', this.dataset.player)" title="Remove">✕</button>
-        </div>`).join('')}`;
-  }
-  populateMatchStatsAddSelect(containerId);
-  updateMatchStatsPreview(containerId);
-}
-
-function renderMatchStatsGrid(containerId, existing) {
-  const rows = (existing || []).map(s => ({ player: s.player, goals: s.goals, assists: s.assists }));
-  renderMatchStatRows(containerId, rows);
-}
-
-function populateMatchStatsAddSelect(containerId) {
-  const sel = document.getElementById(matchStatsAddSelectId(containerId));
-  if (!sel) return;
-  const inRoster = new Set(collectMatchStatsFromGrid(containerId).map(r => r.player));
-  const prev = sel.value;
-  sel.innerHTML = '<option value="">— Add legend who played —</option>';
-  PLAYERS.filter(p => !inRoster.has(p)).forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p;
-    opt.textContent = playerLegendLabel(p);
-    sel.appendChild(opt);
-  });
-  if (prev && sel.querySelector(`option[value="${prev}"]`)) sel.value = prev;
-}
-
-function addMatchStatPlayer(containerId) {
-  const sel = document.getElementById(matchStatsAddSelectId(containerId));
-  const name = sel?.value;
-  if (!name) return showToast('Select a player to add.', true);
-  const rows = collectMatchStatsFromGrid(containerId);
-  if (rows.some(r => r.player === name)) return showToast('Player already in the list.', true);
-  rows.push({ player: name, goals: 0, assists: 0 });
-  renderMatchStatRows(containerId, rows);
-  if (sel) sel.value = '';
-  showToast(playerLegendLabel(name) + ' added.');
-}
-
-function removeMatchStatPlayer(containerId, player) {
-  const rows = collectMatchStatsFromGrid(containerId).filter(r => r.player !== player);
-  renderMatchStatRows(containerId, rows);
-}
-
-function upsertRosterPlayer(containerId, player, goals, assists) {
-  if (!player) return;
-  let rows = collectMatchStatsFromGrid(containerId);
-  const i = rows.findIndex(r => r.player === player);
-  if (i === -1) rows.push({ player, goals, assists });
-  else rows[i] = { player, goals, assists };
-  renderMatchStatRows(containerId, rows);
-}
-
-function syncMatchStatsFromScore(containerId) {
-  const p1 = document.getElementById('matchPlayer1')?.value || document.getElementById('editPlayer1')?.value;
-  const p2 = document.getElementById('matchPlayer2')?.value || document.getElementById('editPlayer2')?.value;
-  const g1 = parseInt(document.getElementById('matchGoals1')?.value || document.getElementById('editGoals1')?.value) || 0;
-  const g2 = parseInt(document.getElementById('matchGoals2')?.value || document.getElementById('editGoals2')?.value) || 0;
-  if (p1) upsertRosterPlayer(containerId, p1, g1, collectMatchStatsFromGrid(containerId).find(r => r.player === p1)?.assists || 0);
-  if (p2) upsertRosterPlayer(containerId, p2, g2, collectMatchStatsFromGrid(containerId).find(r => r.player === p2)?.assists || 0);
-  updateMatchStatsPreview(containerId);
-}
-
-function updateMatchStatsPreview(containerId) {
-  const preview = document.getElementById(containerId === 'matchStatsGrid' ? 'matchAwardsPreview' : 'editMatchAwardsPreview');
-  if (!preview) return;
-  const rows = collectMatchStatsFromGrid(containerId);
-  if (!rows.length) {
-    preview.innerHTML = '<span class="text-dim">Add players who played to preview awards.</span>';
+async function persistGoalEvents(matchId, events) {
+  if (!sb || !goalEventsTablesReady) return;
+  await sb.from('match_goal_events').delete().eq('match_id', matchId);
+  if (!events.length) {
+    db.goalEvents = db.goalEvents.filter(e => e.matchId !== matchId);
     return;
   }
-  const fakeId = '__preview__';
-  const prev = db.matchStats.filter(s => s.matchId !== fakeId);
-  db.matchStats = [...prev, ...rows.map(r => ({ id: '', matchId: fakeId, ...r }))];
-  preview.innerHTML = matchAwardsHTML(fakeId) || '<span class="text-dim">No awards yet (need goals or assists).</span>';
-  db.matchStats = prev;
-}
-
-async function persistMatchStats(matchId, rows) {
-  if (!sb || !matchStatsTablesReady) return;
-  await sb.from('match_stats').delete().eq('match_id', matchId);
-  if (!rows.length) {
-    db.matchStats = db.matchStats.filter(s => s.matchId !== matchId);
-    return;
-  }
-  const { data, error } = await sb.from('match_stats')
-    .insert(rows.map(r => ({ match_id: matchId, player: r.player, goals: r.goals, assists: r.assists })))
-    .select();
+  const payload = events.map((e, i) => ({
+    match_id: matchId,
+    owner: e.owner,
+    scorer: e.scorer,
+    assist: e.assist || '',
+    minute: e.minute ?? 0,
+    sort_order: i
+  }));
+  const { data, error } = await sb.from('match_goal_events').insert(payload).select();
   if (error) throw error;
-  db.matchStats = db.matchStats.filter(s => s.matchId !== matchId);
-  (data || []).forEach(row => db.matchStats.push(mapMatchStat(row)));
+  db.goalEvents = db.goalEvents.filter(e => e.matchId !== matchId);
+  (data || []).forEach(row => db.goalEvents.push(mapGoalEvent(row)));
 }
 
 function getSeasonStatTotals(player, seasonFilter) {
@@ -882,6 +1012,15 @@ function getSeasonStatTotals(player, seasonFilter) {
     db.matches.filter(m => seasonFilter === 'all' || m.season === seasonFilter).map(m => m.id)
   );
   let goals = 0, assists = 0;
+  if (goalEventsTablesReady) {
+    db.goalEvents.filter(e => matchIds.has(e.matchId)).forEach(e => {
+      if (e.owner === player) {
+        goals++;
+        if (e.assist) assists++;
+      }
+    });
+    return { goals, assists };
+  }
   db.matchStats.filter(s => s.player === player && matchIds.has(s.matchId)).forEach(s => {
     goals += s.goals;
     assists += s.assists;
@@ -889,13 +1028,77 @@ function getSeasonStatTotals(player, seasonFilter) {
   return { goals, assists };
 }
 
+function fbPlayerKey(name) {
+  return (name || '').trim().toLowerCase();
+}
+
+function getMatchIdsForSeason(seasonFilter) {
+  return new Set(
+    db.matches.filter(m => seasonFilter === 'all' || m.season === seasonFilter).map(m => m.id)
+  );
+}
+
+function computeFootballPlayerStats(seasonFilter = 'all') {
+  const matchIds = getMatchIdsForSeason(seasonFilter);
+  const map = {};
+
+  const ensure = (rawName) => {
+    const key = fbPlayerKey(rawName);
+    if (!key) return null;
+    if (!map[key]) map[key] = { name: rawName.trim(), goals: 0, assists: 0, matchIds: new Set() };
+    return map[key];
+  };
+
+  db.goalEvents.filter(e => matchIds.has(e.matchId)).forEach(e => {
+    const scorer = ensure(e.scorer);
+    if (scorer) {
+      scorer.goals++;
+      scorer.matchIds.add(e.matchId);
+    }
+    if (e.assist) {
+      const a = ensure(e.assist);
+      if (a) {
+        a.assists++;
+        a.matchIds.add(e.matchId);
+      }
+    }
+  });
+
+  return Object.values(map).map(p => {
+    const matches = p.matchIds.size;
+    return {
+      name: p.name,
+      goals: p.goals,
+      assists: p.assists,
+      contributions: p.goals + p.assists,
+      matches,
+      gpg: matches ? (p.goals / matches) : 0
+    };
+  }).sort((a, b) => b.goals - a.goals || b.assists - a.assists);
+}
+
 // ===== RECORD MATCH =====
+function updateGoalEventsSetupBanner() {
+  const el = document.getElementById('goalEventsSetupBanner');
+  if (!el) return;
+  if (goalEventsTablesReady) {
+    el.classList.add('hidden');
+    el.innerHTML = '';
+  } else {
+    el.classList.remove('hidden');
+    el.innerHTML = `<h3>⚠️ Goal events table not set up</h3>
+      <p>Run <code>supabase-match-goal-events-migration.sql</code> in Supabase SQL Editor to enable goal-by-goal tracking.</p>
+      <p class="qa-hint">Matches still save score only until migration is run.</p>`;
+  }
+}
+
 function initRecordForm() {
   document.getElementById('matchDate').value = new Date().toISOString().split('T')[0];
   populateSeasonDropdowns();
   populateMatchPlayerDropdowns();
+  updateGoalEventsSetupBanner();
   clearMatchForm();
-  if (matchStatsTablesReady) renderMatchStatRows('matchStatsGrid', []);
+  if (goalEventsTablesReady) renderGoalEventsForm('goalEventsList', []);
 }
 
 function clearMatchForm() {
@@ -906,7 +1109,7 @@ function clearMatchForm() {
   document.getElementById('matchDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('matchFormError').classList.add('hidden');
   updateMatchPreview();
-  if (matchStatsTablesReady) renderMatchStatRows('matchStatsGrid', []);
+  if (goalEventsTablesReady) renderGoalEventsForm('goalEventsList', []);
   const active = getActiveSeason();
   if (active) document.getElementById('matchSeason').value = active.id;
 }
@@ -917,23 +1120,22 @@ function updateMatchPreview() {
   const g1 = parseInt(document.getElementById('matchGoals1').value) || 0;
   const g2 = parseInt(document.getElementById('matchGoals2').value) || 0;
 
-  document.getElementById('scoreLabel1').textContent = p1 ? (nick(p1) || p1) + ' Goals' : 'Goals';
-  document.getElementById('scoreLabel2').textContent = p2 ? (nick(p2) || p2) + ' Goals' : 'Goals';
+  document.getElementById('scoreLabel1').textContent = p1 ? p1 + ' Goals' : 'Goals';
+  document.getElementById('scoreLabel2').textContent = p2 ? p2 + ' Goals' : 'Goals';
 
   if (!p1 || !p2) {
     document.getElementById('previewResult').textContent = '— vs —';
+    if (goalEventsTablesReady) updateGoalEventsUI('goalEventsList');
     return;
   }
 
   let result = '';
-  if (g1 > g2) result = `🏆 ${nick(p1) || p1} WINS`;
-  else if (g2 > g1) result = `🏆 ${nick(p2) || p2} WINS`;
+  if (g1 > g2) result = `🏆 ${p1} WINS`;
+  else if (g2 > g1) result = `🏆 ${p2} WINS`;
   else result = `🤝 DRAW`;
 
-  const n1 = p1 ? (nick(p1) || p1) : '—';
-  const n2 = p2 ? (nick(p2) || p2) : '—';
-  document.getElementById('previewResult').textContent = `${n1} ${g1} — ${g2} ${n2}  |  ${result}`;
-  syncMatchStatsFromScore('matchStatsGrid');
+  document.getElementById('previewResult').textContent = `${p1} ${g1} — ${g2} ${p2}  |  ${result}`;
+  if (goalEventsTablesReady) updateGoalEventsUI('goalEventsList');
 }
 
 async function saveMatch() {
@@ -956,6 +1158,12 @@ async function saveMatch() {
 
   errEl.classList.add('hidden');
 
+  const goalRows = collectGoalEventsFromForm('goalEventsList');
+  if (goalEventsTablesReady && goalRows.length) {
+    const geErr = validateGoalEvents(goalRows, p1, p2, g1, g2);
+    if (geErr) return showError(errEl, geErr);
+  }
+
   const { data, error } = await sb.from('matches')
     .insert({ player1: p1, player2: p2, goals1: g1, goals2: g2, date, season_id: season, timestamp: Date.now() })
     .select().single();
@@ -963,10 +1171,9 @@ async function saveMatch() {
 
   db.matches.push(mapMatch(data));
   try {
-    const statRows = collectMatchStatsFromGrid('matchStatsGrid');
-    await persistMatchStats(data.id, statRows);
+    await persistGoalEvents(data.id, goalRows);
   } catch (e) {
-    showToast('Match saved but player stats failed to save.', true);
+    showToast('Match saved but goal events failed to save.', true);
   }
   cacheDB();
   updateSidebarPlayer();
@@ -1028,12 +1235,14 @@ function matchCardHTML(m) {
         <div class="match-score">${m.goals1} — ${m.goals2}</div>
         <div class="match-player right">${matchPlayerLabel(m.player2)}</div>
       </div>
-      ${matchStatsTableHTML(m.id)}
+      ${matchGoalSummaryHTML(m.id)}
       ${matchAwardsHTML(m.id)}
-      ${isAdmin() ? `<div class="match-card-actions">
+      <div class="match-card-actions">
+        <button class="btn-sm" onclick="openMatchDetails('${m.id}')">📄 Details</button>
+        ${isAdmin() ? `
         <button class="btn-sm edit" onclick="openEditModal('${m.id}')">✏️ Edit</button>
-        <button class="btn-sm delete" onclick="deleteMatch('${m.id}')">🗑️ Delete</button>
-      </div>` : ''}
+        <button class="btn-sm delete" onclick="deleteMatch('${m.id}')">🗑️ Delete</button>` : ''}
+      </div>
     </div>`;
 }
 
@@ -1046,6 +1255,7 @@ function deleteMatch(id) {
 
     db.matches = db.matches.filter(m => m.id !== id);
     db.matchStats = db.matchStats.filter(s => s.matchId !== id);
+    db.goalEvents = db.goalEvents.filter(e => e.matchId !== id);
     cacheDB();
     await syncDerivedData();
     renderHistory();
@@ -1070,8 +1280,17 @@ function openEditModal(id) {
   document.getElementById('editDate').value = m.date;
   document.getElementById('editSeason').value = m.season;
 
-  renderMatchStatsGrid('editMatchStatsGrid', getMatchStats(id));
+  if (goalEventsTablesReady) {
+    renderGoalEventsForm('editGoalEventsList', getMatchGoalEvents(id).map(e => ({
+      owner: e.owner, scorer: e.scorer, assist: e.assist, minute: e.minute
+    })));
+  }
   document.getElementById('editMatchModal').classList.remove('hidden');
+}
+
+function onEditMatchPlayersChange() {
+  const events = collectGoalEventsFromForm('editGoalEventsList');
+  renderGoalEventsForm('editGoalEventsList', events);
 }
 
 function closeEditModal() {
@@ -1101,6 +1320,12 @@ async function saveEditMatch() {
   const idx = db.matches.findIndex(m => m.id === id);
   if (idx === -1) return;
 
+  const goalRows = collectGoalEventsFromForm('editGoalEventsList');
+  if (goalEventsTablesReady && goalRows.length) {
+    const geErr = validateGoalEvents(goalRows, p1, p2, g1, g2);
+    if (geErr) return showError(errEl, geErr);
+  }
+
   const { error } = await sb.from('matches')
     .update({ player1: p1, player2: p2, goals1: g1, goals2: g2, date, season_id: season })
     .eq('id', id);
@@ -1108,9 +1333,9 @@ async function saveEditMatch() {
 
   db.matches[idx] = { ...db.matches[idx], player1: p1, player2: p2, goals1: g1, goals2: g2, date, season };
   try {
-    await persistMatchStats(id, collectMatchStatsFromGrid('editMatchStatsGrid'));
+    await persistGoalEvents(id, goalRows);
   } catch (e) {
-    showToast('Match updated but player stats failed to save.', true);
+    showToast('Match updated but goal events failed to save.', true);
   }
   cacheDB();
   await syncDerivedData();
@@ -1118,6 +1343,186 @@ async function saveEditMatch() {
   renderHistory();
   updateSidebarPlayer();
   showToast('Match updated!');
+}
+
+// ===== MATCH DETAILS =====
+function openMatchDetails(matchId) {
+  viewingMatchId = matchId;
+  navigateTo('matchDetails', null);
+}
+
+function backFromMatchDetails() {
+  viewingMatchId = null;
+  navigateTo('matchHistory', document.querySelector('.nav-item[data-page="matchHistory"]'));
+}
+
+function renderMatchDetails() {
+  const cont = document.getElementById('matchDetailsContent');
+  const sub = document.getElementById('matchDetailsSubtitle');
+  if (!cont) return;
+
+  if (!goalEventsTablesReady) {
+    cont.innerHTML = `<div class="qa-setup-banner">
+      <h3>⚠️ Goal events not set up</h3>
+      <p>Run <code>supabase-match-goal-events-migration.sql</code> in Supabase SQL Editor, then refresh.</p>
+    </div>`;
+    return;
+  }
+
+  const m = db.matches.find(x => x.id === viewingMatchId);
+  if (!m) {
+    if (sub) sub.textContent = '—';
+    cont.innerHTML = '<div class="empty-state">Match not found.</div>';
+    return;
+  }
+
+  const season = db.seasons.find(s => s.id === m.season);
+  const date = m.date ? new Date(m.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+  if (sub) sub.textContent = `${date} · ${season ? season.name : 'Unknown season'}`;
+
+  let resultBadge = 'DRAW';
+  if (m.goals1 > m.goals2) resultBadge = `${m.player1} wins`;
+  else if (m.goals2 > m.goals1) resultBadge = `${m.player2} wins`;
+
+  const events = getMatchGoalEvents(m.id);
+
+  cont.innerHTML = `
+    <div class="match-details-card">
+      <div class="match-details-score">
+        <span class="md-player">${esc(m.player1)}</span>
+        <span class="md-score">${m.goals1} — ${m.goals2}</span>
+        <span class="md-player">${esc(m.player2)}</span>
+      </div>
+      <div class="match-details-meta">${esc(resultBadge)}</div>
+      ${matchAwardsHTML(m.id)}
+      <div class="panel mt-16">
+        <div class="panel-header">⚽ GOALS</div>
+        <div class="panel-body">
+          ${events.length ? goalEventTimelineHTML(m.id) : '<div class="empty-state">No goal events recorded for this match.</div>'}
+        </div>
+      </div>
+      ${isAdmin() ? `<div class="form-actions mt-16">
+        <button class="btn-sm edit" onclick="openEditModal('${m.id}')">✏️ Edit match</button>
+      </div>` : ''}
+    </div>`;
+}
+
+// ===== FOOTBALL PLAYER PERFORMANCE =====
+function renderFootballStats() {
+  populateSeasonDropdowns();
+  const seasonSel = document.getElementById('fbStatsSeasonFilter');
+
+  const contLb = document.getElementById('fbLeaderboards');
+  const contTbl = document.getElementById('fbStatsTable');
+  const detail = document.getElementById('fbPlayerDetail');
+  if (!contLb || !contTbl) return;
+
+  if (!goalEventsTablesReady) {
+    contLb.innerHTML = '';
+    contTbl.innerHTML = `<div class="qa-setup-banner">
+      <h3>⚠️ Goal events table required</h3>
+      <p>Run <code>supabase-match-goal-events-migration.sql</code> in Supabase SQL Editor.</p>
+    </div>`;
+    if (detail) detail.classList.add('hidden');
+    return;
+  }
+
+  const filter = seasonSel?.value || 'all';
+  const search = (document.getElementById('fbPlayerSearch')?.value || '').trim().toLowerCase();
+  let players = computeFootballPlayerStats(filter);
+  if (search) players = players.filter(p => p.name.toLowerCase().includes(search));
+
+  const topG = [...players].sort((a, b) => b.goals - a.goals).slice(0, 5);
+  const topA = [...players].sort((a, b) => b.assists - a.assists).slice(0, 5);
+  const topC = [...players].sort((a, b) => b.contributions - a.contributions).slice(0, 5);
+
+  const lbCard = (title, icon, rows, valKey) => {
+    if (!rows.length || rows[0][valKey] === 0) {
+      return `<div class="fb-lb-card"><div class="fb-lb-title">${icon} ${title}</div><p class="text-dim">No data yet</p></div>`;
+    }
+    return `<div class="fb-lb-card">
+      <div class="fb-lb-title">${icon} ${title}</div>
+      <ol class="fb-lb-list">${rows.map((r, i) =>
+        `<li><span class="fb-lb-rank">${i + 1}</span> <strong>${esc(r.name)}</strong> <span class="fb-lb-val">${r[valKey]}</span></li>`
+      ).join('')}</ol>
+    </div>`;
+  };
+
+  contLb.innerHTML = `
+    <div class="fb-lb-grid">
+      ${lbCard('Top Scorers', '⚽', topG, 'goals')}
+      ${lbCard('Top Assists', '🎯', topA, 'assists')}
+      ${lbCard('Goal Contributions', '⭐', topC, 'contributions')}
+    </div>`;
+
+  if (!players.length) {
+    contTbl.innerHTML = '<div class="empty-state">No football player stats yet. Record matches with goal events.</div>';
+    if (detail) detail.classList.add('hidden');
+    return;
+  }
+
+  contTbl.innerHTML = `
+    <table class="league-table fb-stats-table">
+      <thead>
+        <tr>
+          <th>Player</th><th>G</th><th>A</th><th>G+A</th><th>Matches</th><th>G/M</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${players.map(p => `<tr class="fb-row-click" onclick='showFootballPlayerDetail(${JSON.stringify(p.name)})'>
+          <td><strong>${esc(p.name)}</strong></td>
+          <td>${p.goals}</td>
+          <td>${p.assists}</td>
+          <td>${p.contributions}</td>
+          <td>${p.matches}</td>
+          <td>${p.gpg.toFixed(2)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function showFootballPlayerDetail(name) {
+  const detail = document.getElementById('fbPlayerDetail');
+  if (!detail) return;
+  const filter = document.getElementById('fbStatsSeasonFilter')?.value || 'all';
+  const matchIds = getMatchIdsForSeason(filter);
+  const key = fbPlayerKey(name);
+
+  const goals = [];
+  const assists = [];
+  db.goalEvents.filter(e => matchIds.has(e.matchId)).forEach(e => {
+    const m = db.matches.find(x => x.id === e.matchId);
+    if (!m) return;
+    if (fbPlayerKey(e.scorer) === key) goals.push({ e, m });
+    if (e.assist && fbPlayerKey(e.assist) === key) assists.push({ e, m });
+  });
+
+  const matchSet = new Set([...goals, ...assists].map(x => x.m.id));
+  const gpg = matchSet.size ? (goals.length / matchSet.size).toFixed(2) : '0.00';
+
+  detail.classList.remove('hidden');
+  detail.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">👤 ${esc(name)}</div>
+      <div class="panel-body">
+        <div class="fb-detail-stats">
+          <span>⚽ ${goals.length} goals</span>
+          <span>🎯 ${assists.length} assists</span>
+          <span>📋 ${matchSet.size} matches</span>
+          <span>📈 ${gpg} goals/match</span>
+        </div>
+        ${goals.length ? `<h4 class="fb-detail-h4">Goals</h4>
+          <ul class="fb-detail-list">${goals.sort((a,b)=>a.e.minute-b.e.minute).map(({e,m}) =>
+            `<li>${e.minute ? e.minute + "'" : '—'} vs ${esc(m.player1 === e.owner ? m.player2 : m.player1)} (${esc(e.owner)})${e.assist ? ' · A: ' + esc(e.assist) : ''}</li>`
+          ).join('')}</ul>` : ''}
+        ${assists.length ? `<h4 class="fb-detail-h4">Assists</h4>
+          <ul class="fb-detail-list">${assists.map(({e,m}) =>
+            `<li>${e.minute ? e.minute + "'" : '—'} ${esc(e.scorer)} (${esc(e.owner)})</li>`
+          ).join('')}</ul>` : ''}
+        <button type="button" class="btn-sm mt-8" onclick="document.getElementById('fbPlayerDetail').classList.add('hidden')">Close</button>
+      </div>
+    </div>`;
+  detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ===== STATS ENGINE =====
@@ -1660,13 +2065,13 @@ function renderStatistics() {
         <div class="chart-title">📈 GOAL DIFFERENCE</div>
         ${barChart(stats, maxGD, 'goalDiff', 'purple')}
       </div>
-      ${matchStatsTablesReady ? `
+      ${(goalEventsTablesReady || matchStatsTablesReady) ? `
       <div class="chart-section">
-        <div class="chart-title">🎯 ASSISTS (match log)</div>
+        <div class="chart-title">🎯 ASSISTS (goal events)</div>
         ${barChart(stats, maxAssists, 'assists', 'blue')}
       </div>
       <div class="chart-section">
-        <div class="chart-title">⚽ SESSION GOALS (match log)</div>
+        <div class="chart-title">⚽ SESSION GOALS (goal events)</div>
         ${barChart(stats, maxSessionG, 'sessionGoals', '')}
       </div>` : ''}
     </div>`;
@@ -2020,6 +2425,10 @@ async function wipeAllData() {
     await sb.from('answers').delete().neq('timestamp', -1);
     await sb.from('questions').delete().neq('timestamp', -1);
   } catch (e) { /* Q&A tables may not exist yet */ }
+  try {
+    await sb.from('match_goal_events').delete().neq('minute', -1);
+    await sb.from('match_stats').delete().neq('goals', -1);
+  } catch (e) { /* optional tables */ }
 }
 
 function confirmResetSeason() {
@@ -2033,6 +2442,9 @@ function confirmResetSeason() {
     if (error) return showToast('Could not reset season.', true);
 
     db.matches = db.matches.filter(m => m.season !== active.id);
+    const keptIds = new Set(db.matches.map(m => m.id));
+    db.goalEvents = db.goalEvents.filter(e => keptIds.has(e.matchId));
+    db.matchStats = db.matchStats.filter(s => keptIds.has(s.matchId));
     cacheDB();
     await syncDerivedData();
     updateSidebarPlayer();
@@ -2049,7 +2461,7 @@ function confirmResetAll() {
       await wipeAllData();
       // Re-seed one active season so the app stays usable.
       const { data } = await sb.from('seasons').insert({ name: 'Season 1', active: true }).select().single();
-      db = { accounts: {}, matches: [], seasons: data ? [mapSeason(data)] : [], questions: [], answers: [], matchStats: [] };
+      db = { accounts: {}, matches: [], seasons: data ? [mapSeason(data)] : [], questions: [], answers: [], matchStats: [], goalEvents: [] };
     } catch (e) {
       return showToast('Could not reset data.', true);
     }

@@ -4,6 +4,7 @@
 -- =====================================================
 
 -- ---------- Clean start (safe to re-run) ----------
+drop table if exists public.match_goal_events cascade;
 drop table if exists public.match_stats   cascade;
 drop table if exists public.answers      cascade;
 drop table if exists public.questions    cascade;
@@ -45,15 +46,30 @@ create index if not exists matches_season_idx on public.matches(season_id);
 
 -- ---------- MATCH PLAYER STATS (goals / assists per player per match) ----------
 create table public.match_stats (
-  id         uuid primary key default gen_random_uuid(),
-  match_id   uuid not null references public.matches(id) on delete cascade,
-  player     text not null,
-  goals      integer not null default 0 check (goals >= 0),
-  assists    integer not null default 0 check (assists >= 0),
+  id              uuid primary key default gen_random_uuid(),
+  match_id        uuid not null references public.matches(id) on delete cascade,
+  player          text not null,
+  character_name  text not null default '',
+  goals           integer not null default 0 check (goals >= 0),
+  assists         integer not null default 0 check (assists >= 0),
   unique (match_id, player)
 );
 
 create index if not exists match_stats_match_idx on public.match_stats(match_id);
+
+-- ---------- MATCH GOAL EVENTS (per-goal scorer / assist / minute) ----------
+create table public.match_goal_events (
+  id         uuid primary key default gen_random_uuid(),
+  match_id   uuid not null references public.matches(id) on delete cascade,
+  owner      text not null,
+  scorer     text not null,
+  assist     text not null default '',
+  minute     integer not null default 0 check (minute >= 0 and minute <= 120),
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists match_goal_events_match_idx on public.match_goal_events(match_id);
 
 -- ---------- STANDINGS (auto-computed league table snapshot) ----------
 -- `season` holds either a season uuid (as text) or the literal 'all' (overall table).
@@ -117,11 +133,12 @@ alter table public.achievements enable row level security;
 alter table public.questions    enable row level security;
 alter table public.answers      enable row level security;
 alter table public.match_stats  enable row level security;
+alter table public.match_goal_events enable row level security;
 
 do $$
 declare t text;
 begin
-  foreach t in array array['players','seasons','matches','standings','achievements','questions','answers','match_stats']
+  foreach t in array array['players','seasons','matches','standings','achievements','questions','answers','match_stats','match_goal_events']
   loop
     execute format('drop policy if exists "public_all_%1$s" on public.%1$s;', t);
     execute format(
@@ -157,6 +174,11 @@ end $$;
 do $$
 begin
   alter publication supabase_realtime add table public.match_stats;
+  exception when duplicate_object then null;
+end $$;
+do $$
+begin
+  alter publication supabase_realtime add table public.match_goal_events;
   exception when duplicate_object then null;
 end $$;
 do $$
