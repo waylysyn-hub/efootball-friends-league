@@ -42,47 +42,7 @@
       </div>
       <div id="loginError" class="login-error hidden"></div>
       <button class="btn-primary" onclick="handleLogin()">LOGIN →</button>
-      <p class="login-hint">New player? <span onclick="showRegister()" class="link-text">Create Account</span></p>
-    </div>
-  </div>
-</div>
-
-<!-- REGISTER SCREEN -->
-<div id="registerScreen" class="login-screen hidden">
-  <div class="login-bg">
-    <div class="login-grid"></div>
-  </div>
-  <div class="login-container">
-    <div class="login-logo">
-      <div class="logo-icon">⚽</div>
-      <h1>eFOOTBALL</h1>
-      <h2>FRIENDS LEAGUE</h2>
-    </div>
-    <div class="login-form-box">
-      <h3>CREATE ACCOUNT</h3>
-      <div class="form-group">
-        <label>SELECT YOUR NAME</label>
-        <select id="regUsername">
-          <option value="">— SELECT PLAYER —</option>
-          <option value="Wael">Wael</option>
-          <option value="Omar">Omar</option>
-          <option value="Abdul Rahim">Abdul Rahim</option>
-          <option value="Mohammad">Mohammad</option>
-          <option value="Mustafa">Mustafa</option>
-          <option value="Abdul Qader">Abdul Qader</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>SET PASSWORD</label>
-        <input type="password" id="regPassword" placeholder="Create password">
-      </div>
-      <div class="form-group">
-        <label>CONFIRM PASSWORD</label>
-        <input type="password" id="regPassword2" placeholder="Confirm password">
-      </div>
-      <div id="regError" class="login-error hidden"></div>
-      <button class="btn-primary" onclick="handleRegister()">CREATE ACCOUNT →</button>
-      <p class="login-hint"><span onclick="showLogin()" class="link-text">← Back to Login</span></p>
+      <p class="login-hint">Accounts are managed by the admin.</p>
     </div>
   </div>
 </div>
@@ -116,7 +76,7 @@
       <a href="#" class="nav-item active" data-page="dashboard" onclick="navigateTo('dashboard',this)">
         <span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span>
       </a>
-      <a href="#" class="nav-item" data-page="recordMatch" onclick="navigateTo('recordMatch',this)">
+      <a href="#" class="nav-item admin-only" data-page="recordMatch" onclick="navigateTo('recordMatch',this)">
         <span class="nav-icon">⚽</span><span class="nav-label">Record Match</span>
       </a>
       <a href="#" class="nav-item" data-page="matchHistory" onclick="navigateTo('matchHistory',this)">
@@ -415,7 +375,7 @@
         <h2 class="page-title">SEASONS</h2>
         <div class="page-subtitle">Manage league seasons</div>
       </div>
-      <div class="seasons-actions">
+      <div class="seasons-actions admin-only">
         <div class="form-group inline">
           <input type="text" id="newSeasonName" placeholder="Season name (e.g. Season 3)">
           <button class="btn-primary" onclick="createSeason()">+ CREATE SEASON</button>
@@ -493,20 +453,33 @@
           <p>Download all league data as a JSON backup file.</p>
           <button class="btn-primary" onclick="exportData()">Export JSON</button>
         </div>
-        <div class="settings-card">
+        <div class="settings-card admin-only">
+          <div class="settings-icon">👥</div>
+          <h3>Manage Accounts</h3>
+          <p>Create a new account or reset a player's password. (Admin only)</p>
+          <select id="adminAccName">
+            <option value="">— SELECT PLAYER —</option>
+            <option>Wael</option><option>Omar</option>
+            <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
+          </select>
+          <input type="password" id="adminAccPassword" placeholder="Set password (min 4 chars)">
+          <div id="adminAccError" class="login-error hidden"></div>
+          <button class="btn-primary" onclick="adminCreateAccount()">Save Account</button>
+        </div>
+        <div class="settings-card admin-only">
           <div class="settings-icon">📥</div>
           <h3>Import Data</h3>
           <p>Restore league data from a JSON backup file.</p>
           <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
           <button class="btn-primary" onclick="document.getElementById('importFile').click()">Import JSON</button>
         </div>
-        <div class="settings-card danger">
+        <div class="settings-card danger admin-only">
           <div class="settings-icon">🔄</div>
           <h3>Reset Season</h3>
           <p>Delete all matches from the current active season. Player accounts remain.</p>
           <button class="btn-danger" onclick="confirmResetSeason()">Reset Season</button>
         </div>
-        <div class="settings-card danger">
+        <div class="settings-card danger admin-only">
           <div class="settings-icon">⚠️</div>
           <h3>Reset All Data</h3>
           <p>Permanently delete ALL data including matches, seasons, and accounts.</p>

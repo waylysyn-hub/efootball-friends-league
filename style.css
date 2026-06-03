@@ -1436,6 +1436,23 @@ select option { background: #0f1f17; color: var(--text-primary); }
 
 .settings-card p { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
 
+.settings-card select,
+.settings-card input[type="password"] {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-dark, rgba(0,0,0,0.3));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.9rem;
+}
+.settings-card select:focus,
+.settings-card input[type="password"]:focus {
+  outline: none;
+  border-color: var(--neon);
+}
+
 /* ===================== MODAL ===================== */
 .modal-overlay {
   position: fixed; inset: 0;

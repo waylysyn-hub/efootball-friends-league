@@ -30,6 +30,26 @@ function nickChip(name, big = false) {
     `<span class="nick-chip-text">${esc(n.nick)}</span></span>`;
 }
 
+// ===== ADMIN / PERMISSIONS =====
+// Only this account may create accounts and modify data (matches, seasons,
+// resets, imports). Everyone else gets a read-only view.
+// NOTE: this is enforced in the browser only. For true security you'd add
+// real auth + row-level security in Supabase.
+const ADMIN = 'Wael';
+function isAdmin() { return currentUser === ADMIN; }
+function requireAdmin() {
+  if (!isAdmin()) { showToast('Only ' + ADMIN + ' (admin) can do this.', true); return false; }
+  return true;
+}
+// Shows/hides every element marked `.admin-only` based on the current user.
+function applyAdminUI() {
+  const admin = isAdmin();
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = admin ? '' : 'none';
+  });
+  document.body.classList.toggle('is-admin', admin);
+}
+
 const ACHIEVEMENT_DEFS = [
   { id: 'first_win',   icon: '🥇', name: 'First Win',         desc: 'Win your first match',         check: (s) => s.wins >= 1 },
   { id: 'wins10',      icon: '🏆', name: '10 Wins',           desc: 'Win 10 matches',                check: (s) => s.wins >= 10 },
@@ -234,13 +254,7 @@ function spawnParticles() {
 // ===== AUTH =====
 function showLogin() {
   document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('registerScreen').classList.add('hidden');
   document.getElementById('mainApp').classList.add('hidden');
-}
-
-function showRegister() {
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('registerScreen').classList.remove('hidden');
 }
 
 function handleLogin() {
@@ -252,7 +266,7 @@ function handleLogin() {
   if (!password) return showError(err, 'Please enter your password.');
 
   const acc = db.accounts[username];
-  if (!acc) return showError(err, 'Account not found. Please register first.');
+  if (!acc) return showError(err, 'Account not found. Ask the admin to create it.');
   if (acc.password !== password) return showError(err, 'Incorrect password.');
 
   err.classList.add('hidden');
@@ -261,29 +275,30 @@ function handleLogin() {
   enterApp();
 }
 
-async function handleRegister() {
-  const username = document.getElementById('regUsername').value;
-  const pw1 = document.getElementById('regPassword').value;
-  const pw2 = document.getElementById('regPassword2').value;
-  const err = document.getElementById('regError');
+// Admin-only: create a new account or reset an existing player's password.
+async function adminCreateAccount() {
+  const err = document.getElementById('adminAccError');
+  if (!isAdmin()) return showError(err, 'Only ' + ADMIN + ' (admin) can manage accounts.');
+
+  const username = document.getElementById('adminAccName').value;
+  const pw = document.getElementById('adminAccPassword').value;
 
   if (!sb) return showError(err, 'Supabase is not configured. See supabase-config.js.');
-  if (!username) return showError(err, 'Please select your name.');
-  if (!pw1) return showError(err, 'Please create a password.');
-  if (pw1.length < 4) return showError(err, 'Password must be at least 4 characters.');
-  if (pw1 !== pw2) return showError(err, 'Passwords do not match.');
-  if (db.accounts[username]) return showError(err, 'Account already exists. Please login.');
+  if (!username) return showError(err, 'Please select a player.');
+  if (!pw) return showError(err, 'Please set a password.');
+  if (pw.length < 4) return showError(err, 'Password must be at least 4 characters.');
 
-  const { error } = await sb.from('players').insert({ name: username, password: pw1, created: Date.now() });
-  if (error) {
-    if (error.code === '23505') return showError(err, 'Account already exists. Please login.');
-    return showError(err, 'Could not create account. Please try again.');
-  }
+  const exists = !!db.accounts[username];
+  // Upsert so the admin can both create and reset passwords.
+  const { error } = await sb.from('players')
+    .upsert({ name: username, password: pw, created: db.accounts[username]?.created || Date.now() },
+            { onConflict: 'name' });
+  if (error) return showError(err, 'Could not save account. Please try again.');
 
   await fetchAllData();
   err.classList.add('hidden');
-  showToast('Account created! Please login.');
-  showLogin();
+  document.getElementById('adminAccPassword').value = '';
+  showToast(`Account for ${username} ${exists ? 'updated' : 'created'}!`);
 }
 
 function handleLogout() {
@@ -294,10 +309,10 @@ function handleLogout() {
 
 function enterApp() {
   document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('registerScreen').classList.add('hidden');
   document.getElementById('mainApp').classList.remove('hidden');
 
   updateSidebarPlayer();
+  applyAdminUI();
   populateSeasonDropdowns();
   navigateTo('dashboard', document.querySelector('.nav-item[data-page="dashboard"]'));
 
@@ -419,6 +434,7 @@ function populateSeasonDropdowns() {
 }
 
 async function createSeason() {
+  if (!requireAdmin()) return;
   const name = document.getElementById('newSeasonName').value.trim();
   if (!sb) return showToast('Supabase is not configured.', true);
   if (!name) return showToast('Please enter a season name.', true);
@@ -441,6 +457,7 @@ async function createSeason() {
 }
 
 async function setActiveSeason(id) {
+  if (!requireAdmin()) return;
   if (!sb) return showToast('Supabase is not configured.', true);
   const r1 = await sb.from('seasons').update({ active: false }).neq('created', -1);
   const r2 = await sb.from('seasons').update({ active: true }).eq('id', id);
@@ -455,6 +472,7 @@ async function setActiveSeason(id) {
 }
 
 function deleteSeason(id) {
+  if (!requireAdmin()) return;
   const season = db.seasons.find(s => s.id === id);
   if (!season) return;
   const matchCount = db.matches.filter(m => m.season === id).length;
@@ -500,8 +518,8 @@ function renderSeasons() {
         </div>
         <div class="season-card-actions">
           ${s.active ? '<span class="season-badge-active">ACTIVE</span>' :
-            `<button class="btn-sm" onclick="setActiveSeason('${s.id}')">Set Active</button>`}
-          <button class="btn-sm delete" onclick="deleteSeason('${s.id}')">Delete</button>
+            (isAdmin() ? `<button class="btn-sm" onclick="setActiveSeason('${s.id}')">Set Active</button>` : '')}
+          ${isAdmin() ? `<button class="btn-sm delete" onclick="deleteSeason('${s.id}')">Delete</button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -557,6 +575,7 @@ async function saveMatch() {
   const season = document.getElementById('matchSeason').value;
   const errEl = document.getElementById('matchFormError');
 
+  if (!isAdmin()) return showError(errEl, 'Only ' + ADMIN + ' (admin) can record matches.');
   if (!p1 || !p2) return showError(errEl, 'Please select both players.');
   if (p1 === p2) return showError(errEl, 'A player cannot play against themselves.');
   if (isNaN(g1) || isNaN(g2) || g1 < 0 || g2 < 0) return showError(errEl, 'Goals cannot be negative.');
@@ -634,14 +653,15 @@ function matchCardHTML(m) {
         <div class="match-score">${m.goals1} — ${m.goals2}</div>
         <div class="match-player right">${esc(m.player2)}</div>
       </div>
-      <div class="match-card-actions">
+      ${isAdmin() ? `<div class="match-card-actions">
         <button class="btn-sm edit" onclick="openEditModal('${m.id}')">✏️ Edit</button>
         <button class="btn-sm delete" onclick="deleteMatch('${m.id}')">🗑️ Delete</button>
-      </div>
+      </div>` : ''}
     </div>`;
 }
 
 function deleteMatch(id) {
+  if (!requireAdmin()) return;
   showConfirm('Delete Match', 'Are you sure you want to delete this match? This cannot be undone.', async () => {
     if (!sb) return showToast('Supabase is not configured.', true);
     const { error } = await sb.from('matches').delete().eq('id', id);
@@ -657,6 +677,7 @@ function deleteMatch(id) {
 }
 
 function openEditModal(id) {
+  if (!requireAdmin()) return;
   const m = db.matches.find(x => x.id === id);
   if (!m) return;
 
@@ -687,6 +708,7 @@ async function saveEditMatch() {
   const season = document.getElementById('editSeason').value;
   const errEl = document.getElementById('editError');
 
+  if (!isAdmin()) return showError(errEl, 'Only ' + ADMIN + ' (admin) can edit matches.');
   if (!p1 || !p2) return showError(errEl, 'Please select both players.');
   if (p1 === p2) return showError(errEl, 'A player cannot play against themselves.');
   if (isNaN(g1) || isNaN(g2) || g1 < 0 || g2 < 0) return showError(errEl, 'Goals cannot be negative.');
@@ -1264,6 +1286,7 @@ function exportData() {
 }
 
 function importData(event) {
+  if (!requireAdmin()) { event.target.value = ''; return; }
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -1330,6 +1353,7 @@ async function wipeAllData() {
 }
 
 function confirmResetSeason() {
+  if (!requireAdmin()) return;
   const active = getActiveSeason();
   if (!active) return showToast('No active season to reset.', true);
   const count = db.matches.filter(m => m.season === active.id).length;
@@ -1348,6 +1372,7 @@ function confirmResetSeason() {
 }
 
 function confirmResetAll() {
+  if (!requireAdmin()) return;
   showConfirm('⚠️ RESET ALL DATA', 'This will permanently delete ALL matches, seasons, and accounts. This CANNOT be undone!', async () => {
     if (!sb) return showToast('Supabase is not configured.', true);
     try {
