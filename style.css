@@ -1005,6 +1005,23 @@ select option { background: #0f1f17; color: var(--text-primary); }
   font-family: 'Share Tech Mono', monospace;
 }
 
+.profile-info .profile-nickname {
+  color: var(--gold);
+  font-size: 0.95rem;
+  font-style: italic;
+  font-family: 'Share Tech Mono', monospace;
+  margin: 2px 0;
+}
+
+.player-nick {
+  display: block;
+  color: var(--gold);
+  font-size: 0.7rem;
+  font-style: italic;
+  font-family: 'Share Tech Mono', monospace;
+  opacity: 0.85;
+}
+
 .profile-stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));

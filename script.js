@@ -8,6 +8,17 @@
 // ===== CONSTANTS =====
 const PLAYERS = ['Wael', 'Omar', 'Abdul Rahim', 'Mohammad', 'Mustafa', 'Abdul Qader'];
 
+// Each player's legend nickname, shown next to their name across the app.
+const NICKNAMES = {
+  'Wael':        'Zlatan',
+  'Mustafa':     'Ronaldinho',
+  'Abdul Rahim': 'Mbappé',
+  'Mohammad':    'Del Piero',
+  'Omar':        'Drogba',
+  'Abdul Qader': 'Nesta',
+};
+function nick(name) { return NICKNAMES[name] || ''; }
+
 const ACHIEVEMENT_DEFS = [
   { id: 'first_win',   icon: '🥇', name: 'First Win',         desc: 'Win your first match',         check: (s) => s.wins >= 1 },
   { id: 'wins10',      icon: '🏆', name: '10 Wins',           desc: 'Win 10 matches',                check: (s) => s.wins >= 10 },
@@ -292,7 +303,9 @@ function updateSidebarPlayer() {
 
   const table = computeLeagueTable('all');
   const rank = table.findIndex(r => r.player === currentUser) + 1;
-  document.getElementById('sidebarPlayerRank').textContent = rank ? '#' + rank : '#—';
+  const n = nick(currentUser);
+  document.getElementById('sidebarPlayerRank').textContent =
+    (rank ? '#' + rank : '#—') + (n ? ' · ' + n : '');
 }
 
 // ===== NAVIGATION =====
@@ -868,7 +881,7 @@ function renderLeagueTable() {
     return `
       <tr class="${rankClass}">
         <td><span class="rank-badge ${badge}">${i + 1}</span></td>
-        <td>${esc(r.player)}</td>
+        <td>${esc(r.player)}${nick(r.player) ? `<span class="player-nick">${esc(nick(r.player))}</span>` : ''}</td>
         <td>${r.played}</td>
         <td>${r.wins}</td>
         <td>${r.draws}</td>
@@ -895,6 +908,7 @@ function selectProfilePlayer(name, btn) {
       <div class="profile-avatar">${name.charAt(0)}</div>
       <div class="profile-info">
         <h3>${esc(name)}</h3>
+        ${nick(name) ? `<div class="profile-nickname">"${esc(nick(name))}"</div>` : ''}
         <div class="profile-rank">${s.winRate}% win rate · ${s.points} points</div>
       </div>
     </div>
