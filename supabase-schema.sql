@@ -129,7 +129,8 @@ insert into public.players (name, password) values
   ('Omar',        '2003'),
   ('Abdul Rahim', '2003'),
   ('Mohammad',    '2003'),
-  ('Mustafa',     '2003')
+  ('Mustafa',     '2003'),
+  ('Abdul Qader', '2003')
 on conflict (name) do update set password = excluded.password;
 
 -- Done. Your tables are ready.

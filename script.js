@@ -6,7 +6,7 @@
 'use strict';
 
 // ===== CONSTANTS =====
-const PLAYERS = ['Wael', 'Omar', 'Abdul Rahim', 'Mohammad', 'Mustafa'];
+const PLAYERS = ['Wael', 'Omar', 'Abdul Rahim', 'Mohammad', 'Mustafa', 'Abdul Qader'];
 
 const ACHIEVEMENT_DEFS = [
   { id: 'first_win',   icon: '🥇', name: 'First Win',         desc: 'Win your first match',         check: (s) => s.wins >= 1 },
