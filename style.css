@@ -884,7 +884,8 @@ select option { background: #0f1f17; color: var(--text-primary); }
   padding: 6px 0;
   border-bottom: 1px solid rgba(255,255,255,0.04);
 }
-.ms-name { font-weight: 600; font-size: 0.9rem; }
+.ms-name { font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; }
+.ms-name .nick-chip { font-size: 0.72rem; padding: 2px 8px; }
 .ms-goals, .ms-assists {
   width: 100%;
   padding: 6px 8px;
@@ -909,6 +910,15 @@ select option { background: #0f1f17; color: var(--text-primary); }
   color: var(--text-secondary);
 }
 .match-stat-line strong { color: var(--neon); }
+
+.match-player-legend {
+  display: block;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 1px;
+}
 
 .match-awards {
   display: flex;

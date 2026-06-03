@@ -20,6 +20,37 @@ const NICKNAMES = {
 };
 function nick(name) { return NICKNAMES[name] ? NICKNAMES[name].nick : ''; }
 
+// Legend label for dropdowns (e.g. "🦁 Zlatan"). DB still stores real name.
+function playerLegendLabel(name) {
+  const n = NICKNAMES[name];
+  return n ? `${n.icon} ${n.nick}` : name;
+}
+
+function matchPlayerLabel(name) {
+  const n = nick(name);
+  return n ? `<span class="match-player-legend">${esc(n)}</span>` : esc(name);
+}
+
+function fillPlayerSelect(selectEl, emptyLabel) {
+  if (!selectEl) return;
+  const prev = selectEl.value;
+  selectEl.innerHTML = emptyLabel ? `<option value="">${emptyLabel}</option>` : '';
+  PLAYERS.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = playerLegendLabel(p);
+    selectEl.appendChild(opt);
+  });
+  if (prev && [...selectEl.options].some(o => o.value === prev)) selectEl.value = prev;
+}
+
+function populateMatchPlayerDropdowns() {
+  fillPlayerSelect(document.getElementById('matchPlayer1'), 'Select Player');
+  fillPlayerSelect(document.getElementById('matchPlayer2'), 'Select Player');
+  fillPlayerSelect(document.getElementById('editPlayer1'), null);
+  fillPlayerSelect(document.getElementById('editPlayer2'), null);
+}
+
 // Returns a styled chip element (HTML string). Pass big=true for the large,
 // animated variant used on the player profile.
 function nickChip(name, big = false) {
@@ -701,17 +732,18 @@ function computeMatchAwards(matchId) {
 function matchAwardsHTML(matchId) {
   const awards = computeMatchAwards(matchId);
   if (!awards.length) return '';
-  return `<div class="match-awards">${awards.map(a =>
-    `<span class="match-award-chip" title="${esc(a.title)} — ${esc(a.detail)}">` +
-    `${a.icon} <strong>${esc(a.player)}</strong> <span class="match-award-title">${esc(a.title)}</span></span>`
-  ).join('')}</div>`;
+  return `<div class="match-awards">${awards.map(a => {
+    const label = nick(a.player) || a.player;
+    return `<span class="match-award-chip" title="${esc(a.title)} — ${esc(a.detail)}">` +
+      `${a.icon} <strong>${esc(label)}</strong> <span class="match-award-title">${esc(a.title)}</span></span>`;
+  }).join('')}</div>`;
 }
 
 function matchStatsTableHTML(matchId) {
   const stats = getMatchStats(matchId);
   if (!stats.length) return '';
   return `<div class="match-stats-table">
-    ${stats.map(s => `<span class="match-stat-line">${esc(s.player)}: <strong>${s.goals}G</strong> ${s.assists}A</span>`).join('')}
+    ${stats.map(s => `<span class="match-stat-line">${esc(playerLegendLabel(s.player))}: <strong>${s.goals}G</strong> ${s.assists}A</span>`).join('')}
   </div>`;
 }
 
@@ -749,7 +781,7 @@ function renderMatchStatRows(containerId, rows) {
       </div>
       ${rows.map(s => `
         <div class="ms-row" data-player="${esc(s.player)}">
-          <span class="ms-name">${esc(s.player)}</span>
+          <span class="ms-name">${nickChip(s.player) || esc(s.player)}</span>
           <input type="number" class="ms-goals" min="0" value="${s.goals}" oninput="updateMatchStatsPreview('${containerId}')">
           <input type="number" class="ms-assists" min="0" value="${s.assists}" oninput="updateMatchStatsPreview('${containerId}')">
           <button type="button" class="btn-sm delete ms-remove" data-player="${esc(s.player)}" onclick="removeMatchStatPlayer('${containerId}', this.dataset.player)" title="Remove">✕</button>
@@ -769,11 +801,11 @@ function populateMatchStatsAddSelect(containerId) {
   if (!sel) return;
   const inRoster = new Set(collectMatchStatsFromGrid(containerId).map(r => r.player));
   const prev = sel.value;
-  sel.innerHTML = '<option value="">— Add player who played —</option>';
+  sel.innerHTML = '<option value="">— Add legend who played —</option>';
   PLAYERS.filter(p => !inRoster.has(p)).forEach(p => {
     const opt = document.createElement('option');
     opt.value = p;
-    opt.textContent = p;
+    opt.textContent = playerLegendLabel(p);
     sel.appendChild(opt);
   });
   if (prev && sel.querySelector(`option[value="${prev}"]`)) sel.value = prev;
@@ -788,7 +820,7 @@ function addMatchStatPlayer(containerId) {
   rows.push({ player: name, goals: 0, assists: 0 });
   renderMatchStatRows(containerId, rows);
   if (sel) sel.value = '';
-  showToast(name + ' added.');
+  showToast(playerLegendLabel(name) + ' added.');
 }
 
 function removeMatchStatPlayer(containerId, player) {
@@ -861,6 +893,7 @@ function getSeasonStatTotals(player, seasonFilter) {
 function initRecordForm() {
   document.getElementById('matchDate').value = new Date().toISOString().split('T')[0];
   populateSeasonDropdowns();
+  populateMatchPlayerDropdowns();
   clearMatchForm();
   if (matchStatsTablesReady) renderMatchStatRows('matchStatsGrid', []);
 }
@@ -884,8 +917,8 @@ function updateMatchPreview() {
   const g1 = parseInt(document.getElementById('matchGoals1').value) || 0;
   const g2 = parseInt(document.getElementById('matchGoals2').value) || 0;
 
-  document.getElementById('scoreLabel1').textContent = p1 ? p1 + ' Goals' : 'Goals';
-  document.getElementById('scoreLabel2').textContent = p2 ? p2 + ' Goals' : 'Goals';
+  document.getElementById('scoreLabel1').textContent = p1 ? (nick(p1) || p1) + ' Goals' : 'Goals';
+  document.getElementById('scoreLabel2').textContent = p2 ? (nick(p2) || p2) + ' Goals' : 'Goals';
 
   if (!p1 || !p2) {
     document.getElementById('previewResult').textContent = '— vs —';
@@ -893,11 +926,13 @@ function updateMatchPreview() {
   }
 
   let result = '';
-  if (g1 > g2) result = `🏆 ${p1} WINS`;
-  else if (g2 > g1) result = `🏆 ${p2} WINS`;
+  if (g1 > g2) result = `🏆 ${nick(p1) || p1} WINS`;
+  else if (g2 > g1) result = `🏆 ${nick(p2) || p2} WINS`;
   else result = `🤝 DRAW`;
 
-  document.getElementById('previewResult').textContent = `${p1} ${g1} — ${g2} ${p2}  |  ${result}`;
+  const n1 = p1 ? (nick(p1) || p1) : '—';
+  const n2 = p2 ? (nick(p2) || p2) : '—';
+  document.getElementById('previewResult').textContent = `${n1} ${g1} — ${g2} ${n2}  |  ${result}`;
   syncMatchStatsFromScore('matchStatsGrid');
 }
 
@@ -989,9 +1024,9 @@ function matchCardHTML(m) {
         ${resultBadge}
       </div>
       <div class="match-card-result">
-        <div class="match-player">${esc(m.player1)}</div>
+        <div class="match-player">${matchPlayerLabel(m.player1)}</div>
         <div class="match-score">${m.goals1} — ${m.goals2}</div>
-        <div class="match-player right">${esc(m.player2)}</div>
+        <div class="match-player right">${matchPlayerLabel(m.player2)}</div>
       </div>
       ${matchStatsTableHTML(m.id)}
       ${matchAwardsHTML(m.id)}
@@ -1025,6 +1060,7 @@ function openEditModal(id) {
   if (!m) return;
 
   populateSeasonDropdowns();
+  populateMatchPlayerDropdowns();
 
   document.getElementById('editMatchId').value = m.id;
   document.getElementById('editPlayer1').value = m.player1;
