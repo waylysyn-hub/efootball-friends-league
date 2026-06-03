@@ -1411,12 +1411,18 @@ function renderQuestions() {
 
   const card = (q) => {
     const n = getQuestionAnswers(q.id).length;
+    const adminDel = isAdmin()
+      ? `<button class="btn-sm delete qa-delete" onclick="event.stopPropagation();deleteQuestion('${q.id}')" title="Admin: delete question">🗑️</button>`
+      : '';
     return `<div class="qa-card" onclick="openQuestion('${q.id}')">
       <div class="qa-card-top">
         <span class="qa-author">${esc(q.author)}</span>
-        ${q.closed
-          ? '<span class="qa-badge closed">CLOSED</span>'
-          : '<span class="qa-badge open">OPEN</span>'}
+        <span class="qa-card-top-right">
+          ${q.closed
+            ? '<span class="qa-badge closed">CLOSED</span>'
+            : '<span class="qa-badge open">OPEN</span>'}
+          ${adminDel}
+        </span>
       </div>
       <p class="qa-card-body">${esc(q.body)}</p>
       <div class="qa-card-meta">${n} answer${n !== 1 ? 's' : ''} · ${formatDate(q.timestamp)}</div>
@@ -1437,6 +1443,10 @@ function renderQuestions() {
       <div class="qa-list">${open.length ? open.map(card).join('') : '<div class="empty-state">No open questions yet.</div>'}</div>
       ${closed.length ? `<h3 class="qa-section-title">Closed (${closed.length})</h3>
         <div class="qa-list">${closed.map(card).join('')}</div>` : ''}
+      ${isAdmin() && closed.length ? `
+      <div class="qa-admin-actions">
+        <button class="btn-danger btn-sm" onclick="deleteAllClosedQuestions()">🗑️ Delete all closed questions (${closed.length})</button>
+      </div>` : ''}
     </div>`;
 }
 
@@ -1481,9 +1491,12 @@ function renderQuestionDetail(id) {
     <div class="qa-detail-view">
       <button class="btn-sm qa-back" onclick="backToQuestions()">← All Questions</button>
       <div class="panel qa-question-panel">
-        <div class="panel-header">
+        <div class="panel-header qa-detail-header">
           <span>Question by ${esc(q.author)}</span>
-          ${q.closed ? '<span class="qa-badge closed">CLOSED</span>' : '<span class="qa-badge open">OPEN</span>'}
+          <span class="qa-card-top-right">
+            ${q.closed ? '<span class="qa-badge closed">CLOSED</span>' : '<span class="qa-badge open">OPEN</span>'}
+            ${isAdmin() ? `<button class="btn-sm delete" onclick="deleteQuestion('${q.id}')">🗑️ Delete Question</button>` : ''}
+          </span>
         </div>
         <div class="panel-body">
           <p class="qa-question-body">${esc(q.body)}</p>
@@ -1553,6 +1566,54 @@ async function submitAnswer(questionId) {
   err?.classList.add('hidden');
   showToast('Answer posted!');
   renderQuestionDetail(questionId);
+}
+
+function deleteQuestion(id) {
+  if (!requireAdmin()) return;
+  const q = db.questions.find(x => x.id === id);
+  if (!q) return;
+  const n = getQuestionAnswers(id).length;
+  showConfirm(
+    'Delete Question',
+    `Delete this question and ${n} answer${n !== 1 ? 's' : ''}? This cannot be undone.`,
+    async () => {
+      if (!sb) return showToast('Supabase is not configured.', true);
+      const { error } = await sb.from('questions').delete().eq('id', id);
+      if (error) return showToast('Could not delete question.', true);
+
+      db.questions = db.questions.filter(x => x.id !== id);
+      db.answers = db.answers.filter(a => a.questionId !== id);
+      cacheDB();
+      if (qaSelectedId === id) qaSelectedId = null;
+      showToast('Question deleted.');
+      renderQuestions();
+    }
+  );
+}
+
+function deleteAllClosedQuestions() {
+  if (!requireAdmin()) return;
+  const closed = db.questions.filter(q => q.closed);
+  if (!closed.length) return showToast('No closed questions to delete.', true);
+  const totalAnswers = closed.reduce((sum, q) => sum + getQuestionAnswers(q.id).length, 0);
+  showConfirm(
+    'Delete All Closed Questions',
+    `Delete ${closed.length} closed question(s) and ${totalAnswers} answer(s)? This cannot be undone.`,
+    async () => {
+      if (!sb) return showToast('Supabase is not configured.', true);
+      const ids = closed.map(q => q.id);
+      const { error } = await sb.from('questions').delete().in('id', ids);
+      if (error) return showToast('Could not delete questions.', true);
+
+      const idSet = new Set(ids);
+      db.questions = db.questions.filter(q => !idSet.has(q.id));
+      db.answers = db.answers.filter(a => !idSet.has(a.questionId));
+      cacheDB();
+      qaSelectedId = null;
+      showToast(`${closed.length} question(s) deleted.`);
+      renderQuestions();
+    }
+  );
 }
 
 function markCorrectAnswer(questionId, answerId) {
