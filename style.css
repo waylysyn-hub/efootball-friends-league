@@ -462,6 +462,18 @@ select option { background: #0f1f17; color: var(--text-primary); }
   display: flex; flex-direction: column;
 }
 
+.viewer-badge {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  color: var(--neon2);
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
 .topbar {
   background: rgba(7,11,18,0.9);
   border-bottom: 1px solid var(--border);

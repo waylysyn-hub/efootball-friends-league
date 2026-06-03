@@ -45,9 +45,12 @@ function requireAdmin() {
 function applyAdminUI() {
   const admin = isAdmin();
   document.querySelectorAll('.admin-only').forEach(el => {
-    el.style.display = admin ? '' : 'none';
+    el.classList.toggle('hidden', !admin);
   });
   document.body.classList.toggle('is-admin', admin);
+  document.body.classList.toggle('is-viewer', !admin);
+  const badge = document.getElementById('viewerBadge');
+  if (badge) badge.classList.toggle('hidden', admin);
 }
 
 const ACHIEVEMENT_DEFS = [
@@ -190,8 +193,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   subscribeRealtime();
 
+  // If the user logged in while data was still loading, don't call showLogin()
+  // afterwards — that was hiding the app and leaving a blank screen.
   const saved = localStorage.getItem('efl_user');
-  if (saved && db.accounts[saved]) {
+  if (currentUser) {
+    enterApp();
+  } else if (saved && db.accounts[saved]) {
     currentUser = saved;
     enterApp();
   } else {
@@ -253,8 +260,9 @@ function spawnParticles() {
 
 // ===== AUTH =====
 function showLogin() {
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('loginScreen')?.classList.remove('hidden');
+  document.getElementById('mainApp')?.classList.add('hidden');
+  closeSidebar();
 }
 
 function handleLogin() {
@@ -308,17 +316,32 @@ function handleLogout() {
 }
 
 function enterApp() {
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('mainApp').classList.remove('hidden');
+  const login = document.getElementById('loginScreen');
+  const app = document.getElementById('mainApp');
+  if (!app) {
+    showToast('App failed to load. Please refresh the page.', true);
+    return;
+  }
 
-  updateSidebarPlayer();
-  applyAdminUI();
-  populateSeasonDropdowns();
-  navigateTo('dashboard', document.querySelector('.nav-item[data-page="dashboard"]'));
+  try {
+    login?.classList.add('hidden');
+    app.classList.remove('hidden');
 
-  // Keep the stored league table / achievements in sync with the latest
-  // matches (self-heals if a previous write was interrupted). Fire-and-forget.
-  if (sb) syncDerivedData().catch(() => {});
+    updateSidebarPlayer();
+    applyAdminUI();
+    populateSeasonDropdowns();
+    navigateTo('dashboard', document.querySelector('.nav-item[data-page="dashboard"]'));
+
+    // Keep the stored league table / achievements in sync with the latest
+    // matches (self-heals if a previous write was interrupted). Fire-and-forget.
+    if (sb && isAdmin()) syncDerivedData().catch(() => {});
+  } catch (e) {
+    console.error('enterApp failed:', e);
+    showToast('Could not open the app. Please refresh and try again.', true);
+    currentUser = null;
+    try { localStorage.removeItem('efl_user'); } catch (err) {}
+    showLogin();
+  }
 }
 
 function updateSidebarPlayer() {
@@ -336,15 +359,25 @@ function updateSidebarPlayer() {
 
 // ===== NAVIGATION =====
 function navigateTo(page, el) {
-  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-
-  const target = document.getElementById('page-' + page);
-  if (target) {
-    target.classList.remove('hidden');
-    target.classList.add('active');
+  if (!isAdmin() && page === 'recordMatch') {
+    showToast('Only ' + ADMIN + ' (admin) can record matches.', true);
+    page = 'dashboard';
+    el = document.querySelector('.nav-item[data-page="dashboard"]');
   }
+  const target = document.getElementById('page-' + page);
+  if (!target) {
+    console.error('Unknown page:', page);
+    page = 'dashboard';
+  }
+  const pageEl = document.getElementById('page-' + page) || document.getElementById('page-dashboard');
 
+  document.querySelectorAll('.page').forEach(p => {
+    if (p !== pageEl) p.classList.add('hidden');
+  });
+  pageEl.classList.remove('hidden');
+  pageEl.classList.add('active');
+
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
 
   const titles = {
@@ -354,14 +387,21 @@ function navigateTo(page, el) {
     seasons: 'Seasons', awards: 'Awards', achievements: 'Achievements',
     rivalries: 'Rivalries', statistics: 'Statistics', settings: 'Settings'
   };
-  document.getElementById('topbarTitle').textContent = titles[page] || page;
+  const topTitle = document.getElementById('topbarTitle');
+  if (topTitle) topTitle.textContent = titles[page] || page;
 
   const activeSeason = getActiveSeason();
-  document.getElementById('topbarSeason').textContent = activeSeason ? activeSeason.name : 'No Season';
+  const topSeason = document.getElementById('topbarSeason');
+  if (topSeason) topSeason.textContent = activeSeason ? activeSeason.name : 'No Season';
 
   closeSidebar();
   currentPage = page;
-  renderPage(page);
+  try {
+    renderPage(page);
+  } catch (e) {
+    console.error('renderPage failed:', page, e);
+    showToast('Could not load this page.', true);
+  }
 }
 
 // Renders a page's content. Kept separate from navigateTo so realtime updates
