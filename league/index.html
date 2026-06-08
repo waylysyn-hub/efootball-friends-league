@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eFootball Friends League</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-bg">
+    <div class="login-particles" id="loginParticles"></div>
+    <div class="login-grid"></div>
+  </div>
+  <div class="login-container">
+    <div class="login-logo">
+      <div class="logo-icon">⚽</div>
+      <h1>eFOOTBALL</h1>
+      <h2>FRIENDS LEAGUE</h2>
+      <div class="login-divider"></div>
+    </div>
+    <div class="login-form-box">
+      <h3>SIGN IN</h3>
+      <div class="form-group">
+        <label>USERNAME</label>
+        <select id="loginUsername">
+          <option value="">— SELECT PLAYER —</option>
+          <option value="Wael">Wael</option>
+          <option value="Omar">Omar</option>
+          <option value="Abdul Rahim">Abdul Rahim</option>
+          <option value="Mohammad">Mohammad</option>
+          <option value="Mustafa">Mustafa</option>
+          <option value="Abdul Qader">Abdul Qader</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>PASSWORD</label>
+        <input type="password" id="loginPassword" placeholder="Enter password">
+      </div>
+      <div id="loginError" class="login-error hidden"></div>
+      <button class="btn-primary" onclick="handleLogin()">LOGIN →</button>
+      <p class="login-hint">Accounts are managed by the admin.</p>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" class="main-app hidden">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <span class="logo-ball">⚽</span>
+        <div>
+          <div class="sidebar-title">eFOOTBALL</div>
+          <div class="sidebar-subtitle">FRIENDS LEAGUE</div>
+        </div>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">☰</button>
+    </div>
+
+    <div class="sidebar-player">
+      <div class="player-avatar" id="sidebarAvatar">W</div>
+      <div class="player-info">
+        <div class="player-name" id="sidebarPlayerName">Wael</div>
+        <div class="sidebar-nick" id="sidebarNick"></div>
+        <div class="player-rank" id="sidebarPlayerRank">#1</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="dashboard" onclick="navigateTo('dashboard',this)">
+        <span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span>
+      </a>
+      <a href="#" class="nav-item admin-only" data-page="recordMatch" onclick="navigateTo('recordMatch',this)">
+        <span class="nav-icon">⚽</span><span class="nav-label">Record Match</span>
+      </a>
+      <a href="#" class="nav-item" data-page="matchHistory" onclick="navigateTo('matchHistory',this)">
+        <span class="nav-icon">📋</span><span class="nav-label">Match History</span>
+      </a>
+      <a href="#" class="nav-item" data-page="footballStats" onclick="navigateTo('footballStats',this)">
+        <span class="nav-icon">⭐</span><span class="nav-label">Player Performance</span>
+      </a>
+      <a href="#" class="nav-item" data-page="leagueTable" onclick="navigateTo('leagueTable',this)">
+        <span class="nav-icon">🏆</span><span class="nav-label">League Table</span>
+      </a>
+      <a href="#" class="nav-item" data-page="playerProfile" onclick="navigateTo('playerProfile',this)">
+        <span class="nav-icon">👤</span><span class="nav-label">Player Profiles</span>
+      </a>
+      <a href="#" class="nav-item" data-page="headToHead" onclick="navigateTo('headToHead',this)">
+        <span class="nav-icon">⚔️</span><span class="nav-label">Head to Head</span>
+      </a>
+      <a href="#" class="nav-item" data-page="seasons" onclick="navigateTo('seasons',this)">
+        <span class="nav-icon">📅</span><span class="nav-label">Seasons</span>
+      </a>
+      <a href="#" class="nav-item" data-page="awards" onclick="navigateTo('awards',this)">
+        <span class="nav-icon">🥇</span><span class="nav-label">Awards</span>
+      </a>
+      <a href="#" class="nav-item" data-page="achievements" onclick="navigateTo('achievements',this)">
+        <span class="nav-icon">🎖️</span><span class="nav-label">Achievements</span>
+      </a>
+      <a href="#" class="nav-item" data-page="rivalries" onclick="navigateTo('rivalries',this)">
+        <span class="nav-icon">🔥</span><span class="nav-label">Rivalries</span>
+      </a>
+      <a href="#" class="nav-item" data-page="statistics" onclick="navigateTo('statistics',this)">
+        <span class="nav-icon">📊</span><span class="nav-label">Statistics</span>
+      </a>
+      <a href="#" class="nav-item" data-page="questions" onclick="navigateTo('questions',this)">
+        <span class="nav-icon">❓</span><span class="nav-label">League Q&A</span>
+      </a>
+      <a href="#" class="nav-item" data-page="settings" onclick="navigateTo('settings',this)">
+        <span class="nav-icon">⚙️</span><span class="nav-label">Settings</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="handleLogout()">⏻ LOGOUT</button>
+    </div>
+  </aside>
+
+  <!-- OVERLAY -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" id="mainContent">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-title" id="topbarTitle">Dashboard</div>
+      <div class="topbar-right">
+        <div class="viewer-badge hidden" id="viewerBadge">👁 VIEW ONLY</div>
+        <div class="season-badge" id="topbarSeason">Season 1</div>
+        <div class="topbar-player" id="topbarPlayer">Wael</div>
+      </div>
+    </div>
+
+    <!-- PAGES -->
+
+    <!-- DASHBOARD PAGE -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h2 class="page-title">DASHBOARD</h2>
+        <div class="page-subtitle" id="dashCurrentSeason">Season 1 — Active</div>
+      </div>
+
+      <div class="stat-cards-grid" id="dashStatCards">
+        <div class="stat-card" id="sc-leader">
+          <div class="stat-card-icon">👑</div>
+          <div class="stat-card-label">LEAGUE LEADER</div>
+          <div class="stat-card-value" id="sc-leader-val">—</div>
+          <div class="stat-card-sub" id="sc-leader-sub">0 pts</div>
+        </div>
+        <div class="stat-card" id="sc-scorer">
+          <div class="stat-card-icon">⚽</div>
+          <div class="stat-card-label">TOP SCORER</div>
+          <div class="stat-card-value" id="sc-scorer-val">—</div>
+          <div class="stat-card-sub" id="sc-scorer-sub">0 goals</div>
+        </div>
+        <div class="stat-card" id="sc-defense">
+          <div class="stat-card-icon">🧱</div>
+          <div class="stat-card-label">BEST DEFENSE</div>
+          <div class="stat-card-value" id="sc-defense-val">—</div>
+          <div class="stat-card-sub" id="sc-defense-sub">0 conceded</div>
+        </div>
+        <div class="stat-card" id="sc-attack">
+          <div class="stat-card-icon">🔥</div>
+          <div class="stat-card-label">BEST ATTACK</div>
+          <div class="stat-card-value" id="sc-attack-val">—</div>
+          <div class="stat-card-sub" id="sc-attack-sub">0 scored</div>
+        </div>
+        <div class="stat-card" id="sc-wins">
+          <div class="stat-card-icon">🏆</div>
+          <div class="stat-card-label">MOST WINS</div>
+          <div class="stat-card-value" id="sc-wins-val">—</div>
+          <div class="stat-card-sub" id="sc-wins-sub">0 wins</div>
+        </div>
+        <div class="stat-card" id="sc-matches">
+          <div class="stat-card-icon">📋</div>
+          <div class="stat-card-label">TOTAL MATCHES</div>
+          <div class="stat-card-value" id="sc-matches-val">0</div>
+          <div class="stat-card-sub" id="sc-matches-sub">this season</div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="panel">
+          <div class="panel-header">⚡ RECENT MATCHES</div>
+          <div class="panel-body" id="dashRecentMatches">
+            <div class="empty-state">No matches recorded yet</div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">📊 MINI STANDINGS</div>
+          <div class="panel-body" id="dashMiniStandings">
+            <div class="empty-state">No data yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECORD MATCH PAGE -->
+    <div class="page hidden" id="page-recordMatch">
+      <div class="page-header">
+        <h2 class="page-title">RECORD MATCH</h2>
+        <div class="page-subtitle">Result + goal-by-goal events (scorer, assist, minute)</div>
+      </div>
+      <div class="form-container">
+        <div class="match-form-card">
+          <div class="match-vs-header">
+            <div class="match-player-select">
+              <label>PLAYER 1</label>
+              <select id="matchPlayer1" onchange="updateMatchPreview()">
+                <option value="">Select Player</option>
+                <option>Wael</option><option>Omar</option>
+                <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
+              </select>
+            </div>
+            <div class="vs-badge">VS</div>
+            <div class="match-player-select">
+              <label>PLAYER 2</label>
+              <select id="matchPlayer2" onchange="updateMatchPreview()">
+                <option value="">Select Player</option>
+                <option>Wael</option><option>Omar</option>
+                <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="match-score-row">
+            <div class="score-input-group">
+              <label id="scoreLabel1">Goals</label>
+              <input type="number" id="matchGoals1" min="0" value="0" oninput="updateMatchPreview()">
+            </div>
+            <div class="score-colon">:</div>
+            <div class="score-input-group">
+              <label id="scoreLabel2">Goals</label>
+              <input type="number" id="matchGoals2" min="0" value="0" oninput="updateMatchPreview()">
+            </div>
+          </div>
+
+          <div class="match-preview" id="matchPreview">
+            <div class="preview-result" id="previewResult">— vs —</div>
+          </div>
+
+          <div class="form-row-two">
+            <div class="form-group">
+              <label>MATCH DATE</label>
+              <input type="date" id="matchDate">
+            </div>
+            <div class="form-group">
+              <label>SEASON</label>
+              <select id="matchSeason">
+              </select>
+            </div>
+          </div>
+
+          <div id="goalEventsSetupBanner" class="qa-setup-banner hidden"></div>
+          <div class="panel goal-events-panel">
+            <div class="panel-header">⚽ GOAL EVENTS</div>
+            <div class="panel-body">
+              <p class="match-stats-hint">Add each goal: team owner (friend), scorer &amp; assist (football players), and minute. Total goals must match the score above.</p>
+              <div id="goalEventsList" class="goal-events-list"></div>
+              <div class="ge-actions">
+                <button type="button" class="btn-sm btn-ge-add" onclick="addGoalEventRow('goalEventsList')">+ ADD GOAL EVENT</button>
+                <button type="button" class="btn-sm" onclick="syncScoreFromGoalEvents('goalEventsList')">↻ Sync score from goals</button>
+              </div>
+              <div id="goalEventsSummary" class="goal-events-summary"></div>
+              <div class="match-awards-preview-wrap">
+                <span class="match-stats-hint">Match awards preview:</span>
+                <div id="matchAwardsPreview" class="match-awards-preview"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="matchFormError" class="form-error hidden"></div>
+
+          <div class="form-actions">
+            <button class="btn-primary" onclick="saveMatch()">💾 SAVE MATCH</button>
+            <button class="btn-secondary" onclick="clearMatchForm()">✕ CLEAR</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MATCH HISTORY PAGE -->
+    <div class="page hidden" id="page-matchHistory">
+      <div class="page-header">
+        <h2 class="page-title">MATCH HISTORY</h2>
+        <div class="page-subtitle" id="historyCount">0 matches recorded</div>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" id="historySearch" placeholder="🔍 Search player..." oninput="renderHistory()">
+        <select id="historyFilterPlayer" onchange="renderHistory()">
+          <option value="">All Players</option>
+          <option>Wael</option><option>Omar</option>
+          <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
+        </select>
+        <select id="historyFilterSeason" onchange="renderHistory()">
+          <option value="">All Seasons</option>
+        </select>
+        <select id="historySort" onchange="renderHistory()">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+        </select>
+      </div>
+
+      <div class="match-list" id="matchList">
+        <div class="empty-state">No matches yet. Record your first match!</div>
+      </div>
+    </div>
+
+    <!-- MATCH DETAILS PAGE -->
+    <div class="page hidden" id="page-matchDetails">
+      <div class="page-header match-details-header">
+        <button type="button" class="btn-sm back-btn" onclick="backFromMatchDetails()">← Back</button>
+        <div>
+          <h2 class="page-title">MATCH DETAILS</h2>
+          <div class="page-subtitle" id="matchDetailsSubtitle">—</div>
+        </div>
+      </div>
+      <div id="matchDetailsContent" class="match-details-content">
+        <div class="empty-state">Select a match from history.</div>
+      </div>
+    </div>
+
+    <!-- FOOTBALL PLAYER PERFORMANCE PAGE -->
+    <div class="page hidden" id="page-footballStats">
+      <div class="page-header">
+        <h2 class="page-title">PLAYER PERFORMANCE</h2>
+        <div class="page-subtitle">Football player stats from goal events</div>
+      </div>
+      <div class="season-filter-row">
+        <label>Season:</label>
+        <select id="fbStatsSeasonFilter" onchange="renderFootballStats()">
+          <option value="all">All Seasons</option>
+        </select>
+      </div>
+      <div class="fb-search-row">
+        <input type="text" id="fbPlayerSearch" placeholder="🔍 Search football player..." oninput="renderFootballStats()">
+      </div>
+      <div class="fb-leaderboards" id="fbLeaderboards"></div>
+      <div class="panel mt-16">
+        <div class="panel-header">📋 ALL PLAYERS</div>
+        <div class="panel-body" id="fbStatsTable"></div>
+      </div>
+      <div id="fbPlayerDetail" class="fb-player-detail hidden"></div>
+    </div>
+
+    <!-- LEAGUE TABLE PAGE -->
+    <div class="page hidden" id="page-leagueTable">
+      <div class="page-header">
+        <h2 class="page-title">LEAGUE TABLE</h2>
+        <div class="page-subtitle">Current standings</div>
+      </div>
+      <div class="season-filter-row">
+        <label>Season:</label>
+        <select id="tableSeasonFilter" onchange="renderLeagueTable()">
+          <option value="all">All Seasons</option>
+        </select>
+      </div>
+      <div class="table-container">
+        <table class="league-table" id="leagueTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Player</th>
+              <th>P</th>
+              <th>W</th>
+              <th>D</th>
+              <th>L</th>
+              <th>GF</th>
+              <th>GA</th>
+              <th>GD</th>
+              <th>PTS</th>
+            </tr>
+          </thead>
+          <tbody id="leagueTableBody"></tbody>
+        </table>
+      </div>
+      <div class="table-legend">
+        <span class="legend-item"><span class="legend-dot gold"></span> Champion</span>
+        <span class="legend-item"><span class="legend-dot silver"></span> Top 2</span>
+        <span class="legend-item"><span class="legend-dot bronze"></span> Top 3</span>
+      </div>
+    </div>
+
+    <!-- PLAYER PROFILES PAGE -->
+    <div class="page hidden" id="page-playerProfile">
+      <div class="page-header">
+        <h2 class="page-title">PLAYER PROFILES</h2>
+        <div class="page-subtitle">Select a player to view stats</div>
+      </div>
+      <div class="player-tabs">
+        <button class="player-tab active" onclick="selectProfilePlayer('Wael',this)">Wael</button>
+        <button class="player-tab" onclick="selectProfilePlayer('Omar',this)">Omar</button>
+        <button class="player-tab" onclick="selectProfilePlayer('Abdul Rahim',this)">Abdul Rahim</button>
+        <button class="player-tab" onclick="selectProfilePlayer('Mohammad',this)">Mohammad</button>
+        <button class="player-tab" onclick="selectProfilePlayer('Mustafa',this)">Mustafa</button>
+        <button class="player-tab" onclick="selectProfilePlayer('Abdul Qader',this)">Abdul Qader</button>
+      </div>
+      <div id="profileContent"></div>
+    </div>
+
+    <!-- HEAD TO HEAD PAGE -->
+    <div class="page hidden" id="page-headToHead">
+      <div class="page-header">
+        <h2 class="page-title">HEAD TO HEAD</h2>
+        <div class="page-subtitle">Compare two players directly</div>
+      </div>
+      <div class="h2h-select-row">
+        <select id="h2hPlayer1" onchange="renderH2H()">
+          <option value="">Player 1</option>
+          <option>Wael</option><option>Omar</option>
+          <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
+        </select>
+        <div class="vs-badge big">VS</div>
+        <select id="h2hPlayer2" onchange="renderH2H()">
+          <option value="">Player 2</option>
+          <option>Wael</option><option>Omar</option>
+          <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
+        </select>
+      </div>
+      <div id="h2hContent">
+        <div class="empty-state">Select two players to compare</div>
+      </div>
+    </div>
+
+    <!-- SEASONS PAGE -->
+    <div class="page hidden" id="page-seasons">
+      <div class="page-header">
+        <h2 class="page-title">SEASONS</h2>
+        <div class="page-subtitle">Manage league seasons</div>
+      </div>
+      <div class="seasons-actions admin-only">
+        <div class="form-group inline">
+          <input type="text" id="newSeasonName" placeholder="Season name (e.g. Season 3)">
+          <button class="btn-primary" onclick="createSeason()">+ CREATE SEASON</button>
+        </div>
+      </div>
+      <div id="seasonsList"></div>
+    </div>
+
+    <!-- AWARDS PAGE -->
+    <div class="page hidden" id="page-awards">
+      <div class="page-header">
+        <h2 class="page-title">AWARDS</h2>
+        <div class="page-subtitle">Season honours</div>
+      </div>
+      <div class="season-filter-row">
+        <label>Season:</label>
+        <select id="awardsSeasonFilter" onchange="renderAwards()">
+          <option value="all">All Seasons (Overall)</option>
+        </select>
+      </div>
+      <div id="awardsContent"></div>
+    </div>
+
+    <!-- ACHIEVEMENTS PAGE -->
+    <div class="page hidden" id="page-achievements">
+      <div class="page-header">
+        <h2 class="page-title">ACHIEVEMENTS</h2>
+        <div class="page-subtitle">Milestones unlocked</div>
+      </div>
+      <div class="player-tabs">
+        <button class="player-tab active" onclick="selectAchievementsPlayer('Wael',this)">Wael</button>
+        <button class="player-tab" onclick="selectAchievementsPlayer('Omar',this)">Omar</button>
+        <button class="player-tab" onclick="selectAchievementsPlayer('Abdul Rahim',this)">Abdul Rahim</button>
+        <button class="player-tab" onclick="selectAchievementsPlayer('Mohammad',this)">Mohammad</button>
+        <button class="player-tab" onclick="selectAchievementsPlayer('Mustafa',this)">Mustafa</button>
+        <button class="player-tab" onclick="selectAchievementsPlayer('Abdul Qader',this)">Abdul Qader</button>
+      </div>
+      <div id="achievementsContent"></div>
+    </div>
+
+    <!-- RIVALRIES PAGE -->
+    <div class="page hidden" id="page-rivalries">
+      <div class="page-header">
+        <h2 class="page-title">RIVALRIES</h2>
+        <div class="page-subtitle">Epic matchups detected</div>
+      </div>
+      <div id="rivalriesContent"></div>
+    </div>
+
+    <!-- STATISTICS PAGE -->
+    <div class="page hidden" id="page-statistics">
+      <div class="page-header">
+        <h2 class="page-title">STATISTICS</h2>
+        <div class="page-subtitle">League analytics</div>
+      </div>
+      <div class="season-filter-row">
+        <label>Season:</label>
+        <select id="statsSeasonFilter" onchange="renderStatistics()">
+          <option value="all">All Seasons</option>
+        </select>
+      </div>
+      <div id="statsContent"></div>
+    </div>
+
+    <!-- LEAGUE Q&A PAGE -->
+    <div class="page hidden" id="page-questions">
+      <div class="page-header">
+        <h2 class="page-title">LEAGUE Q&A</h2>
+        <div class="page-subtitle">Ask questions — everyone answers — asker picks the winner</div>
+      </div>
+      <div id="qaContent"></div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div class="page hidden" id="page-settings">
+      <div class="page-header">
+        <h2 class="page-title">SETTINGS</h2>
+        <div class="page-subtitle">Manage your league data</div>
+      </div>
+      <div class="settings-grid">
+        <div class="settings-card">
+          <div class="settings-icon">📤</div>
+          <h3>Export Data</h3>
+          <p>Download all league data as a JSON backup file.</p>
+          <button class="btn-primary" onclick="exportData()">Export JSON</button>
+        </div>
+        <div class="settings-card admin-only">
+          <div class="settings-icon">👥</div>
+          <h3>Manage Accounts</h3>
+          <p>Create a new account or reset a player's password. (Admin only)</p>
+          <select id="adminAccName">
+            <option value="">— SELECT PLAYER —</option>
+            <option>Wael</option><option>Omar</option>
+            <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
+          </select>
+          <input type="password" id="adminAccPassword" placeholder="Set password (min 4 chars)">
+          <div id="adminAccError" class="login-error hidden"></div>
+          <button class="btn-primary" onclick="adminCreateAccount()">Save Account</button>
+        </div>
+        <div class="settings-card admin-only">
+          <div class="settings-icon">📥</div>
+          <h3>Import Data</h3>
+          <p>Restore league data from a JSON backup file.</p>
+          <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+          <button class="btn-primary" onclick="document.getElementById('importFile').click()">Import JSON</button>
+        </div>
+        <div class="settings-card danger admin-only">
+          <div class="settings-icon">🔄</div>
+          <h3>Reset Season</h3>
+          <p>Delete all matches from the current active season. Player accounts remain.</p>
+          <button class="btn-danger" onclick="confirmResetSeason()">Reset Season</button>
+        </div>
+        <div class="settings-card danger admin-only">
+          <div class="settings-icon">⚠️</div>
+          <h3>Reset All Data</h3>
+          <p>Permanently delete ALL data including matches, seasons, and accounts.</p>
+          <button class="btn-danger" onclick="confirmResetAll()">Reset Everything</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- EDIT MATCH MODAL -->
+<div class="modal-overlay hidden" id="editMatchModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>EDIT MATCH</h3>
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editMatchId">
+      <div class="match-vs-header">
+        <div class="match-player-select">
+          <label>PLAYER 1</label>
+          <select id="editPlayer1" onchange="onEditMatchPlayersChange()">
+            <option>Wael</option><option>Omar</option>
+            <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
+          </select>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="match-player-select">
+          <label>PLAYER 2</label>
+          <select id="editPlayer2" onchange="onEditMatchPlayersChange()">
+            <option>Wael</option><option>Omar</option>
+            <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
+          </select>
+        </div>
+      </div>
+      <div class="match-score-row">
+        <div class="score-input-group">
+          <label>Goals P1</label>
+          <input type="number" id="editGoals1" min="0" value="0" oninput="updateGoalEventsUI('editGoalEventsList')">
+        </div>
+        <div class="score-colon">:</div>
+        <div class="score-input-group">
+          <label>Goals P2</label>
+          <input type="number" id="editGoals2" min="0" value="0" oninput="updateGoalEventsUI('editGoalEventsList')">
+        </div>
+      </div>
+      <div class="panel goal-events-panel compact">
+        <div class="panel-header">⚽ GOAL EVENTS</div>
+        <div class="panel-body">
+          <div id="editGoalEventsList" class="goal-events-list"></div>
+          <div class="ge-actions">
+            <button type="button" class="btn-sm btn-ge-add" onclick="addGoalEventRow('editGoalEventsList')">+ ADD GOAL</button>
+            <button type="button" class="btn-sm" onclick="syncScoreFromGoalEvents('editGoalEventsList')">↻ Sync score</button>
+          </div>
+          <div id="editGoalEventsSummary" class="goal-events-summary"></div>
+          <div id="editMatchAwardsPreview" class="match-awards-preview"></div>
+        </div>
+      </div>
+      <div class="form-row-two">
+        <div class="form-group">
+          <label>DATE</label>
+          <input type="date" id="editDate">
+        </div>
+        <div class="form-group">
+          <label>SEASON</label>
+          <select id="editSeason"></select>
+        </div>
+      </div>
+      <div id="editError" class="form-error hidden"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="saveEditMatch()">SAVE CHANGES</button>
+      <button class="btn-secondary" onclick="closeEditModal()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay hidden" id="confirmModal">
+  <div class="modal small">
+    <div class="modal-header">
+      <h3 id="confirmTitle">Confirm</h3>
+    </div>
+    <div class="modal-body">
+      <p id="confirmMessage">Are you sure?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-danger" id="confirmYes">CONFIRM</button>
+      <button class="btn-secondary" onclick="closeConfirmModal()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast hidden" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../supabase-config.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
