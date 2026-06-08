@@ -1,0 +1,9 @@
+.DS_Store
+Thumbs.db
+*.log
+.env
+.idea/
+.vscode/
+.cursor/
+.vite/
+node_modules/

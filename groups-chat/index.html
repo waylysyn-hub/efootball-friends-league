@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Circle · Groups & Friends Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">C</div>
+        <div class="brand-text">
+          <span class="brand-name">Circle</span>
+          <span class="brand-sub">Groups &amp; Friends</span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-item active" data-view="groups">
+          <span class="nav-icon">▦</span>
+          <span>Groups</span>
+        </button>
+        <button class="nav-item" data-view="invites">
+          <span class="nav-icon">✦</span>
+          <span>Invitations</span>
+          <span class="badge" id="inviteBadge">0</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="me">
+          <div class="avatar" style="--c1:#6366f1;--c2:#8b5cf6">Y</div>
+          <div class="me-text">
+            <span class="me-name">You</span>
+            <span class="me-status">● Online</span>
+          </div>
+        </div>
+        <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+          <span class="theme-icon">🌙</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main">
+      <!-- GROUPS VIEW -->
+      <section class="view active" id="view-groups">
+        <header class="view-header">
+          <div>
+            <h1>Groups</h1>
+            <p class="muted">Jump into a conversation or discover new circles.</p>
+          </div>
+          <div class="search">
+            <span>⌕</span>
+            <input type="text" id="groupSearch" placeholder="Search groups…" />
+          </div>
+        </header>
+        <div class="groups-grid" id="groupsGrid"></div>
+      </section>
+
+      <!-- CHAT VIEW -->
+      <section class="view" id="view-chat">
+        <header class="chat-header">
+          <button class="back-btn" id="backToGroups">←</button>
+          <div class="chat-title">
+            <div class="avatar" id="chatAvatar">G</div>
+            <div>
+              <h2 id="chatGroupName">Group</h2>
+              <span class="muted" id="chatGroupMeta">0 members</span>
+            </div>
+          </div>
+          <div class="chat-actions">
+            <button title="Call">📞</button>
+            <button title="Video">🎥</button>
+            <button title="Info">ⓘ</button>
+          </div>
+        </header>
+
+        <div class="messages" id="messages"></div>
+
+        <form class="composer" id="composer">
+          <button type="button" class="icon-btn" title="Attach">＋</button>
+          <input
+            type="text"
+            id="messageInput"
+            placeholder="Type a message…"
+            autocomplete="off"
+          />
+          <button type="submit" class="send-btn" id="sendBtn">➤</button>
+        </form>
+      </section>
+
+      <!-- INVITES VIEW -->
+      <section class="view" id="view-invites">
+        <header class="view-header">
+          <div>
+            <h1>Invitations</h1>
+            <p class="muted">People want you in their circle.</p>
+          </div>
+        </header>
+        <div class="invites-list" id="invitesList"></div>
+        <div class="empty" id="invitesEmpty" hidden>
+          <div class="empty-emoji">📭</div>
+          <h3>You're all caught up</h3>
+          <p class="muted">No pending invitations right now.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
