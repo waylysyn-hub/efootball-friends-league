@@ -409,20 +409,23 @@ themeToggle.addEventListener("click", () => {
   } catch (_) {}
   applyTheme(savedTheme);
 
+  el("loginScreen").classList.remove("hidden");
+
   if (!chatClient()) {
     showError("Supabase is not configured. Edit supabase-config.js.");
     return;
   }
 
-  await populateLoginPlayers();
+  try {
+    await populateLoginPlayers();
+  } catch (_) {
+    showError("Could not load players from Supabase.");
+  }
 
   const savedUser = localStorage.getItem("efl_user");
   if (savedUser) {
     el("loginUsername").value = savedUser;
-    // Auto-enter if session exists — password still required on fresh device
   }
-
-  el("loginScreen").classList.remove("hidden");
 })();
 
 el("logoutBtn").addEventListener("click", handleLogout);

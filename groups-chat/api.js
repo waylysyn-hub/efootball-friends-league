@@ -158,6 +158,7 @@ async function chatFetchRoster(excludePlayer) {
   return (data || []).map((p) => p.name);
 }
 
+function chatSubscribeMessages(groupId, onMessage) {
   const sb = chatClient();
   if (!sb || !groupId) return null;
 
