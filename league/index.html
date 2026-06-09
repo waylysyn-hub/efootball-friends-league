@@ -29,12 +29,6 @@
         <label>USERNAME</label>
         <select id="loginUsername">
           <option value="">— SELECT PLAYER —</option>
-          <option value="Wael">Wael</option>
-          <option value="Omar">Omar</option>
-          <option value="Abdul Rahim">Abdul Rahim</option>
-          <option value="Mohammad">Mohammad</option>
-          <option value="Mustafa">Mustafa</option>
-          <option value="Abdul Qader">Abdul Qader</option>
         </select>
       </div>
       <div class="form-group">
@@ -74,6 +68,9 @@
     </div>
 
     <nav class="sidebar-nav">
+      <a href="../index.html" class="nav-item nav-external">
+        <span class="nav-icon">🏛️</span><span class="nav-label">Tournament Hub</span>
+      </a>
       <a href="#" class="nav-item active" data-page="dashboard" onclick="navigateTo('dashboard',this)">
         <span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span>
       </a>
@@ -217,8 +214,6 @@
               <label>PLAYER 1</label>
               <select id="matchPlayer1" onchange="updateMatchPreview()">
                 <option value="">Select Player</option>
-                <option>Wael</option><option>Omar</option>
-                <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
               </select>
             </div>
             <div class="vs-badge">VS</div>
@@ -226,8 +221,6 @@
               <label>PLAYER 2</label>
               <select id="matchPlayer2" onchange="updateMatchPreview()">
                 <option value="">Select Player</option>
-                <option>Wael</option><option>Omar</option>
-                <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
               </select>
             </div>
           </div>
@@ -299,8 +292,6 @@
         <input type="text" id="historySearch" placeholder="🔍 Search player..." oninput="renderHistory()">
         <select id="historyFilterPlayer" onchange="renderHistory()">
           <option value="">All Players</option>
-          <option>Wael</option><option>Omar</option>
-          <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
         </select>
         <select id="historyFilterSeason" onchange="renderHistory()">
           <option value="">All Seasons</option>
@@ -397,14 +388,7 @@
         <h2 class="page-title">PLAYER PROFILES</h2>
         <div class="page-subtitle">Select a player to view stats</div>
       </div>
-      <div class="player-tabs">
-        <button class="player-tab active" onclick="selectProfilePlayer('Wael',this)">Wael</button>
-        <button class="player-tab" onclick="selectProfilePlayer('Omar',this)">Omar</button>
-        <button class="player-tab" onclick="selectProfilePlayer('Abdul Rahim',this)">Abdul Rahim</button>
-        <button class="player-tab" onclick="selectProfilePlayer('Mohammad',this)">Mohammad</button>
-        <button class="player-tab" onclick="selectProfilePlayer('Mustafa',this)">Mustafa</button>
-        <button class="player-tab" onclick="selectProfilePlayer('Abdul Qader',this)">Abdul Qader</button>
-      </div>
+      <div class="player-tabs" id="profilePlayerTabs"></div>
       <div id="profileContent"></div>
     </div>
 
@@ -417,14 +401,10 @@
       <div class="h2h-select-row">
         <select id="h2hPlayer1" onchange="renderH2H()">
           <option value="">Player 1</option>
-          <option>Wael</option><option>Omar</option>
-          <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
         </select>
         <div class="vs-badge big">VS</div>
         <select id="h2hPlayer2" onchange="renderH2H()">
           <option value="">Player 2</option>
-          <option>Wael</option><option>Omar</option>
-          <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
         </select>
       </div>
       <div id="h2hContent">
@@ -468,14 +448,7 @@
         <h2 class="page-title">ACHIEVEMENTS</h2>
         <div class="page-subtitle">Milestones unlocked</div>
       </div>
-      <div class="player-tabs">
-        <button class="player-tab active" onclick="selectAchievementsPlayer('Wael',this)">Wael</button>
-        <button class="player-tab" onclick="selectAchievementsPlayer('Omar',this)">Omar</button>
-        <button class="player-tab" onclick="selectAchievementsPlayer('Abdul Rahim',this)">Abdul Rahim</button>
-        <button class="player-tab" onclick="selectAchievementsPlayer('Mohammad',this)">Mohammad</button>
-        <button class="player-tab" onclick="selectAchievementsPlayer('Mustafa',this)">Mustafa</button>
-        <button class="player-tab" onclick="selectAchievementsPlayer('Abdul Qader',this)">Abdul Qader</button>
-      </div>
+      <div class="player-tabs" id="achievementsPlayerTabs"></div>
       <div id="achievementsContent"></div>
     </div>
 
@@ -531,8 +504,6 @@
           <p>Create a new account or reset a player's password. (Admin only)</p>
           <select id="adminAccName">
             <option value="">— SELECT PLAYER —</option>
-            <option>Wael</option><option>Omar</option>
-            <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
           </select>
           <input type="password" id="adminAccPassword" placeholder="Set password (min 4 chars)">
           <div id="adminAccError" class="login-error hidden"></div>
@@ -575,18 +546,12 @@
       <div class="match-vs-header">
         <div class="match-player-select">
           <label>PLAYER 1</label>
-          <select id="editPlayer1" onchange="onEditMatchPlayersChange()">
-            <option>Wael</option><option>Omar</option>
-            <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
-          </select>
+          <select id="editPlayer1" onchange="onEditMatchPlayersChange()"></select>
         </div>
         <div class="vs-badge">VS</div>
         <div class="match-player-select">
           <label>PLAYER 2</label>
-          <select id="editPlayer2" onchange="onEditMatchPlayersChange()">
-            <option>Wael</option><option>Omar</option>
-            <option>Abdul Rahim</option><option>Mohammad</option><option>Mustafa</option><option>Abdul Qader</option>
-          </select>
+          <select id="editPlayer2" onchange="onEditMatchPlayersChange()"></select>
         </div>
       </div>
       <div class="match-score-row">

@@ -420,6 +420,18 @@ select option { background: #0f1f17; color: var(--text-primary); }
   border-left-color: var(--neon);
 }
 
+.nav-item.nav-external {
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--gold, #ffd700);
+}
+
+.nav-item.nav-external:hover {
+  color: var(--neon);
+  background: rgba(255,215,0,0.06);
+  border-left-color: rgba(255,215,0,0.4);
+}
+
 .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
 .nav-label { font-family: 'Rajdhani', sans-serif; }
 

@@ -1,4 +1,4 @@
-// ---------- Mock data ----------
+// ---------- Theme palettes (visual only) ----------
 const palettes = [
   ["#6366f1", "#8b5cf6"],
   ["#06b6d4", "#3b82f6"],
@@ -8,96 +8,13 @@ const palettes = [
   ["#a855f7", "#ec4899"],
 ];
 
-const groups = [
-  {
-    id: "g1",
-    name: "Design Crew",
-    emoji: "🎨",
-    members: 18,
-    desc: "Pixel pushers sharing mockups, fonts and Figma chaos.",
-    palette: 0,
-  },
-  {
-    id: "g2",
-    name: "Weekend Hikers",
-    emoji: "🥾",
-    members: 42,
-    desc: "Trails, summits and questionable trail mix recipes.",
-    palette: 3,
-  },
-  {
-    id: "g3",
-    name: "Code & Coffee",
-    emoji: "☕",
-    members: 27,
-    desc: "Dev talk, shipping updates and late-night debugging.",
-    palette: 1,
-  },
-  {
-    id: "g4",
-    name: "Foodies United",
-    emoji: "🍜",
-    members: 63,
-    desc: "Recipes, restaurant finds and aggressively good photos.",
-    palette: 4,
-  },
-  {
-    id: "g5",
-    name: "Game Night",
-    emoji: "🎮",
-    members: 31,
-    desc: "Co-op sessions, tier lists and friendly trash talk.",
-    palette: 5,
-  },
-  {
-    id: "g6",
-    name: "Book Club",
-    emoji: "📚",
-    members: 14,
-    desc: "Monthly reads, hot takes and zero spoilers (mostly).",
-    palette: 2,
-  },
-];
-
-const messagesByGroup = {
-  g1: [
-    { sender: "Maya", text: "Dropped the new landing mockups 👀", me: false, time: "09:12" },
-    { sender: "You", text: "Loving the gradient direction!", me: true, time: "09:14" },
-    { sender: "Leo", text: "Can we try a lighter hero section?", me: false, time: "09:16" },
-    { sender: "You", text: "On it — pushing a variant in 10.", me: true, time: "09:17" },
-  ],
-  g2: [
-    { sender: "Sam", text: "Trail conditions look great for Saturday ⛰️", me: false, time: "18:02" },
-    { sender: "You", text: "I'm in! What time are we starting?", me: true, time: "18:05" },
-    { sender: "Priya", text: "7am at the north trailhead.", me: false, time: "18:06" },
-  ],
-  g3: [
-    { sender: "Devon", text: "Shipped the auth refactor today 🚀", me: false, time: "11:40" },
-    { sender: "You", text: "Huge. Tests green?", me: true, time: "11:41" },
-    { sender: "Devon", text: "All passing ✅", me: false, time: "11:42" },
-  ],
-  g4: [
-    { sender: "Nina", text: "Found a ramen spot that changed my life 🍜", me: false, time: "20:15" },
-    { sender: "You", text: "Sending pin or it didn't happen", me: true, time: "20:16" },
-  ],
-  g5: [
-    { sender: "Jay", text: "Squad up at 9? 🎮", me: false, time: "21:00" },
-    { sender: "You", text: "Give me 15 to finish dinner", me: true, time: "21:01" },
-  ],
-  g6: [
-    { sender: "Ada", text: "Chapter 7 destroyed me emotionally 📖", me: false, time: "15:30" },
-    { sender: "You", text: "Don't say a word, I'm only on 4!", me: true, time: "15:33" },
-  ],
-};
-
-let invitations = [
-  { id: "i1", group: "Startup Founders", from: "Olivia R.", emoji: "🚀", palette: 1 },
-  { id: "i2", group: "Vinyl Collectors", from: "Marcus T.", emoji: "🎵", palette: 5 },
-  { id: "i3", group: "Morning Runners", from: "Hana K.", emoji: "🏃", palette: 3 },
-];
-
-// ---------- State / elements ----------
+// ---------- State ----------
+let currentUser = null;
+let groups = [];
+let invitations = [];
 let currentGroup = null;
+let messageChannel = null;
+
 const el = (id) => document.getElementById(id);
 const initials = (name) =>
   name
@@ -106,6 +23,104 @@ const initials = (name) =>
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+function formatMsgTime(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDayLabel(iso) {
+  const d = new Date(iso);
+  const today = new Date();
+  if (d.toDateString() === today.toDateString()) return "Today";
+  return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+}
+
+function escapeHtml(str) {
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function showToast(text) {
+  const t = el("toast");
+  t.textContent = text;
+  t.classList.add("show");
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => t.classList.remove("show"), 2400);
+}
+
+function showError(msg) {
+  const err = el("loginError");
+  err.textContent = msg;
+  err.hidden = false;
+}
+
+// ---------- Auth ----------
+async function handleLogin() {
+  const username = el("loginUsername").value;
+  const password = el("loginPassword").value;
+  el("loginError").hidden = true;
+
+  if (!username || !password) {
+    showError("Select your account and enter your password.");
+    return;
+  }
+
+  try {
+    const name = await chatLogin(username, password);
+    if (!name) {
+      showError("Invalid username or password.");
+      return;
+    }
+    currentUser = name;
+    localStorage.setItem("efl_user", name);
+    await enterApp();
+  } catch (e) {
+    showError("Could not connect to Supabase.");
+  }
+}
+
+async function handleLogout() {
+  currentUser = null;
+  localStorage.removeItem("efl_user");
+  chatUnsubscribe(messageChannel);
+  messageChannel = null;
+  el("loginScreen").classList.remove("hidden");
+  el("appRoot").classList.add("hidden");
+}
+
+async function enterApp() {
+  el("loginScreen").classList.add("hidden");
+  el("appRoot").classList.remove("hidden");
+  updateMeSidebar();
+  await refreshAll();
+}
+
+function updateMeSidebar() {
+  const [c1, c2] = palettes[0];
+  const avatar = el("meAvatar");
+  avatar.textContent = initials(currentUser);
+  avatar.style.setProperty("--c1", c1);
+  avatar.style.setProperty("--c2", c2);
+  el("meName").textContent = currentUser;
+}
+
+async function populateLoginPlayers() {
+  const select = el("loginUsername");
+  try {
+    const players = await chatFetchPlayers();
+    select.innerHTML = '<option value="">— SELECT PLAYER —</option>';
+    players.forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.name;
+      opt.textContent = p.name;
+      select.appendChild(opt);
+    });
+  } catch (_) {
+    showError("Could not load players from Supabase.");
+  }
+}
 
 // ---------- Navigation ----------
 function showView(name) {
@@ -119,9 +134,57 @@ function showView(name) {
 document.querySelectorAll(".nav-item[data-view]").forEach((btn) => {
   btn.addEventListener("click", () => showView(btn.dataset.view));
 });
-el("backToGroups").addEventListener("click", () => showView("groups"));
+el("backToGroups").addEventListener("click", () => {
+  chatUnsubscribe(messageChannel);
+  messageChannel = null;
+  currentGroup = null;
+  el("chatInviteBar").classList.add("hidden");
+  showView("groups");
+});
 
-// ---------- Render groups ----------
+async function populateInviteSelect() {
+  const select = el("invitePlayerSelect");
+  try {
+    const roster = await chatFetchRoster(currentUser);
+    select.innerHTML = '<option value="">Invite player…</option>';
+    roster.forEach((name) => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+  } catch (_) {
+    select.innerHTML = '<option value="">Could not load roster</option>';
+  }
+}
+
+el("sendInviteBtn").addEventListener("click", async () => {
+  const player = el("invitePlayerSelect").value;
+  if (!player || !currentGroup) return;
+  try {
+    await chatInvitePlayer(currentGroup.id, player, currentUser);
+    showToast(`Invited ${player}`);
+    el("invitePlayerSelect").value = "";
+  } catch (_) {
+    showToast("Could not send invitation.");
+  }
+});
+
+// ---------- Data refresh ----------
+async function refreshAll() {
+  try {
+    [groups, invitations] = await Promise.all([
+      chatFetchGroups(currentUser),
+      chatFetchInvitations(currentUser),
+    ]);
+    renderGroups(el("groupSearch").value);
+    renderInvites();
+  } catch (e) {
+    showToast("Failed to load chat data.");
+  }
+}
+
+// ---------- Groups ----------
 function renderGroups(filter = "") {
   const grid = el("groupsGrid");
   const q = filter.trim().toLowerCase();
@@ -129,33 +192,23 @@ function renderGroups(filter = "") {
   grid.innerHTML = "";
 
   if (!list.length) {
-    grid.innerHTML = `<p class="muted">No groups match “${filter}”.</p>`;
+    grid.innerHTML = `<div class="empty-inline"><p class="muted">${q ? `No groups match “${filter}”.` : "No groups yet. Create one to start chatting."}</p></div>`;
     return;
   }
 
   list.forEach((g) => {
-    const [c1, c2] = palettes[g.palette];
-    const stack = Array.from({ length: Math.min(4, g.members) })
-      .map((_, i) => {
-        const [a, b] = palettes[(g.palette + i) % palettes.length];
-        return `<span class="mini" style="background:linear-gradient(135deg,${a},${b})">${String.fromCharCode(
-          65 + ((g.name.charCodeAt(0) + i) % 26)
-        )}</span>`;
-      })
-      .join("");
-
+    const [c1, c2] = palettes[g.palette_index % palettes.length];
     const card = document.createElement("div");
     card.className = "group-card";
     card.innerHTML = `
       <div class="group-top">
         <div class="avatar group-avatar" style="--c1:${c1};--c2:${c2}">${g.emoji}</div>
         <div>
-          <div class="group-name">${g.name}</div>
+          <div class="group-name">${escapeHtml(g.name)}</div>
           <div class="members">👥 ${g.members} members</div>
         </div>
       </div>
-      <p class="group-desc">${g.desc}</p>
-      <div class="avatars-stack">${stack}</div>
+      <p class="group-desc">${escapeHtml(g.description || "")}</p>
       <button class="open-btn">Open chat</button>
     `;
     card.querySelector(".open-btn").addEventListener("click", (e) => {
@@ -169,95 +222,124 @@ function renderGroups(filter = "") {
 
 el("groupSearch").addEventListener("input", (e) => renderGroups(e.target.value));
 
+el("createGroupBtn").addEventListener("click", () => {
+  el("createGroupModal").classList.remove("hidden");
+  el("newGroupName").focus();
+});
+
+el("createGroupForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = el("newGroupName").value.trim();
+  const desc = el("newGroupDesc").value.trim();
+  const emoji = el("newGroupEmoji").value.trim() || "⚽";
+  if (!name) return;
+
+  try {
+    const paletteIndex = groups.length % palettes.length;
+    const group = await chatCreateGroup(name, desc, emoji, paletteIndex, currentUser);
+    el("createGroupModal").classList.add("hidden");
+    el("createGroupForm").reset();
+    groups.unshift({ ...group, members: 1 });
+    renderGroups(el("groupSearch").value);
+    openChat({ ...group, members: 1 });
+    showToast(`Created “${name}”`);
+  } catch (_) {
+    showToast("Could not create group.");
+  }
+});
+
+el("cancelCreateGroup").addEventListener("click", () => {
+  el("createGroupModal").classList.add("hidden");
+});
+
 // ---------- Chat ----------
-function openChat(group) {
+async function openChat(group) {
   currentGroup = group;
-  const [c1, c2] = palettes[group.palette];
+  const [c1, c2] = palettes[group.palette_index % palettes.length];
   const avatar = el("chatAvatar");
   avatar.textContent = group.emoji;
   avatar.style.setProperty("--c1", c1);
   avatar.style.setProperty("--c2", c2);
   el("chatGroupName").textContent = group.name;
-  el("chatGroupMeta").textContent = `${group.members} members · ${Math.max(
-    1,
-    Math.round(group.members / 4)
-  )} online`;
-  renderMessages();
+  el("chatGroupMeta").textContent = `${group.members} members`;
+  await populateInviteSelect();
+  el("chatInviteBar").classList.remove("hidden");
+
+  chatUnsubscribe(messageChannel);
+  await renderMessages();
+
+  messageChannel = chatSubscribeMessages(group.id, (row) => {
+    if (row.author === currentUser) return;
+    appendMessage(row, false);
+  });
+
   showView("chat");
   el("messageInput").focus();
 }
 
-function renderMessages() {
+async function renderMessages() {
   const box = el("messages");
-  const msgs = messagesByGroup[currentGroup.id] || [];
-  box.innerHTML = '<div class="day-sep">Today</div>';
-  msgs.forEach((m) => box.appendChild(buildMessage(m)));
-  box.scrollTop = box.scrollHeight;
+  box.innerHTML = '<p class="muted chat-loading">Loading messages…</p>';
+
+  try {
+    const msgs = await chatFetchMessages(currentGroup.id);
+    box.innerHTML = "";
+    let lastDay = "";
+    msgs.forEach((m) => {
+      const day = formatDayLabel(m.created_at);
+      if (day !== lastDay) {
+        lastDay = day;
+        const sep = document.createElement("div");
+        sep.className = "day-sep";
+        sep.textContent = day;
+        box.appendChild(sep);
+      }
+      appendMessage(m, m.author === currentUser, false);
+    });
+    box.scrollTop = box.scrollHeight;
+  } catch (_) {
+    box.innerHTML = '<p class="muted">Could not load messages.</p>';
+  }
 }
 
-function buildMessage(m) {
+function appendMessage(m, isMe, scroll = true) {
+  const box = el("messages");
   const wrap = document.createElement("div");
-  wrap.className = `msg ${m.me ? "me" : "them"}`;
+  wrap.className = `msg ${isMe ? "me" : "them"}`;
   wrap.innerHTML = `
-    ${m.me ? "" : `<span class="sender">${m.sender}</span>`}
-    <div class="bubble">${escapeHtml(m.text)}</div>
-    <span class="meta">${m.time}</span>
+    ${isMe ? "" : `<span class="sender">${escapeHtml(m.author)}</span>`}
+    <div class="bubble">${escapeHtml(m.body)}</div>
+    <span class="meta">${formatMsgTime(m.created_at)}</span>
   `;
-  return wrap;
+  box.appendChild(wrap);
+  if (scroll) box.scrollTop = box.scrollHeight;
 }
 
-function escapeHtml(str) {
-  const d = document.createElement("div");
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-el("composer").addEventListener("submit", (e) => {
+el("composer").addEventListener("submit", async (e) => {
   e.preventDefault();
   const input = el("messageInput");
   const text = input.value.trim();
   if (!text || !currentGroup) return;
 
-  const now = new Date();
-  const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const msg = { sender: "You", text, me: true, time };
-  messagesByGroup[currentGroup.id].push(msg);
-
-  const box = el("messages");
-  box.appendChild(buildMessage(msg));
-  box.scrollTop = box.scrollHeight;
   input.value = "";
-  input.focus();
+  input.disabled = true;
 
-  maybeAutoReply();
+  const optimistic = {
+    author: currentUser,
+    body: text,
+    created_at: new Date().toISOString(),
+  };
+  appendMessage(optimistic, true);
+
+  try {
+    await chatSendMessage(currentGroup.id, currentUser, text);
+  } catch (_) {
+    showToast("Message failed to send.");
+  } finally {
+    input.disabled = false;
+    input.focus();
+  }
 });
-
-function maybeAutoReply() {
-  const replies = [
-    "Nice one 👍",
-    "Haha totally",
-    "Let's do it!",
-    "Good point.",
-    "Be right back 🙂",
-    "Agreed 💯",
-  ];
-  const senders = ["Maya", "Leo", "Sam", "Devon", "Nina", "Jay", "Ada"];
-  const groupId = currentGroup.id;
-
-  setTimeout(() => {
-    if (!currentGroup || currentGroup.id !== groupId) return;
-    const reply = {
-      sender: senders[Math.floor(Math.random() * senders.length)],
-      text: replies[Math.floor(Math.random() * replies.length)],
-      me: false,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    };
-    messagesByGroup[groupId].push(reply);
-    const box = el("messages");
-    box.appendChild(buildMessage(reply));
-    box.scrollTop = box.scrollHeight;
-  }, 1100 + Math.random() * 900);
-}
 
 // ---------- Invitations ----------
 function renderInvites() {
@@ -267,71 +349,42 @@ function renderInvites() {
   const badge = el("inviteBadge");
   badge.textContent = invitations.length;
   badge.dataset.empty = invitations.length === 0;
-
   el("invitesEmpty").hidden = invitations.length !== 0;
 
   invitations.forEach((inv) => {
-    const [c1, c2] = palettes[inv.palette];
+    const g = inv.chat_groups || {};
+    const [c1, c2] = palettes[(g.palette_index || 0) % palettes.length];
     const card = document.createElement("div");
     card.className = "invite-card";
     card.innerHTML = `
-      <div class="avatar group-avatar" style="--c1:${c1};--c2:${c2}">${inv.emoji}</div>
+      <div class="avatar group-avatar" style="--c1:${c1};--c2:${c2}">${g.emoji || "⚽"}</div>
       <div class="invite-info">
-        <div class="group-name">${inv.group}</div>
-        <div class="from">Invited by ${inv.from}</div>
+        <div class="group-name">${escapeHtml(g.name || "Group")}</div>
+        <div class="from">Invited by ${escapeHtml(inv.invited_by)}</div>
       </div>
       <div class="invite-actions">
         <button class="btn btn-accept">Accept</button>
         <button class="btn btn-reject">Reject</button>
       </div>
     `;
-    card
-      .querySelector(".btn-accept")
-      .addEventListener("click", () => resolveInvite(inv, card, true));
-    card
-      .querySelector(".btn-reject")
-      .addEventListener("click", () => resolveInvite(inv, card, false));
+    card.querySelector(".btn-accept").addEventListener("click", () => resolveInvite(inv, card, true));
+    card.querySelector(".btn-reject").addEventListener("click", () => resolveInvite(inv, card, false));
     list.appendChild(card);
   });
 }
 
-function resolveInvite(inv, card, accepted) {
+async function resolveInvite(inv, card, accepted) {
   card.classList.add("leaving");
-  if (accepted) {
-    groups.unshift({
-      id: inv.id,
-      name: inv.group,
-      emoji: inv.emoji,
-      members: Math.floor(20 + Math.random() * 50),
-      desc: "Freshly joined — say hi to your new circle!",
-      palette: inv.palette,
-    });
-    messagesByGroup[inv.id] = [
-      {
-        sender: inv.from.split(" ")[0],
-        text: `Welcome to ${inv.group}! 🎉`,
-        me: false,
-        time: "now",
-      },
-    ];
+  try {
+    await chatRespondInvite(inv.id, accepted);
+    setTimeout(async () => {
+      await refreshAll();
+    }, 320);
+    showToast(accepted ? `Joined “${inv.chat_groups?.name || "group"}” 🎉` : "Invitation declined");
+  } catch (_) {
+    card.classList.remove("leaving");
+    showToast("Could not update invitation.");
   }
-  setTimeout(() => {
-    invitations = invitations.filter((x) => x.id !== inv.id);
-    renderInvites();
-    renderGroups(el("groupSearch").value);
-  }, 320);
-
-  showToast(accepted ? `Joined “${inv.group}” 🎉` : `Declined “${inv.group}”`);
-}
-
-// ---------- Toast ----------
-let toastTimer;
-function showToast(text) {
-  const t = el("toast");
-  t.textContent = text;
-  t.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("show"), 2400);
 }
 
 // ---------- Theme ----------
@@ -344,18 +397,32 @@ function applyTheme(theme) {
   } catch (_) {}
 }
 themeToggle.addEventListener("click", () => {
-  const next =
-    document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
   applyTheme(next);
 });
 
-// ---------- Init ----------
-(function init() {
-  let saved = "light";
+// ---------- Boot ----------
+(async function init() {
+  let savedTheme = "light";
   try {
-    saved = localStorage.getItem("circle-theme") || "light";
+    savedTheme = localStorage.getItem("circle-theme") || "light";
   } catch (_) {}
-  applyTheme(saved);
-  renderGroups();
-  renderInvites();
+  applyTheme(savedTheme);
+
+  if (!chatClient()) {
+    showError("Supabase is not configured. Edit supabase-config.js.");
+    return;
+  }
+
+  await populateLoginPlayers();
+
+  const savedUser = localStorage.getItem("efl_user");
+  if (savedUser) {
+    el("loginUsername").value = savedUser;
+    // Auto-enter if session exists — password still required on fresh device
+  }
+
+  el("loginScreen").classList.remove("hidden");
 })();
+
+el("logoutBtn").addEventListener("click", handleLogout);

@@ -6,7 +6,10 @@
 'use strict';
 
 // ===== CONSTANTS =====
-const PLAYERS = ['Wael', 'Omar', 'Abdul Rahim', 'Mohammad', 'Mustafa', 'Abdul Qader'];
+function getPlayers() {
+  const names = Object.keys(db.accounts || {});
+  return names.length ? names.sort((a, b) => a.localeCompare(b)) : [];
+}
 
 // Each player's legend nickname + signature icon, shown as a glowing chip
 // next to their name across the app.
@@ -34,7 +37,7 @@ function fillPlayerSelect(selectEl, emptyLabel) {
   if (!selectEl) return;
   const prev = selectEl.value;
   selectEl.innerHTML = emptyLabel ? `<option value="">${emptyLabel}</option>` : '';
-  PLAYERS.forEach(p => {
+  getPlayers().forEach(p => {
     const opt = document.createElement('option');
     opt.value = p;
     opt.textContent = p;
@@ -48,6 +51,46 @@ function populateMatchPlayerDropdowns() {
   fillPlayerSelect(document.getElementById('matchPlayer2'), 'Select Player');
   fillPlayerSelect(document.getElementById('editPlayer1'), null);
   fillPlayerSelect(document.getElementById('editPlayer2'), null);
+}
+
+function populateAllPlayerDropdowns() {
+  fillPlayerSelect(document.getElementById('loginUsername'), '— SELECT PLAYER —');
+  populateMatchPlayerDropdowns();
+  fillPlayerSelect(document.getElementById('historyFilterPlayer'), 'All Players');
+  fillPlayerSelect(document.getElementById('h2hPlayer1'), 'Player 1');
+  fillPlayerSelect(document.getElementById('h2hPlayer2'), 'Player 2');
+  fillPlayerSelect(document.getElementById('adminAccName'), null);
+  renderPlayerTabBars();
+}
+
+function renderPlayerTabBars() {
+  const players = getPlayers();
+  const profileTabs = document.getElementById('profilePlayerTabs');
+  const achTabs = document.getElementById('achievementsPlayerTabs');
+
+  if (profileTabs) {
+    profileTabs.innerHTML = players
+      .map(
+        (p, i) =>
+          `<button class="player-tab${i === 0 ? ' active' : ''}" type="button" data-player="${esc(p)}">${esc(p)}</button>`
+      )
+      .join('');
+    profileTabs.querySelectorAll('.player-tab').forEach((btn) => {
+      btn.addEventListener('click', () => selectProfilePlayer(btn.dataset.player, btn));
+    });
+  }
+
+  if (achTabs) {
+    achTabs.innerHTML = players
+      .map(
+        (p, i) =>
+          `<button class="player-tab${i === 0 ? ' active' : ''}" type="button" data-player="${esc(p)}">${esc(p)}</button>`
+      )
+      .join('');
+    achTabs.querySelectorAll('.player-tab').forEach((btn) => {
+      btn.addEventListener('click', () => selectAchievementsPlayer(btn.dataset.player, btn));
+    });
+  }
 }
 
 // Returns a styled chip element (HTML string). Pass big=true for the large,
@@ -238,6 +281,7 @@ async function fetchAllData() {
   db.seasons = (seasons.data || []).map(mapSeason);
   db.matches = (matches.data || []).map(mapMatch);
 
+  populateAllPlayerDropdowns();
   cacheDB();
   updateGoalEventsSetupBanner();
 }
@@ -295,7 +339,7 @@ async function persistStandings() {
 async function persistAchievements() {
   if (!sb) return;
   const rows = [];
-  PLAYERS.forEach(p => {
+  getPlayers().forEach(p => {
     const s = computePlayerStats(p);
     ACHIEVEMENT_DEFS.filter(a => a.check(s)).forEach(a => rows.push({ player: p, achievement_id: a.id }));
   });
@@ -489,7 +533,14 @@ function enterApp() {
     updateSidebarPlayer();
     applyAdminUI();
     populateSeasonDropdowns();
-    navigateTo('dashboard', document.querySelector('.nav-item[data-page="dashboard"]'));
+
+    const hashPage = location.hash.slice(1);
+    const hashNav = hashPage && document.querySelector(`.nav-item[data-page="${hashPage}"]`);
+    if (hashNav) {
+      navigateTo(hashPage, hashNav);
+    } else {
+      navigateTo('dashboard', document.querySelector('.nav-item[data-page="dashboard"]'));
+    }
 
     // Keep the stored league table / achievements in sync with the latest
     // matches (self-heals if a previous write was interrupted). Fire-and-forget.
@@ -575,10 +626,18 @@ function renderPage(page) {
     case 'matchDetails': renderMatchDetails(); break;
     case 'footballStats': renderFootballStats(); break;
     case 'leagueTable': renderLeagueTable(); break;
-    case 'playerProfile': selectProfilePlayer('Wael', document.querySelector('#page-playerProfile .player-tab')); break;
+    case 'playerProfile': {
+      const first = getPlayers()[0];
+      if (first) selectProfilePlayer(first, document.querySelector('#profilePlayerTabs .player-tab'));
+      break;
+    }
     case 'seasons': renderSeasons(); break;
     case 'awards': renderAwards(); break;
-    case 'achievements': selectAchievementsPlayer('Wael', document.querySelector('#page-achievements .player-tab')); break;
+    case 'achievements': {
+      const first = getPlayers()[0];
+      if (first) selectAchievementsPlayer(first, document.querySelector('#achievementsPlayerTabs .player-tab'));
+      break;
+    }
     case 'rivalries': renderRivalries(); break;
     case 'statistics': renderStatistics(); break;
     case 'recordMatch': initRecordForm(); break;
@@ -1596,7 +1655,7 @@ function computePlayerStats(playerName, seasonFilter = 'all', countSeasonWins = 
 }
 
 function computeLeagueTable(seasonFilter = 'all') {
-  const table = PLAYERS.map(p => {
+  const table = getPlayers().map(p => {
     const s = computePlayerStats(p, seasonFilter, false);
     return {
       player: p,
@@ -1630,13 +1689,13 @@ function renderDashboard() {
   setStatCard('sc-leader', leader ? leader.player : '—', leader ? leader.points + ' pts' : '0 pts');
 
   // Top scorer
-  const scorers = PLAYERS.map(p => ({ player: p, goals: computePlayerStats(p).goalsFor }))
+  const scorers = getPlayers().map(p => ({ player: p, goals: computePlayerStats(p).goalsFor }))
                          .sort((a, b) => b.goals - a.goals);
   setStatCard('sc-scorer', scorers[0].goals > 0 ? scorers[0].player : '—',
               scorers[0].goals + ' goals');
 
   // Best defense (fewest conceded among those who played)
-  const defenders = PLAYERS.map(p => { const s = computePlayerStats(p); return { player: p, ga: s.goalsAgainst, played: s.played }; })
+  const defenders = getPlayers().map(p => { const s = computePlayerStats(p); return { player: p, ga: s.goalsAgainst, played: s.played }; })
     .filter(p => p.played > 0).sort((a, b) => a.ga - b.ga);
   setStatCard('sc-defense', defenders[0] ? defenders[0].player : '—',
               defenders[0] ? defenders[0].ga + ' conceded' : '0 conceded');
@@ -1647,7 +1706,7 @@ function renderDashboard() {
               attackers[0].goals + ' scored');
 
   // Most wins
-  const winPlayers = PLAYERS.map(p => { const s = computePlayerStats(p); return { player: p, wins: s.wins }; })
+  const winPlayers = getPlayers().map(p => { const s = computePlayerStats(p); return { player: p, wins: s.wins }; })
                              .sort((a, b) => b.wins - a.wins);
   setStatCard('sc-wins', winPlayers[0].wins > 0 ? winPlayers[0].player : '—',
               winPlayers[0].wins + ' wins');
@@ -1719,7 +1778,7 @@ function renderLeagueTable() {
 
 // ===== PLAYER PROFILE =====
 function selectProfilePlayer(name, btn) {
-  document.querySelectorAll('#page-playerProfile .player-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#profilePlayerTabs .player-tab').forEach(t => t.classList.remove('active'));
   if (btn) btn.classList.add('active');
 
   const s = computePlayerStats(name);
@@ -1883,15 +1942,15 @@ function renderAwards() {
   const table = computeLeagueTable(filter);
   const hasData = table.some(t => t.played > 0);
 
-  const scorers = PLAYERS.map(p => ({ player: p, goals: computePlayerStats(p, filter).goalsFor }))
+  const scorers = getPlayers().map(p => ({ player: p, goals: computePlayerStats(p, filter).goalsFor }))
                          .sort((a, b) => b.goals - a.goals);
-  const defenders = PLAYERS.map(p => { const s = computePlayerStats(p, filter); return { player: p, ga: s.goalsAgainst, played: s.played }; })
+  const defenders = getPlayers().map(p => { const s = computePlayerStats(p, filter); return { player: p, ga: s.goalsAgainst, played: s.played }; })
     .filter(p => p.played > 0).sort((a, b) => a.ga - b.ga);
-  const winners = PLAYERS.map(p => ({ player: p, wins: computePlayerStats(p, filter).wins }))
+  const winners = getPlayers().map(p => ({ player: p, wins: computePlayerStats(p, filter).wins }))
                          .sort((a, b) => b.wins - a.wins);
 
   // MVP: points * 0.5 + goals * 0.3 + wins * 0.2
-  const mvpScores = PLAYERS.map(p => {
+  const mvpScores = getPlayers().map(p => {
     const s = computePlayerStats(p, filter);
     const score = s.points * 0.5 + s.goalsFor * 0.3 + s.wins * 0.2;
     return { player: p, score, played: s.played };
@@ -1918,7 +1977,7 @@ function renderAwards() {
 
 // ===== ACHIEVEMENTS =====
 function selectAchievementsPlayer(name, btn) {
-  document.querySelectorAll('#page-achievements .player-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#achievementsPlayerTabs .player-tab').forEach(t => t.classList.remove('active'));
   if (btn) btn.classList.add('active');
 
   const s = computePlayerStats(name);
@@ -2018,7 +2077,7 @@ function renderStatistics() {
   const cont = document.getElementById('statsContent');
   if (!cont) return;
 
-  const stats = PLAYERS.map(p => {
+  const stats = getPlayers().map(p => {
     const s = computePlayerStats(p, filter);
     const ms = getSeasonStatTotals(p, filter);
     return {

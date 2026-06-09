@@ -127,32 +127,73 @@ function computeTopScorers(scorers, teams, limit = 5) {
     .map((s, i) => ({ ...s, rank: i + 1 }));
 }
 
-// ---------- Render ----------
-function renderTabs(tournament) {
-  const type = tournament.type || 'league';
-  const tabs = [
-    { key: 'league', icon: '🏆', cls: 'gold', en: 'Current Season League', ar: 'الدوري الحالي' },
-    { key: 'cup', icon: '🏆', cls: 'blue', en: 'Cup Tournament', ar: 'كأس البطولة' },
-    { key: 'friendly', icon: '🤝', cls: 'green', en: 'Friendly Matches', ar: 'مباريات ودية' },
-    { key: 'halloffame', icon: '🏛️', cls: 'purple', en: 'Hall of Fame', ar: 'قاعة المشاهير' },
-  ];
+function standingsFromDb(rows, teams) {
+  const byName = Object.fromEntries(teams.map((t) => [t.name, t]));
+  return rows
+    .slice()
+    .sort((a, b) => a.rank - b.rank)
+    .map((r) => ({
+      rank: r.rank,
+      team: byName[r.player] || {
+        name: r.player,
+        abbreviation: r.player.slice(0, 3).toUpperCase(),
+        color_class: '',
+      },
+      pld: r.played,
+      w: r.wins,
+      d: r.draws,
+      l: r.losses,
+      gf: r.goals_for,
+      ga: r.goals_against,
+      gd: r.goal_diff,
+      pts: r.points,
+    }));
+}
 
-  $('#tabs').innerHTML = tabs
+function resolveStandings(data) {
+  const { tournament, teams, fixtures, standingsRows } = data;
+  if (standingsRows?.length) return standingsFromDb(standingsRows, teams);
+  return computeStandings(tournament, teams, fixtures);
+}
+
+// ---------- Render ----------
+let activeSeasonId = null;
+
+function renderTabs(seasons, currentId) {
+  const tabsEl = $('#tabs');
+  if (!seasons?.length) {
+    tabsEl.innerHTML = '';
+    return;
+  }
+
+  tabsEl.innerHTML = seasons
     .map(
-      (t) => `
-    <button class="hub-tab${type === t.key ? ' active' : ''}" type="button">
-      <div class="hub-tab-icon ${t.cls}">${t.icon}</div>
-      <div class="hub-tab-label">${t.en}</div>
-      <span class="hub-tab-label-ar">${t.ar}</span>
+      (s) => `
+    <button class="hub-tab${s.id === currentId ? ' active' : ''}" type="button" data-season-id="${s.id}">
+      <div class="hub-tab-icon ${s.active ? 'gold' : 'blue'}">${s.active ? '🏆' : '📅'}</div>
+      <div class="hub-tab-label">${s.name}</div>
+      <span class="hub-tab-label-ar">${s.active ? 'الموسم النشط' : 'موسم'}</span>
     </button>`
     )
     .join('');
+
+  $$('#tabs .hub-tab').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const sid = btn.dataset.seasonId;
+      if (sid === activeSeasonId) return;
+      activeSeasonId = sid;
+      $('#loading').classList.remove('hidden');
+      $('#hubContent').classList.add('hidden');
+      const data = await loadTournamentData(sid);
+      renderHub(data);
+    });
+  });
 }
 
 function renderStandings(tournament, standings) {
   const subtitle =
-    tournament.total_matchdays > 0
-      ? `${tournament.season_name || 'Season'} &nbsp;|&nbsp; Matchday ${tournament.current_matchday || 0} / ${tournament.total_matchdays}`
+    tournament.total_matches > 0
+      ? `${tournament.season_name || 'Season'} &nbsp;|&nbsp; ${tournament.total_matches} matches played`
       : tournament.season_name || '';
 
   if (!standings.length) {
@@ -189,7 +230,7 @@ function renderStandings(tournament, standings) {
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <div class="hub-card-footer"><a href="#" class="hub-link">View Full Standings →</a></div>`;
+    <div class="hub-card-footer"><a href="league/index.html#leagueTable" class="hub-link">View Full Standings →</a></div>`;
 }
 
 function renderAside(tournament, teams, stats) {
@@ -201,11 +242,11 @@ function renderAside(tournament, teams, stats) {
       <div class="hub-info-list">
         <div class="hub-info-item"><span>Format</span><span>${tournament.format || '—'}</span></div>
         <div class="hub-info-item"><span>Teams</span><span>${teams.length}</span></div>
-        <div class="hub-info-item"><span>Matchdays</span><span>${tournament.total_matchdays || '—'}</span></div>
+        <div class="hub-info-item"><span>Matches</span><span>${tournament.total_matches || 0}</span></div>
         <div class="hub-info-item"><span>Points System</span><span>${pts}</span></div>
       </div>
     </div>
-    <div class="hub-card">
+    <div class="hub-card hub-section" id="section-statistics">
       <div class="hub-card-header"><div class="hub-card-title">Quick Stats</div></div>
       <div class="hub-stats-grid">
         <div class="hub-stat"><div class="hub-stat-icon">⚽</div><div class="hub-stat-value">${stats.total_matches}</div><div class="hub-stat-label">Total Matches</div></div>
@@ -216,7 +257,7 @@ function renderAside(tournament, teams, stats) {
         <div class="hub-stat"><div class="hub-stat-icon">✈️</div><div class="hub-stat-value">${stats.away_wins}</div><div class="hub-stat-label">Away Wins</div></div>
       </div>
     </div>
-    <a href="league/index.html" class="hub-btn-gold" id="addResultBtn">
+    <a href="league/index.html#recordMatch" class="hub-btn-gold" id="addResultBtn">
       <span>+ ADD MATCH RESULT</span>
       <span class="hub-btn-gold-sub">Record a new match result</span>
     </a>`;
@@ -281,16 +322,16 @@ function renderBottom(teams, fixtures, scorers) {
     : '<div class="hub-empty-inline"><p>لا توجد مباريات قادمة.</p></div>';
 
   $('#bottomGrid').innerHTML = `
-    <div class="hub-card"><div class="hub-card-header"><div class="hub-card-title">Recent Matches</div></div>
+    <div class="hub-card hub-section" id="section-matches"><div class="hub-card-header"><div class="hub-card-title">Recent Matches</div></div>
       <ul class="hub-match-list">${recentHtml}</ul></div>
-    <div class="hub-card"><div class="hub-card-header"><div class="hub-card-title">Top Scorers</div></div>
+    <div class="hub-card hub-section" id="section-players"><div class="hub-card-header"><div class="hub-card-title">Top Scorers</div></div>
       <div>${scorersHtml}</div></div>
-    <div class="hub-card"><div class="hub-card-header"><div class="hub-card-title">Upcoming Matches</div></div>
+    <div class="hub-card hub-section" id="section-upcoming"><div class="hub-card-header"><div class="hub-card-title">Upcoming Matches</div></div>
       <ul class="hub-match-list">${upcomingHtml}</ul></div>`;
 }
 
 function renderHub(data) {
-  const { tournament, teams, fixtures, scorers } = data;
+  const { tournament, teams, fixtures, scorers, seasons, activeSeasonId: seasonId, standingsRows } = data;
 
   if (!tournament || !teams.length) {
     $('#loading').classList.add('hidden');
@@ -298,10 +339,11 @@ function renderHub(data) {
     return;
   }
 
-  const standings = computeStandings(tournament, teams, fixtures);
+  activeSeasonId = seasonId;
+  const standings = resolveStandings(data);
   const stats = computeQuickStats(fixtures);
 
-  renderTabs(tournament);
+  renderTabs(seasons, activeSeasonId);
   renderStandings(tournament, standings);
   renderAside(tournament, teams, stats);
   renderBottom(teams, fixtures, scorers);
@@ -327,26 +369,30 @@ function initMobileMenu() {
   });
 }
 
-// ---------- Nav highlight ----------
-const LEAGUE_PAGES = {
-  dashboard: 'league/index.html',
-  matches: 'league/index.html#matchHistory',
-  standings: 'league/index.html#leagueTable',
-  players: 'league/index.html#playerProfile',
-  statistics: 'league/index.html#statistics',
-  settings: 'league/index.html#settings',
+// ---------- In-page nav (scroll to hub sections) ----------
+const HUB_SECTIONS = {
+  tournaments: '#hubTop',
+  matches: '#section-matches',
+  standings: '#standingsCard',
+  players: '#section-players',
+  statistics: '#section-statistics',
 };
 
 function initNav() {
-  $$('#nav .hub-nav-link').forEach((btn) => {
+  $$('#nav .hub-nav-link[data-page]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const page = btn.dataset.page;
-      if (page && LEAGUE_PAGES[page]) {
-        window.location.href = LEAGUE_PAGES[page];
-        return;
-      }
-      $$('#nav .hub-nav-link').forEach((b) => b.classList.remove('active'));
+      $$('#nav .hub-nav-link[data-page]').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
+
+      const target = HUB_SECTIONS[page];
+      if (!target) return;
+      const el = document.querySelector(target);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      else if (page === 'tournaments') window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      $('#sidebar')?.classList.remove('open');
+      $('#overlay')?.classList.remove('show');
     });
   });
 }

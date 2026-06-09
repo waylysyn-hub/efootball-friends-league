@@ -2,8 +2,6 @@
  * Tournament Hub — loads real data from Supabase (Friends League).
  */
 
-const PLAYERS = ['Wael', 'Omar', 'Abdul Rahim', 'Mohammad', 'Mustafa', 'Abdul Qader'];
-
 const PLAYER_META = {
   Wael: { abbreviation: 'WAE', color_class: 'p-wael' },
   Omar: { abbreviation: 'OMA', color_class: 'p-omar' },
@@ -13,7 +11,15 @@ const PLAYER_META = {
   'Abdul Qader': { abbreviation: 'AQA', color_class: 'p-aqa' },
 };
 
-const EMPTY = { tournament: null, teams: [], fixtures: [], scorers: [] };
+const EMPTY = {
+  tournament: null,
+  teams: [],
+  fixtures: [],
+  scorers: [],
+  seasons: [],
+  activeSeasonId: null,
+  standingsRows: [],
+};
 
 function isConfigured() {
   return (
@@ -30,62 +36,88 @@ function getClient() {
   return window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
 }
 
-async function loadTournamentData() {
+function teamMeta(name) {
+  const m = PLAYER_META[name];
+  return {
+    abbreviation:
+      m?.abbreviation ||
+      name
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 3)
+        .toUpperCase(),
+    color_class: m?.color_class || '',
+  };
+}
+
+function buildTeams(playerNames) {
+  return playerNames.map((name, i) => ({
+    id: i + 1,
+    name,
+    ...teamMeta(name),
+  }));
+}
+
+/**
+ * @param {string|null} seasonId — specific season uuid, or null for active season
+ */
+async function loadTournamentData(seasonId = null) {
   const sb = getClient();
   if (!sb) {
     console.warn('[Hub] Supabase not configured');
-    return EMPTY;
+    return { ...EMPTY };
   }
 
   try {
-    const [seasonsRes, matchesRes, goalEventsRes, matchStatsRes] = await Promise.all([
-      sb.from('seasons').select('*').order('created', { ascending: true }),
-      sb.from('matches').select('*'),
-      sb.from('match_goal_events').select('*'),
-      sb.from('match_stats').select('*'),
-    ]);
+    const [seasonsRes, playersRes, matchesRes, goalEventsRes, matchStatsRes, standingsRes] =
+      await Promise.all([
+        sb.from('seasons').select('*').order('created', { ascending: true }),
+        sb.from('players').select('name').order('name'),
+        sb.from('matches').select('*'),
+        sb.from('match_goal_events').select('*'),
+        sb.from('match_stats').select('*'),
+        sb.from('standings').select('*').order('rank', { ascending: true }),
+      ]);
 
     if (seasonsRes.error) throw seasonsRes.error;
+    if (playersRes.error) throw playersRes.error;
     if (matchesRes.error) throw matchesRes.error;
 
     const seasons = seasonsRes.data || [];
+    const playerNames = (playersRes.data || []).map((p) => p.name);
     const allMatches = matchesRes.data || [];
     const goalEvents = goalEventsRes.error ? [] : goalEventsRes.data || [];
     const matchStats = matchStatsRes.error ? [] : matchStatsRes.data || [];
+    const allStandings = standingsRes.error ? [] : standingsRes.data || [];
 
-    const activeSeason = seasons.find((s) => s.active) || seasons[seasons.length - 1];
+    const activeSeason =
+      (seasonId && seasons.find((s) => s.id === seasonId)) ||
+      seasons.find((s) => s.active) ||
+      seasons[seasons.length - 1] ||
+      null;
 
-    const teams = PLAYERS.map((name, i) => ({
-      id: i + 1,
-      name,
-      abbreviation: PLAYER_META[name]?.abbreviation || name.slice(0, 3).toUpperCase(),
-      color_class: PLAYER_META[name]?.color_class || '',
-    }));
-
+    const teams = buildTeams(playerNames);
     const nameToId = Object.fromEntries(teams.map((t) => [t.name, t.id]));
-
-    const tournament = {
-      name: activeSeason ? `${activeSeason.name} League` : 'Friends League',
-      season_name: activeSeason?.name || 'All Time',
-      type: 'league',
-      format: 'Round Robin',
-      total_matchdays: 0,
-      current_matchday: 0,
-      points_win: 3,
-      points_draw: 1,
-      points_loss: 0,
-    };
 
     const seasonMatches = activeSeason
       ? allMatches.filter((m) => m.season_id === activeSeason.id)
       : allMatches;
 
-    tournament.total_matchdays = seasonMatches.length;
-    tournament.current_matchday = seasonMatches.length;
+    const tournament = {
+      name: activeSeason ? `${activeSeason.name} League` : 'Friends League',
+      season_name: activeSeason?.name || 'All Time',
+      season_id: activeSeason?.id || null,
+      type: 'league',
+      format: 'Round Robin',
+      total_matches: seasonMatches.length,
+      points_win: 3,
+      points_draw: 1,
+      points_loss: 0,
+    };
 
     const fixtures = seasonMatches.map((m) => ({
       id: m.id,
-      matchday: 1,
       home_team_id: nameToId[m.player1],
       away_team_id: nameToId[m.player2],
       home_score: m.goals1,
@@ -95,42 +127,48 @@ async function loadTournamentData() {
       scheduled_at: null,
     }));
 
+    const seasonMatchIds = new Set(seasonMatches.map((m) => m.id));
     const scorers = [];
 
     if (goalEvents.length) {
       const map = {};
       goalEvents.forEach((e) => {
+        if (!seasonMatchIds.has(e.match_id)) return;
         const teamId = nameToId[e.owner];
         if (!teamId || !e.scorer) return;
         const key = `${e.scorer}::${teamId}`;
-        if (!map[key]) {
-          map[key] = {
-            player_name: e.scorer,
-            team_id: teamId,
-            goals: 0,
-          };
-        }
+        if (!map[key]) map[key] = { player_name: e.scorer, team_id: teamId, goals: 0 };
         map[key].goals += 1;
       });
       Object.values(map).forEach((s) => scorers.push(s));
     } else if (matchStats.length) {
       const map = {};
       matchStats.forEach((s) => {
+        if (!seasonMatchIds.has(s.match_id)) return;
         const teamId = nameToId[s.player];
         const name = s.character_name || s.player;
         if (!teamId) return;
         const key = `${name}::${teamId}`;
-        if (!map[key]) {
-          map[key] = { player_name: name, team_id: teamId, goals: 0 };
-        }
+        if (!map[key]) map[key] = { player_name: name, team_id: teamId, goals: 0 };
         map[key].goals += s.goals || 0;
       });
       Object.values(map).forEach((s) => scorers.push(s));
     }
 
-    return { tournament, teams, fixtures, scorers };
+    const standingsKey = activeSeason ? String(activeSeason.id) : 'all';
+    const standingsRows = allStandings.filter((r) => r.season === standingsKey);
+
+    return {
+      tournament,
+      teams,
+      fixtures,
+      scorers,
+      seasons,
+      activeSeasonId: activeSeason?.id || null,
+      standingsRows,
+    };
   } catch (err) {
     console.warn('[Hub] Supabase load failed:', err.message);
-    return EMPTY;
+    return { ...EMPTY };
   }
 }
