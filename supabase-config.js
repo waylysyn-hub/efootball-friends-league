@@ -27,11 +27,6 @@ const SUPABASE_CONFIG = {
   if (!inLeague && !inChat) return;
 
   const rootPrefix = '../';
-  document.write(`<script src="${rootPrefix}auth-runtime.js"><\\/script>`);
-  if (inLeague) {
-    document.write('<script src="security-bootstrap.js"><\\/script>');
-  }
-  if (inChat) {
-    document.write('<script src="security-bootstrap.js"><\\/script>');
-  }
+  document.write(`<script src="${rootPrefix}auth-runtime.js"></script>`);
+  document.write('<script src="security-bootstrap.js"></script>');
 })();
