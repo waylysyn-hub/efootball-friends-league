@@ -1,213 +1,188 @@
 -- =====================================================
---  eFOOTBALL FRIENDS LEAGUE — SUPABASE SCHEMA
---  Run this entire file in: Supabase Dashboard → SQL Editor → New query
+-- eFOOTBALL FRIENDS LEAGUE — FRESH SUPABASE SCHEMA
+-- WARNING: this file recreates the league tables and therefore wipes league data.
+-- For an EXISTING project, use supabase-security-migration.sql instead.
+-- After this file, also run supabase-groups-chat-migration.sql and then
+-- supabase-security-migration.sql.
 -- =====================================================
 
--- ---------- Clean start (safe to re-run) ----------
+-- ---------- Clean start ----------
 drop table if exists public.match_goal_events cascade;
-drop table if exists public.match_stats   cascade;
-drop table if exists public.answers      cascade;
-drop table if exists public.questions    cascade;
+drop table if exists public.match_stats cascade;
+drop table if exists public.answers cascade;
+drop table if exists public.questions cascade;
 drop table if exists public.achievements cascade;
-drop table if exists public.standings   cascade;
-drop table if exists public.matches      cascade;
-drop table if exists public.seasons      cascade;
-drop table if exists public.players      cascade;
+drop table if exists public.standings cascade;
+drop table if exists public.matches cascade;
+drop table if exists public.seasons cascade;
+drop table if exists public.players cascade;
 
--- ---------- PLAYERS (accounts / roster) ----------
+-- ---------- PLAYER PROFILES ----------
+-- Credentials live in Supabase Auth, never in this table.
 create table public.players (
-  name      text primary key,
-  password  text not null,
-  created   bigint not null default (extract(epoch from now()) * 1000)::bigint
+  name         text primary key,
+  auth_user_id uuid unique,
+  role         text not null default 'player' check (role in ('admin', 'player')),
+  created      bigint not null default (extract(epoch from now()) * 1000)::bigint
 );
 
 -- ---------- SEASONS ----------
 create table public.seasons (
-  id        uuid primary key default gen_random_uuid(),
-  name      text not null,
-  active    boolean not null default false,
-  created   bigint not null default (extract(epoch from now()) * 1000)::bigint
+  id      uuid primary key default gen_random_uuid(),
+  name    text not null,
+  active  boolean not null default false,
+  created bigint not null default (extract(epoch from now()) * 1000)::bigint
 );
 
 -- ---------- MATCHES ----------
 create table public.matches (
   id         uuid primary key default gen_random_uuid(),
-  player1    text not null,
-  player2    text not null,
+  player1    text not null references public.players(name) on update cascade,
+  player2    text not null references public.players(name) on update cascade,
   goals1     integer not null check (goals1 >= 0),
   goals2     integer not null check (goals2 >= 0),
   date       date not null,
   season_id  uuid references public.seasons(id) on delete cascade,
   timestamp  bigint not null default (extract(epoch from now()) * 1000)::bigint,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  check (player1 <> player2)
 );
+create index matches_season_idx on public.matches(season_id);
+create index matches_players_idx on public.matches(player1, player2);
 
-create index if not exists matches_season_idx on public.matches(season_id);
-
--- ---------- MATCH PLAYER STATS (goals / assists per player per match) ----------
+-- ---------- MATCH PLAYER STATS ----------
 create table public.match_stats (
-  id              uuid primary key default gen_random_uuid(),
-  match_id        uuid not null references public.matches(id) on delete cascade,
-  player          text not null,
-  character_name  text not null default '',
-  goals           integer not null default 0 check (goals >= 0),
-  assists         integer not null default 0 check (assists >= 0),
+  id             uuid primary key default gen_random_uuid(),
+  match_id       uuid not null references public.matches(id) on delete cascade,
+  player         text not null references public.players(name) on update cascade,
+  character_name text not null default '',
+  goals          integer not null default 0 check (goals >= 0),
+  assists        integer not null default 0 check (assists >= 0),
   unique (match_id, player)
 );
+create index match_stats_match_idx on public.match_stats(match_id);
 
-create index if not exists match_stats_match_idx on public.match_stats(match_id);
-
--- ---------- MATCH GOAL EVENTS (per-goal scorer / assist / minute) ----------
+-- ---------- GOAL EVENTS ----------
 create table public.match_goal_events (
   id         uuid primary key default gen_random_uuid(),
   match_id   uuid not null references public.matches(id) on delete cascade,
-  owner      text not null,
+  owner      text not null references public.players(name) on update cascade,
   scorer     text not null,
   assist     text not null default '',
-  minute     integer not null default 0 check (minute >= 0 and minute <= 120),
+  minute     integer not null default 0 check (minute between 0 and 120),
   sort_order integer not null default 0,
   created_at timestamptz not null default now()
 );
+create index match_goal_events_match_idx on public.match_goal_events(match_id);
 
-create index if not exists match_goal_events_match_idx on public.match_goal_events(match_id);
-
--- ---------- STANDINGS (auto-computed league table snapshot) ----------
--- `season` holds either a season uuid (as text) or the literal 'all' (overall table).
+-- ---------- STANDINGS SNAPSHOT ----------
 create table public.standings (
-  season         text not null,
-  player         text not null,
-  played         integer not null default 0,
-  wins           integer not null default 0,
-  draws          integer not null default 0,
-  losses         integer not null default 0,
-  goals_for      integer not null default 0,
-  goals_against  integer not null default 0,
-  goal_diff      integer not null default 0,
-  points         integer not null default 0,
-  rank           integer not null default 0,
-  updated_at     timestamptz not null default now(),
+  season        text not null,
+  player        text not null references public.players(name) on update cascade on delete cascade,
+  played        integer not null default 0,
+  wins          integer not null default 0,
+  draws         integer not null default 0,
+  losses        integer not null default 0,
+  goals_for     integer not null default 0,
+  goals_against integer not null default 0,
+  goal_diff     integer not null default 0,
+  points        integer not null default 0,
+  rank          integer not null default 0,
+  updated_at    timestamptz not null default now(),
   primary key (season, player)
 );
 
 -- ---------- LEAGUE Q&A ----------
 create table public.questions (
-  id                 uuid primary key default gen_random_uuid(),
-  author             text not null,
-  body               text not null,
-  closed             boolean not null default false,
-  correct_answer_id  uuid,
-  created_at         timestamptz not null default now(),
-  timestamp          bigint not null default (extract(epoch from now()) * 1000)::bigint
+  id                uuid primary key default gen_random_uuid(),
+  author            text not null references public.players(name) on update cascade,
+  body              text not null check (char_length(trim(body)) between 1 and 2000),
+  closed            boolean not null default false,
+  correct_answer_id uuid,
+  created_at        timestamptz not null default now(),
+  timestamp         bigint not null default (extract(epoch from now()) * 1000)::bigint
 );
 
 create table public.answers (
-  id           uuid primary key default gen_random_uuid(),
-  question_id  uuid not null references public.questions(id) on delete cascade,
-  author       text not null,
-  body         text not null,
-  created_at   timestamptz not null default now(),
-  timestamp    bigint not null default (extract(epoch from now()) * 1000)::bigint
+  id          uuid primary key default gen_random_uuid(),
+  question_id uuid not null references public.questions(id) on delete cascade,
+  author      text not null references public.players(name) on update cascade,
+  body        text not null check (char_length(trim(body)) between 1 and 4000),
+  created_at  timestamptz not null default now(),
+  timestamp   bigint not null default (extract(epoch from now()) * 1000)::bigint
 );
+create index answers_question_idx on public.answers(question_id);
 
-create index if not exists answers_question_idx on public.answers(question_id);
+alter table public.questions
+  add constraint questions_correct_answer_fk
+  foreign key (correct_answer_id) references public.answers(id) on delete set null;
 
--- ---------- ACHIEVEMENTS (unlocked badges per player) ----------
+-- ---------- ACHIEVEMENTS ----------
 create table public.achievements (
-  player         text not null,
+  player         text not null references public.players(name) on update cascade on delete cascade,
   achievement_id text not null,
   unlocked_at    timestamptz not null default now(),
   primary key (player, achievement_id)
 );
 
--- =====================================================
---  ROW LEVEL SECURITY
---  This is a shared app for a small group of friends using the public
---  anon key, so we allow the anon role full access to every table.
---  (Tighten these policies if you later add real per-user auth.)
--- =====================================================
-alter table public.players      enable row level security;
-alter table public.seasons      enable row level security;
-alter table public.matches      enable row level security;
-alter table public.standings    enable row level security;
+-- ---------- RLS IS ENABLED IMMEDIATELY ----------
+alter table public.players enable row level security;
+alter table public.seasons enable row level security;
+alter table public.matches enable row level security;
+alter table public.standings enable row level security;
 alter table public.achievements enable row level security;
-alter table public.questions    enable row level security;
-alter table public.answers      enable row level security;
-alter table public.match_stats  enable row level security;
+alter table public.questions enable row level security;
+alter table public.answers enable row level security;
+alter table public.match_stats enable row level security;
 alter table public.match_goal_events enable row level security;
 
+-- Public read-only policies keep the Tournament Hub usable before login.
+create policy players_public_read on public.players for select to anon using (true);
+create policy seasons_public_read on public.seasons for select to anon using (true);
+create policy matches_public_read on public.matches for select to anon using (true);
+create policy standings_public_read on public.standings for select to anon using (true);
+create policy achievements_public_read on public.achievements for select to anon using (true);
+create policy questions_public_read on public.questions for select to anon using (true);
+create policy answers_public_read on public.answers for select to anon using (true);
+create policy match_stats_public_read on public.match_stats for select to anon using (true);
+create policy goal_events_public_read on public.match_goal_events for select to anon using (true);
+
+-- Authenticated read policies. Write policies are installed by the security migration.
+create policy players_auth_read on public.players for select to authenticated using (true);
+create policy seasons_auth_read on public.seasons for select to authenticated using (true);
+create policy matches_auth_read on public.matches for select to authenticated using (true);
+create policy standings_auth_read on public.standings for select to authenticated using (true);
+create policy achievements_auth_read on public.achievements for select to authenticated using (true);
+create policy questions_auth_read on public.questions for select to authenticated using (true);
+create policy answers_auth_read on public.answers for select to authenticated using (true);
+create policy match_stats_auth_read on public.match_stats for select to authenticated using (true);
+create policy goal_events_auth_read on public.match_goal_events for select to authenticated using (true);
+
+-- ---------- REALTIME ----------
 do $$
 declare t text;
 begin
-  foreach t in array array['players','seasons','matches','standings','achievements','questions','answers','match_stats','match_goal_events']
-  loop
-    execute format('drop policy if exists "public_all_%1$s" on public.%1$s;', t);
-    execute format(
-      'create policy "public_all_%1$s" on public.%1$s
-         for all to anon, authenticated
-         using (true) with check (true);', t);
+  foreach t in array array['matches','seasons','players','standings','match_stats','match_goal_events','questions','answers'] loop
+    begin
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    exception when duplicate_object then null;
+    end;
   end loop;
 end $$;
 
--- =====================================================
---  REALTIME  (so every open browser updates live)
--- =====================================================
-do $$
-begin
-  alter publication supabase_realtime add table public.matches;
-  exception when duplicate_object then null;
-end $$;
-do $$
-begin
-  alter publication supabase_realtime add table public.seasons;
-  exception when duplicate_object then null;
-end $$;
-do $$
-begin
-  alter publication supabase_realtime add table public.players;
-  exception when duplicate_object then null;
-end $$;
-do $$
-begin
-  alter publication supabase_realtime add table public.standings;
-  exception when duplicate_object then null;
-end $$;
-do $$
-begin
-  alter publication supabase_realtime add table public.match_stats;
-  exception when duplicate_object then null;
-end $$;
-do $$
-begin
-  alter publication supabase_realtime add table public.match_goal_events;
-  exception when duplicate_object then null;
-end $$;
-do $$
-begin
-  alter publication supabase_realtime add table public.questions;
-  exception when duplicate_object then null;
-end $$;
-do $$
-begin
-  alter publication supabase_realtime add table public.answers;
-  exception when duplicate_object then null;
-end $$;
+-- ---------- INITIAL ROSTER (NO PASSWORDS) ----------
+insert into public.players (name, role) values
+  ('Wael', 'admin'),
+  ('Omar', 'player'),
+  ('Abdul Rahim', 'player'),
+  ('Mohammad', 'player'),
+  ('Mustafa', 'player'),
+  ('Abdul Qader', 'player')
+on conflict (name) do nothing;
 
--- =====================================================
---  SEED — one active season to start with
--- =====================================================
 insert into public.seasons (name, active) values ('Season 1', true);
 
--- =====================================================
---  SEED — pre-created accounts (password: 2003)
---  Each friend can log in straight away with their name + 2003.
--- =====================================================
-insert into public.players (name, password) values
-  ('Wael',        'waelyasyn02003'),
-  ('Omar',        '2003'),
-  ('Abdul Rahim', '2003'),
-  ('Mohammad',    '2003'),
-  ('Mustafa',     '2003'),
-  ('Abdul Qader', '2003')
-on conflict (name) do update set password = excluded.password;
-
--- Done. Your tables are ready.
+-- Next steps:
+-- 1) Create one Supabase Auth user per player and link auth.users.id to players.auth_user_id.
+-- 2) Run supabase-groups-chat-migration.sql.
+-- 3) Run supabase-security-migration.sql to install write policies and server-derived standings.
