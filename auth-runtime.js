@@ -88,30 +88,13 @@
       throw new Error('Password must be at least 8 characters.');
     }
 
-    const isolated = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-        storageKey: `efl-account-create-${Date.now()}-${Math.random()}`,
-      },
+    const { data, error } = await adminClient.functions.invoke('manage-player-account', {
+      body: { name, password },
     });
 
-    const { data, error } = await isolated.auth.signUp({
-      email: emailForName(name),
-      password,
-      options: { data: { league_name: name } },
-    });
     if (error) throw error;
-    if (!data?.user?.id) throw new Error('Supabase did not return the created user.');
-
-    const { error: linkError } = await adminClient.rpc('link_player_auth_user', {
-      target_name: name,
-      target_auth_user_id: data.user.id,
-    });
-    if (linkError) throw linkError;
-
-    return { id: data.user.id, email: emailForName(name) };
+    if (!data?.ok) throw new Error(data?.error || 'Could not update player account.');
+    return data;
   }
 
   sanitizeLegacyStorage();
