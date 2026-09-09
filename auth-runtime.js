@@ -40,10 +40,21 @@
 
   async function getProfile(client) {
     if (!client) return null;
-    const { data, error } = await client.rpc('current_player_profile');
-    if (error) throw error;
-    if (Array.isArray(data)) return data[0] || null;
-    return data || null;
+
+    const { data: account, error: accountError } = await client
+      .from('player_accounts')
+      .select('name')
+      .maybeSingle();
+    if (accountError) throw accountError;
+    if (!account?.name) return null;
+
+    const { data: profile, error: profileError } = await client
+      .from('players')
+      .select('name, role, created')
+      .eq('name', account.name)
+      .maybeSingle();
+    if (profileError) throw profileError;
+    return profile || null;
   }
 
   async function restore(client) {
