@@ -1,12 +1,11 @@
 -- =====================================================
 -- eFOOTBALL FRIENDS LEAGUE — FRESH SUPABASE SCHEMA
--- WARNING: this file recreates the league tables and therefore wipes league data.
--- For an EXISTING project, use supabase-security-migration.sql instead.
--- After this file, also run supabase-groups-chat-migration.sql and then
--- supabase-security-migration.sql.
+-- WARNING: recreates league tables and wipes league data.
+-- Existing projects should use the migration files instead.
 -- =====================================================
 
 -- ---------- Clean start ----------
+drop table if exists public.player_accounts cascade;
 drop table if exists public.match_goal_events cascade;
 drop table if exists public.match_stats cascade;
 drop table if exists public.answers cascade;
@@ -18,12 +17,17 @@ drop table if exists public.seasons cascade;
 drop table if exists public.players cascade;
 
 -- ---------- PLAYER PROFILES ----------
--- Credentials live in Supabase Auth, never in this table.
+-- Credentials never live here. Supabase Auth owns passwords.
 create table public.players (
-  name         text primary key,
-  auth_user_id uuid unique,
-  role         text not null default 'player' check (role in ('admin', 'player')),
-  created      bigint not null default (extract(epoch from now()) * 1000)::bigint
+  name    text primary key,
+  role    text not null default 'player' check (role in ('admin', 'player')),
+  created bigint not null default (extract(epoch from now()) * 1000)::bigint
+);
+
+-- Auth link table. RLS later ensures users can only see their own mapping row.
+create table public.player_accounts (
+  name         text primary key references public.players(name) on update cascade on delete cascade,
+  auth_user_id uuid not null unique
 );
 
 -- ---------- SEASONS ----------
@@ -81,7 +85,7 @@ create table public.standings (
   player        text not null references public.players(name) on update cascade on delete cascade,
   played        integer not null default 0,
   wins          integer not null default 0,
-  draws         integer not null default 0,
+  draws          integer not null default 0,
   losses        integer not null default 0,
   goals_for     integer not null default 0,
   goals_against integer not null default 0,
@@ -125,8 +129,9 @@ create table public.achievements (
   primary key (player, achievement_id)
 );
 
--- ---------- RLS IS ENABLED IMMEDIATELY ----------
+-- ---------- RLS IMMEDIATELY ON ----------
 alter table public.players enable row level security;
+alter table public.player_accounts enable row level security;
 alter table public.seasons enable row level security;
 alter table public.matches enable row level security;
 alter table public.standings enable row level security;
@@ -136,26 +141,38 @@ alter table public.answers enable row level security;
 alter table public.match_stats enable row level security;
 alter table public.match_goal_events enable row level security;
 
--- Public read-only policies keep the Tournament Hub usable before login.
-create policy players_public_read on public.players for select to anon using (true);
-create policy seasons_public_read on public.seasons for select to anon using (true);
-create policy matches_public_read on public.matches for select to anon using (true);
-create policy standings_public_read on public.standings for select to anon using (true);
-create policy achievements_public_read on public.achievements for select to anon using (true);
-create policy questions_public_read on public.questions for select to anon using (true);
-create policy answers_public_read on public.answers for select to anon using (true);
-create policy match_stats_public_read on public.match_stats for select to anon using (true);
-create policy goal_events_public_read on public.match_goal_events for select to anon using (true);
+-- Fresh schema starts read-only from the browser. Fine-grained writes are installed
+-- by supabase-security-migration.sql.
+revoke all on table public.players, public.player_accounts, public.seasons, public.matches,
+  public.standings, public.achievements, public.questions, public.answers,
+  public.match_stats, public.match_goal_events from anon, authenticated;
 
--- Authenticated read policies. Write policies are installed by the security migration.
+grant select(name, role, created) on public.players to anon, authenticated;
+grant select on public.seasons, public.matches, public.standings, public.achievements,
+  public.questions, public.answers, public.match_stats, public.match_goal_events to anon;
+grant select on public.seasons, public.matches, public.standings, public.achievements,
+  public.questions, public.answers, public.match_stats, public.match_goal_events to authenticated;
+grant select(name) on public.player_accounts to authenticated;
+
+create policy players_public_read on public.players for select to anon using (true);
 create policy players_auth_read on public.players for select to authenticated using (true);
+create policy player_accounts_read_self on public.player_accounts for select to authenticated
+  using (auth_user_id = (select auth.uid()));
+create policy seasons_public_read on public.seasons for select to anon using (true);
 create policy seasons_auth_read on public.seasons for select to authenticated using (true);
+create policy matches_public_read on public.matches for select to anon using (true);
 create policy matches_auth_read on public.matches for select to authenticated using (true);
+create policy standings_public_read on public.standings for select to anon using (true);
 create policy standings_auth_read on public.standings for select to authenticated using (true);
+create policy achievements_public_read on public.achievements for select to anon using (true);
 create policy achievements_auth_read on public.achievements for select to authenticated using (true);
+create policy questions_public_read on public.questions for select to anon using (true);
 create policy questions_auth_read on public.questions for select to authenticated using (true);
+create policy answers_public_read on public.answers for select to anon using (true);
 create policy answers_auth_read on public.answers for select to authenticated using (true);
+create policy match_stats_public_read on public.match_stats for select to anon using (true);
 create policy match_stats_auth_read on public.match_stats for select to authenticated using (true);
+create policy goal_events_public_read on public.match_goal_events for select to anon using (true);
 create policy goal_events_auth_read on public.match_goal_events for select to authenticated using (true);
 
 -- ---------- REALTIME ----------
@@ -170,7 +187,7 @@ begin
   end loop;
 end $$;
 
--- ---------- INITIAL ROSTER (NO PASSWORDS) ----------
+-- ---------- INITIAL ROSTER ----------
 insert into public.players (name, role) values
   ('Wael', 'admin'),
   ('Omar', 'player'),
@@ -182,7 +199,8 @@ on conflict (name) do nothing;
 
 insert into public.seasons (name, active) values ('Season 1', true);
 
--- Next steps:
--- 1) Create one Supabase Auth user per player and link auth.users.id to players.auth_user_id.
--- 2) Run supabase-groups-chat-migration.sql.
--- 3) Run supabase-security-migration.sql to install write policies and server-derived standings.
+-- Next:
+-- 1) Run supabase-groups-chat-migration.sql.
+-- 2) Run supabase-security-migration.sql.
+-- 3) Create the first Auth user in Supabase Dashboard and insert its id into
+--    public.player_accounts for the matching player name.
