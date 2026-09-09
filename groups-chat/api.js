@@ -1,5 +1,7 @@
 /** Groups Chat — Supabase API */
 
+let _chatClient = null;
+
 function chatClient() {
   if (
     typeof SUPABASE_CONFIG === 'undefined' ||
@@ -9,13 +11,16 @@ function chatClient() {
   ) {
     return null;
   }
-  return window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+  if (!_chatClient) {
+    _chatClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+  }
+  return _chatClient;
 }
 
 async function chatFetchPlayers() {
   const sb = chatClient();
   if (!sb) return [];
-  const { data, error } = await sb.from('players').select('name, password').order('name');
+  const { data, error } = await sb.from('players').select('name').order('name');
   if (error) throw error;
   return data || [];
 }
@@ -23,9 +28,12 @@ async function chatFetchPlayers() {
 async function chatLogin(username, password) {
   const sb = chatClient();
   if (!sb) return null;
-  const { data, error } = await sb.from('players').select('name, password').eq('name', username).maybeSingle();
-  if (error || !data || data.password !== password) return null;
-  return data.name;
+  try {
+    const profile = await EFLAuth.signIn(sb, username, password);
+    return profile?.name || null;
+  } catch (_) {
+    return null;
+  }
 }
 
 async function chatFetchGroups(player) {
@@ -39,21 +47,17 @@ async function chatFetchGroups(player) {
 
   if (error) throw error;
 
-  const groups = (memberships || [])
-    .map((m) => m.chat_groups)
-    .filter(Boolean);
-
-  const withCounts = await Promise.all(
+  const groups = (memberships || []).map((m) => m.chat_groups).filter(Boolean);
+  return Promise.all(
     groups.map(async (g) => {
-      const { count } = await sb
+      const { count, error: countError } = await sb
         .from('chat_group_members')
-        .select('*', { count: 'exact', head: true })
+        .select('group_id', { count: 'exact', head: true })
         .eq('group_id', g.id);
+      if (countError) throw countError;
       return { ...g, members: count || 0 };
     })
   );
-
-  return withCounts;
 }
 
 async function chatFetchMessages(groupId) {
@@ -71,7 +75,9 @@ async function chatFetchMessages(groupId) {
 async function chatSendMessage(groupId, author, body) {
   const sb = chatClient();
   if (!sb) throw new Error('Not configured');
-  const { error } = await sb.from('chat_messages').insert({ group_id: groupId, author, body: body.trim() });
+  const clean = String(body || '').trim();
+  if (!clean) return;
+  const { error } = await sb.from('chat_messages').insert({ group_id: groupId, author, body: clean });
   if (error) throw error;
 }
 
@@ -120,21 +126,23 @@ async function chatCreateGroup(name, description, emoji, paletteIndex, createdBy
   const { data: group, error: gErr } = await sb
     .from('chat_groups')
     .insert({
-      name: name.trim(),
-      description: description.trim(),
+      name: String(name || '').trim(),
+      description: String(description || '').trim(),
       emoji: emoji || '⚽',
       palette_index: paletteIndex,
       created_by: createdBy,
     })
-    .select()
+    .select('id, name, emoji, description, palette_index, created_by, created_at')
     .single();
   if (gErr) throw gErr;
 
   const { error: mErr } = await sb
     .from('chat_group_members')
     .insert({ group_id: group.id, player: createdBy });
-  if (mErr) throw mErr;
-
+  if (mErr) {
+    await sb.from('chat_groups').delete().eq('id', group.id);
+    throw mErr;
+  }
   return group;
 }
 
@@ -161,8 +169,7 @@ async function chatFetchRoster(excludePlayer) {
 function chatSubscribeMessages(groupId, onMessage) {
   const sb = chatClient();
   if (!sb || !groupId) return null;
-
-  const channel = sb
+  return sb
     .channel(`chat-${groupId}`)
     .on(
       'postgres_changes',
@@ -170,8 +177,6 @@ function chatSubscribeMessages(groupId, onMessage) {
       (payload) => onMessage(payload.new)
     )
     .subscribe();
-
-  return channel;
 }
 
 function chatUnsubscribe(channel) {
