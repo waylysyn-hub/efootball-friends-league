@@ -53,7 +53,7 @@ assert.match(authRuntime, /from\('player_accounts'\)/,
   'The browser must resolve its profile through the RLS-protected account mapping.');
 assert.match(authRuntime, /localStorage\.removeItem\('efl_user'\)/,
   'Legacy localStorage auth marker must be purged.');
-assert.match(leagueBootstrap, /profile\.role === 'admin'/,
+assert.match(leagueBootstrap, /window\.__eflProfile\.role === 'admin'/,
   'League UI admin state must come from the authenticated database profile.');
 assert.match(leagueBootstrap, /persistStandings = async function \(\) \{\};/,
   'Browser-side standings persistence must remain disabled.');
