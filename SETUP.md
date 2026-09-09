@@ -11,7 +11,8 @@ Run the SQL files in this order from **Supabase → SQL Editor**:
 1. `supabase-schema.sql` — creates the league tables and roster. **This wipes existing league data.**
 2. `supabase-groups-chat-migration.sql` — creates chat/group tables with RLS enabled and no open-write policies.
 3. `supabase-security-migration.sql` — installs Auth-backed identity helpers, least-privilege RLS, and server-side standings/achievements.
-4. `supabase-chat-rls-fix.sql` — installs recursion-safe membership/ownership policies for chat.
+4. `supabase-auth-rpc-migration.sql` — exposes only the signed-in player's safe profile and an admin-only account-link RPC.
+5. `supabase-chat-rls-fix.sql` — installs recursion-safe membership/ownership policies for chat.
 
 Then create one user in **Supabase Authentication → Users** for each league player and link
 that user's `auth.users.id` to `public.players.auth_user_id`.
@@ -32,11 +33,12 @@ Instead:
 1. Back up the database.
 2. Run `supabase-groups-chat-migration.sql` only if the chat tables do not already exist.
 3. Run `supabase-security-migration.sql`.
-4. Run `supabase-chat-rls-fix.sql`.
-5. Create/link Supabase Auth users for every player.
-6. Verify every player can sign in and the admin can add/edit a test match.
-7. Rotate every password that ever appeared in this repository or its Git history.
-8. After every player is linked and verified, permanently remove the legacy column:
+4. Run `supabase-auth-rpc-migration.sql`.
+5. Run `supabase-chat-rls-fix.sql`.
+6. Create/link Supabase Auth users for every player.
+7. Verify every player can sign in and the admin can add/edit a test match.
+8. Rotate every password that ever appeared in this repository or its Git history.
+9. After every player is linked and verified, permanently remove the legacy column:
 
 ```sql
 alter table public.players drop column if exists password;
