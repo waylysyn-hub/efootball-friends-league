@@ -21,12 +21,10 @@
 
   function sanitizeLegacyStorage() {
     try {
-      // The old app used this key as an authentication marker. Never trust it.
       const remembered = localStorage.getItem('efl_user');
       if (remembered) localStorage.setItem('efl_last_user', remembered);
       localStorage.removeItem('efl_user');
 
-      // Older builds cached plaintext account passwords. Purge that cache once.
       const raw = localStorage.getItem('efl_cache');
       if (raw) {
         const cache = JSON.parse(raw);
@@ -40,14 +38,11 @@
     } catch (_) {}
   }
 
-  async function getProfile(client, userId) {
-    if (!client || !userId) return null;
-    const { data, error } = await client
-      .from('players')
-      .select('name, role, auth_user_id, created')
-      .eq('auth_user_id', userId)
-      .maybeSingle();
+  async function getProfile(client) {
+    if (!client) return null;
+    const { data, error } = await client.rpc('current_player_profile');
     if (error) throw error;
+    if (Array.isArray(data)) return data[0] || null;
     return data || null;
   }
 
@@ -55,9 +50,9 @@
     if (!client) return null;
     const { data, error } = await client.auth.getSession();
     if (error) throw error;
-    const user = data?.session?.user;
-    if (!user) return null;
-    const profile = await getProfile(client, user.id);
+    if (!data?.session?.user) return null;
+
+    const profile = await getProfile(client);
     if (!profile) {
       await client.auth.signOut();
       return null;
@@ -73,7 +68,7 @@
     });
     if (error || !data?.user) throw error || new Error('Invalid username or password.');
 
-    const profile = await getProfile(client, data.user.id);
+    const profile = await getProfile(client);
     if (!profile || profile.name !== name) {
       await client.auth.signOut();
       throw new Error('This login is not linked to the selected league account.');
@@ -93,17 +88,6 @@
       throw new Error('Password must be at least 8 characters.');
     }
 
-    const { data: existing, error: existingError } = await adminClient
-      .from('players')
-      .select('name, auth_user_id')
-      .eq('name', name)
-      .maybeSingle();
-    if (existingError) throw existingError;
-    if (!existing) throw new Error('Player profile does not exist.');
-    if (existing.auth_user_id) {
-      throw new Error('This player already has a secure login. Reset it from Supabase Auth if needed.');
-    }
-
     const isolated = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
       auth: {
         persistSession: false,
@@ -121,11 +105,10 @@
     if (error) throw error;
     if (!data?.user?.id) throw new Error('Supabase did not return the created user.');
 
-    const { error: linkError } = await adminClient
-      .from('players')
-      .update({ auth_user_id: data.user.id })
-      .eq('name', name)
-      .is('auth_user_id', null);
+    const { error: linkError } = await adminClient.rpc('link_player_auth_user', {
+      target_name: name,
+      target_auth_user_id: data.user.id,
+    });
     if (linkError) throw linkError;
 
     return { id: data.user.id, email: emailForName(name) };
