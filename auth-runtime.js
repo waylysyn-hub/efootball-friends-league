@@ -92,20 +92,8 @@
     await client.auth.signOut();
   }
 
-  async function createPlayerAccount(adminClient, name, password) {
-    if (!adminClient) throw new Error('Supabase is not configured.');
-    if (!name) throw new Error('Choose a player.');
-    if (!password || password.length < 8) {
-      throw new Error('Password must be at least 8 characters.');
-    }
-
-    const { data, error } = await adminClient.functions.invoke('manage-player-account', {
-      body: { name, password },
-    });
-
-    if (error) throw error;
-    if (!data?.ok) throw new Error(data?.error || 'Could not update player account.');
-    return data;
+  async function createPlayerAccount() {
+    throw new Error('Account creation and password resets are managed in Supabase Authentication.');
   }
 
   sanitizeLegacyStorage();
