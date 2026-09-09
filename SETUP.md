@@ -1,114 +1,93 @@
-# eFootball Friends League — Supabase Setup
+# eFootball Friends League — Secure Supabase Setup
 
-This app now stores all data in **Supabase** (Postgres) instead of `localStorage`.
-That means every player shares the same league data, multiple people can use the
-site at the same time, and the league table updates automatically for everyone.
+The app is a static frontend backed by **Supabase Postgres + Auth + Realtime**.
+Passwords belong to **Supabase Auth only**. The `players` table stores league profiles
+(`name`, linked Auth user id, role, creation time) and never needs to expose credentials.
 
-`localStorage` is only used for **optional caching** (fast first paint + remembering
-who is logged in on this device).
+## Fresh installation
 
----
+Run the SQL files in this order from **Supabase → SQL Editor**:
 
-## What gets stored in Supabase
+1. `supabase-schema.sql` — creates the league tables and roster. **This wipes existing league data.**
+2. `supabase-groups-chat-migration.sql` — creates chat/group tables with RLS enabled and no open-write policies.
+3. `supabase-security-migration.sql` — installs Auth-backed identity helpers, least-privilege RLS, and server-side standings/achievements.
+4. `supabase-chat-rls-fix.sql` — installs recursion-safe membership/ownership policies for chat.
 
-| Table          | Purpose                                                                 |
-| -------------- | ----------------------------------------------------------------------- |
-| `players`      | Accounts (name + password) for each friend.                             |
-| `seasons`      | League seasons (one is marked active).                                  |
-| `matches`      | Every recorded match (players, score, date, season).                    |
-| `standings`    | The computed league table (overall + per season). Auto-updated.         |
-| `achievements` | Unlocked achievement badges per player. Auto-updated.                   |
+Then create one user in **Supabase Authentication → Users** for each league player and link
+that user's `auth.users.id` to `public.players.auth_user_id`.
 
-`standings` and `achievements` are recalculated and saved automatically whenever a
-match is added, edited, or deleted, so they stay correct for every user.
+The frontend uses deterministic private-league login addresses derived from each name:
 
----
+- `Wael` → `wael@efootball-friends.example`
+- `Abdul Rahim` → `abdul-rahim@efootball-friends.example`
 
-## Step 1 — Create a Supabase project
+Create the Auth users with those addresses and the passwords you want. For a private
+league, create/confirm them from the Supabase dashboard so email delivery is not required.
 
-1. Go to <https://supabase.com> and sign in (free tier is fine).
-2. Click **New project**, give it a name, set a database password, and create it.
-3. Wait ~1 minute for the project to finish provisioning.
+## Upgrading the existing project
 
-## Step 2 — Create the database tables
+Do **not** run `supabase-schema.sql` on the live database because it recreates tables.
+Instead:
 
-1. In your project, open the left sidebar → **SQL Editor** → **New query**.
-2. Open the file **`supabase-schema.sql`** from this project, copy its entire contents,
-   and paste it into the SQL editor.
-3. Click **Run**. You should see "Success". This creates all tables, security
-   policies, realtime, and seeds an initial "Season 1".
+1. Back up the database.
+2. Run `supabase-groups-chat-migration.sql` only if the chat tables do not already exist.
+3. Run `supabase-security-migration.sql`.
+4. Run `supabase-chat-rls-fix.sql`.
+5. Create/link Supabase Auth users for every player.
+6. Verify every player can sign in and the admin can add/edit a test match.
+7. Rotate every password that ever appeared in this repository or its Git history.
+8. After every player is linked and verified, permanently remove the legacy column:
 
-> Re-running the script is safe — it drops and recreates the tables (this also wipes
-> existing data, so only re-run it intentionally).
-
-## Step 3 — Get your API credentials
-
-1. In the sidebar, open **Project Settings** → **API**.
-2. Copy the **Project URL** (e.g. `https://abcdefgh.supabase.co`).
-3. Copy the **anon / public** key (a long `eyJ...` string).
-
-The anon key is meant for browser use — access is controlled by the Row Level
-Security policies created in Step 2.
-
-## Step 4 — Configure the app
-
-Open **`supabase-config.js`** and paste your values:
-
-```js
-const SUPABASE_CONFIG = {
-  url: 'https://abcdefgh.supabase.co',
-  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6...',
-};
+```sql
+alter table public.players drop column if exists password;
 ```
 
-## Step 5 — Run the app
+The migration revokes browser access to the legacy password column immediately, even
+before that final drop.
 
-This is a static site (no build step). Serve the folder with any static server, e.g.:
+## Supabase project configuration
+
+`supabase-config.js` contains the Project URL and publishable/anon key. A publishable key
+is expected to be visible in a browser application; security comes from Auth and RLS,
+not from hiding that key.
+
+Do **not** put a Supabase `service_role` key, database password, private token, or other
+server secret in this repository.
+
+## Authorization model
+
+- Tournament Hub data is read-only for anonymous visitors.
+- Signed-in players can read league data and participate in Q&A.
+- Only the database profile with `role = 'admin'` can mutate matches, seasons, match stats, and goal events.
+- Chat messages are readable/writable only by group members.
+- Group invitations are restricted to involved users.
+- Browser `localStorage` is used only for non-sensitive cache/last-selected-player convenience and is never trusted as authentication.
+
+## Derived data
+
+`standings` and `achievements` are refreshed in Postgres through triggers whenever
+matches or player profiles change. The browser no longer deletes and recreates standings,
+which avoids race conditions between simultaneous sessions.
+
+## Running locally
+
+No build step is required.
 
 ```bash
-# Python 3
 python3 -m http.server 8000
-
-# or Node
+# or
 npx serve .
 ```
 
-Then open <http://localhost:8000> in your browser.
+Then open `http://localhost:8000`.
 
-> Opening `index.html` directly via `file://` usually works too, but using a local
-> web server avoids browser restrictions and matches how it will be hosted.
+## Deployment
 
-## Step 6 — Register the players
+The site can remain on GitHub Pages, Netlify, Vercel, Cloudflare Pages, or another static
+host. Supabase remains the backend and authorization boundary.
 
-On first run there are no accounts. Each friend should click **Register**, pick their
-name, and create a password. After that they can log in from any device and everyone
-sees the same shared league.
+## CI
 
----
-
-## How multi-user / live updates work
-
-- On page load the app **fetches the latest data from Supabase**.
-- When anyone adds / edits / deletes a match, it is **saved to Supabase** and the
-  **league table + achievements are recomputed and stored automatically**.
-- The app subscribes to **Supabase Realtime**, so other open browsers refresh their
-  view within a moment — no manual reload needed. (Realtime is enabled by the SQL
-  script. If you disable it, the app still works; users just need to reload to see
-  changes made by others.)
-
----
-
-## Deploying online
-
-Host the static files (`index.html`, `style.css`, `script.js`, `supabase-config.js`)
-on any static host — **GitHub Pages, Netlify, Vercel, Cloudflare Pages**, etc.
-No server code is required because Supabase is the backend.
-
----
-
-## Security note
-
-Passwords are stored in plain text in the `players` table (this mirrors the original
-app's behaviour for a small private group of friends). For anything beyond a casual
-private league, switch to **Supabase Auth** for proper hashed credentials and
-per-user Row Level Security.
+The repository includes a GitHub Actions security/static check. It validates JavaScript
+syntax and blocks known regressions such as plaintext-password queries and allow-everything
+RLS policies in the active setup files.
