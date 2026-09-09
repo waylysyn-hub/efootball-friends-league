@@ -13,6 +13,7 @@ create table if not exists public.chat_groups (
   created_by     text not null references public.players(name) on update cascade on delete cascade,
   created_at     timestamptz not null default now()
 );
+create index if not exists chat_groups_created_by_idx on public.chat_groups(created_by);
 
 create table if not exists public.chat_group_members (
   group_id  uuid not null references public.chat_groups(id) on delete cascade,
@@ -30,6 +31,7 @@ create table if not exists public.chat_messages (
   created_at timestamptz not null default now()
 );
 create index if not exists chat_messages_group_idx on public.chat_messages(group_id, created_at);
+create index if not exists chat_messages_author_idx on public.chat_messages(author);
 
 create table if not exists public.chat_invitations (
   id             uuid primary key default gen_random_uuid(),
@@ -42,6 +44,7 @@ create table if not exists public.chat_invitations (
   check (invited_player <> invited_by)
 );
 create index if not exists chat_invitations_player_idx on public.chat_invitations(invited_player, status);
+create index if not exists chat_invitations_invited_by_idx on public.chat_invitations(invited_by);
 
 alter table public.chat_groups enable row level security;
 alter table public.chat_group_members enable row level security;
