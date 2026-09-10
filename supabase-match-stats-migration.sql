@@ -17,8 +17,7 @@ create index if not exists match_stats_match_idx on public.match_stats(match_id)
 alter table public.match_stats enable row level security;
 
 drop policy if exists "public_all_match_stats" on public.match_stats;
-create policy "public_all_match_stats" on public.match_stats
-  for all to anon, authenticated using (true) with check (true);
+-- Apply supabase-security-migration.sql after creating missing tables.
 
 do $$
 begin
