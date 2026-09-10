@@ -1,61 +1,49 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import assert from 'node:assert/strict';
-
-const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
-
-const chatApi = read('groups-chat/api.js');
-const schema = read('supabase-schema.sql');
-const chatMigration = read('supabase-groups-chat-migration.sql');
-const securityMigration = read('supabase-security-migration.sql');
-const derivedMigration = read('supabase-derived-data-migration.sql');
-const authRuntime = read('auth-runtime.js');
-const leagueBootstrap = read('league/security-bootstrap.js');
-
-assert.ok(!/select\s*\(\s*['"]name\s*,\s*password['"]\s*\)/i.test(chatApi),
-  'Chat must never request player passwords.');
-assert.ok(!/data\.password\s*!==|acc\.password\s*!==/i.test(chatApi),
-  'Chat must not compare plaintext passwords in the browser.');
-
-assert.ok(!/\bpassword\s+text\b/i.test(schema),
-  'Fresh schema must not contain a plaintext password column.');
-assert.ok(!/using\s*\(\s*true\s*\)\s*with\s+check\s*\(\s*true\s*\)/i.test(schema),
-  'Fresh schema must not grant allow-everything RLS writes.');
-assert.ok(!/using\s*\(\s*true\s*\)\s*with\s+check\s*\(\s*true\s*\)/i.test(chatMigration),
-  'Chat bootstrap migration must not grant allow-everything RLS writes.');
-
-assert.match(schema, /create table public\.player_accounts/i,
-  'Auth links must be separated from the public player roster.');
-assert.match(securityMigration, /create schema if not exists private/i,
-  'Security-definer helpers must live in a non-exposed private schema.');
-assert.match(securityMigration, /revoke all on table public\.players,public\.player_accounts/i,
-  'Security migration must revoke broad browser privileges before granting least privilege.');
-assert.match(securityMigration, /grant select\(name,role,created\) on public\.players to anon,authenticated/i,
-  'Only safe player profile columns should be browser-readable.');
-assert.match(securityMigration, /player_accounts_read_self/i,
-  'Account mapping must be protected by self-only RLS.');
-assert.match(securityMigration, /private\.is_league_admin\(\)/,
-  'Admin writes must be enforced by database identity.');
-assert.match(securityMigration, /status='accepted'/i,
-  'A player may only join a chat after accepting an invitation.');
-assert.match(securityMigration, /revoke execute on functions from public,anon,authenticated/i,
-  'Future public functions must not receive accidental browser EXECUTE grants.');
-
-assert.match(derivedMigration, /private\.refresh_league_standings/,
-  'Standings must be derived in Postgres.');
-assert.match(derivedMigration, /private\.refresh_league_achievements/,
-  'Achievements must be derived in Postgres.');
-assert.match(derivedMigration, /create trigger matches_refresh_derived/i,
-  'Match changes must refresh derived data automatically.');
-
-assert.match(authRuntime, /auth\.signInWithPassword/,
-  'Authentication must use Supabase Auth.');
-assert.match(authRuntime, /from\('player_accounts'\)/,
-  'The browser must resolve its profile through the RLS-protected account mapping.');
-assert.match(authRuntime, /localStorage\.removeItem\('efl_user'\)/,
-  'Legacy localStorage auth marker must be purged.');
-assert.match(leagueBootstrap, /window\.__eflProfile\.role === 'admin'/,
-  'League UI admin state must come from the authenticated database profile.');
-assert.match(leagueBootstrap, /persistStandings = async function \(\) \{\};/,
-  'Browser-side standings persistence must remain disabled.');
-
-console.log('Security regression checks passed.');
+import { JSDOM } from 'jsdom';
+import { parse } from 'acorn';
+const root=path.resolve(import.meta.dirname,'..');
+const read=file=>fs.readFileSync(path.join(root,file),'utf8');
+const walk=dir=>fs.readdirSync(path.join(root,dir),{withFileTypes:true}).flatMap(entry=>entry.name.startsWith('.') || entry.name==='node_modules' ? [] : entry.isDirectory()?walk(path.join(dir,entry.name)):[path.join(dir,entry.name)]);
+const files=walk('.');
+const source=files.filter(f=>f.endsWith('.js')&&!f.startsWith('tests/')).map(read).join('\n');
+const schema=read('supabase-schema.sql'),security=read('supabase-security-migration.sql'),derived=read('supabase-derived-data-migration.sql'),auth=read('auth-runtime.js');
+assert.ok(!/select\s*\([^)]*password/i.test(source),'Never query player passwords');
+assert.ok(!/data\.password\s*!==|acc\.password\s*!==/.test(source),'No plaintext password comparison');
+assert.ok(!/localStorage\.setItem\([^;]*password/i.test(source),'Never store passwords');
+assert.ok(!/document\.write\s*\(/.test(source),'No injected script bootstrap');
+assert.ok(!/sb_secret_|service_role|"role"\s*:\s*"service_role"/.test(source),'No privileged frontend keys');
+assert.ok(!/from\(['"](?:standings|achievements)['"]\)\s*\.(insert|update|upsert|delete)/.test(source),'Derived writes stay in Postgres');
+assert.ok(!/\bpassword\s+text\b/i.test(schema),'No public plaintext password column');
+for(const file of files.filter(f=>f.endsWith('.sql'))) {
+ const sql=read(file);assert.ok(!/using\s*\(\s*true\s*\)\s*with\s+check\s*\(\s*true\s*\)/i.test(sql),file+' must not allow unrestricted writes');
+ assert.ok(!/insert\s+into\s+auth\.users/i.test(sql),'Never handcraft auth.users inserts');
+}
+for(const [regex,message] of [
+ [/create schema if not exists private/i,'Private helpers'],[/revoke all on table public\.players,public\.player_accounts/i,'Revoke broad profile grants'],[/grant select\(name,role,created\) on public\.players to anon,authenticated/i,'Safe public profile columns'],[/player_accounts_read_self/,'Self-only private mapping'],[/private\.is_league_admin\(\)/,'Database identity enforcement'],[/status='accepted'/i,'Membership invitation check'],[/revoke execute on functions from public,anon,authenticated/i,'Least privilege future functions'],
+])assert.match(security,regex,message);
+assert.match(schema,/create table public\.player_accounts/i);
+assert.match(derived,/private\.refresh_league_standings/);assert.match(derived,/private\.refresh_league_achievements/);assert.match(derived,/create trigger matches_refresh_derived/i);
+assert.match(auth,/auth\.signInWithPassword/);assert.match(auth,/from\('player_accounts'\)/);assert.match(auth,/localStorage\.removeItem\('efl_user'\)/);
+assert.match(read('league/js/admin.js'),/state\.profile\?\.role === 'admin'/,'Admin UI reads authenticated profile');
+for(const page of ['index.html','league/index.html','groups-chat/index.html']) {
+ const doc=new JSDOM(read(page)).window.document;
+ const scripts=[...doc.querySelectorAll('script[src]')];const names=scripts.map(s=>path.basename(s.getAttribute('src')));
+ assert.equal(names.length,5,page+' explicit script count');
+ assert.ok(scripts[0].src.includes('supabase-js@2.116.0'));assert.deepEqual(names.slice(1,4),['supabase-config.js','client-runtime.js','auth-runtime.js']);assert.equal(scripts.at(-1).type,'module');
+ const ids=[...doc.querySelectorAll('[id]')].map(el=>el.id);assert.equal(new Set(ids).size,ids.length,page+' unique IDs');
+ for(const element of doc.querySelectorAll('[src],link[href],a[href]')) {
+  const href=element.getAttribute('src')||element.getAttribute('href');
+  if(!href || /^(?:https?:|data:|#|mailto:)/.test(href))continue;
+  assert.ok(!href.startsWith('/'),page+' must work on GitHub project paths');
+  assert.ok(fs.existsSync(path.resolve(root,path.dirname(page),href.split('#')[0])),page+' broken asset '+href);
+ }
+ for(const id of page==='index.html'?['hubError','retryHub','hubContent']:['loginForm','loginUsername','loginPassword','loginButton'])assert.ok(doc.getElementById(id),page+' missing '+id);
+}
+for(const file of files.filter(f=>f.endsWith('.js')))parse(read(file),{ecmaVersion:'latest',sourceType:'module'});
+const tokens=new Set([...read('shared/tokens.css').matchAll(/(--[\w-]+)\s*:/g)].map(m=>m[1]));
+const css=files.filter(f=>f.endsWith('.css')).map(read).join('\n');
+for(const m of css.matchAll(/(--[\w-]+)\s*:/g))tokens.add(m[1]);
+for(const m of css.matchAll(/var\((--[\w-]+)\)/g))assert.ok(tokens.has(m[1]),'Undefined design token '+m[1]);
+console.log('Security, script order, syntax, design tokens and GitHub Pages paths passed.');

@@ -7,3 +7,6 @@ Thumbs.db
 .cursor/
 .vite/
 node_modules/
+playwright-report/
+test-results/
+.qa-output/
