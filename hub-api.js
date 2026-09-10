@@ -21,20 +21,7 @@ const EMPTY = {
   standingsRows: [],
 };
 
-function isConfigured() {
-  return (
-    typeof SUPABASE_CONFIG !== 'undefined' &&
-    SUPABASE_CONFIG.url &&
-    SUPABASE_CONFIG.url !== 'YOUR_SUPABASE_URL' &&
-    SUPABASE_CONFIG.anonKey &&
-    SUPABASE_CONFIG.anonKey !== 'YOUR_SUPABASE_ANON_KEY'
-  );
-}
-
-function getClient() {
-  if (!window.supabase || !isConfigured()) return null;
-  return window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
-}
+function getClient() { return window.EFLClient?.get() || null; }
 
 function teamMeta(name) {
   const m = PLAYER_META[name];
@@ -62,11 +49,10 @@ function buildTeams(playerNames) {
 /**
  * @param {string|null} seasonId — specific season uuid, or null for active season
  */
-async function loadTournamentData(seasonId = null) {
+export async function loadTournamentData(seasonId = null) {
   const sb = getClient();
   if (!sb) {
-    console.warn('[Hub] Supabase not configured');
-    return { ...EMPTY };
+    throw new Error('Connection unavailable');
   }
 
   try {
@@ -87,6 +73,9 @@ async function loadTournamentData(seasonId = null) {
     const seasons = seasonsRes.data || [];
     const playerNames = (playersRes.data || []).map((p) => p.name);
     const allMatches = matchesRes.data || [];
+    for (const result of [goalEventsRes, matchStatsRes, standingsRes]) {
+      if (result.error && !['42P01', 'PGRST205'].includes(result.error.code)) throw result.error;
+    }
     const goalEvents = goalEventsRes.error ? [] : goalEventsRes.data || [];
     const matchStats = matchStatsRes.error ? [] : matchStatsRes.data || [];
     const allStandings = standingsRes.error ? [] : standingsRes.data || [];
@@ -130,8 +119,8 @@ async function loadTournamentData(seasonId = null) {
     const seasonMatchIds = new Set(seasonMatches.map((m) => m.id));
     const scorers = [];
 
-    if (goalEvents.length) {
-      const map = {};
+    if (goalEvents.some(event => seasonMatchIds.has(event.match_id))) {
+      const map = Object.create(null);
       goalEvents.forEach((e) => {
         if (!seasonMatchIds.has(e.match_id)) return;
         const teamId = nameToId[e.owner];
@@ -142,7 +131,7 @@ async function loadTournamentData(seasonId = null) {
       });
       Object.values(map).forEach((s) => scorers.push(s));
     } else if (matchStats.length) {
-      const map = {};
+      const map = Object.create(null);
       matchStats.forEach((s) => {
         if (!seasonMatchIds.has(s.match_id)) return;
         const teamId = nameToId[s.player];
@@ -168,7 +157,6 @@ async function loadTournamentData(seasonId = null) {
       standingsRows,
     };
   } catch (err) {
-    console.warn('[Hub] Supabase load failed:', err.message);
-    return { ...EMPTY };
+    throw err;
   }
 }

@@ -1,119 +1,100 @@
 <!DOCTYPE html>
-<html lang="ar" dir="ltr">
+
+<html dir="ltr" lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Majles Al-Kibbar · Tournament Hub</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="hub.css" />
-</head>
-<body>
-  <div class="hub" id="app">
-    <div class="hub-overlay" id="overlay"></div>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Majles Al-Kibbar · Tournament Hub</title>
+<link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E" rel="icon"/>
 
-    <aside class="hub-sidebar" id="sidebar">
-      <div class="hub-brand">
-        <svg class="hub-brand-shield" viewBox="0 0 80 88" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M40 4L8 18v28c0 20 14 36 32 42 18-6 32-22 32-42V18L40 4z" fill="#141820" stroke="#d4af37" stroke-width="2"/>
-          <text x="40" y="38" text-anchor="middle" fill="#d4af37" font-size="18" font-weight="800">♛</text>
-          <circle cx="40" cy="58" r="12" fill="#1a1f2a" stroke="#d4af37" stroke-width="1.5"/>
-          <text x="40" y="62" text-anchor="middle" fill="#d4af37" font-size="12">⚽</text>
-        </svg>
-        <div class="hub-brand-name">Majles Al-Kibbar</div>
-        <div class="hub-brand-sub">eFOOTBALL</div>
-      </div>
-
-      <nav class="hub-nav" id="nav">
-        <button class="hub-nav-link active" data-page="tournaments" type="button">
-          <svg class="hub-nav-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&amp;family=Outfit:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/><link href="shared/tokens.css" rel="stylesheet"/><link href="shared/components.css" rel="stylesheet"/><link href="hub.css" rel="stylesheet"/></head>
+<body><a class="skip-link" href="#mainContent">Skip to content</a><div class="connection-status" hidden="" id="connectionStatus" role="status"></div>
+<div class="hub" id="app">
+<div class="hub-overlay" id="overlay"></div>
+<aside class="hub-sidebar" id="sidebar">
+<div class="hub-brand">
+<svg class="hub-brand-shield" fill="none" viewbox="0 0 80 88" xmlns="http://www.w3.org/2000/svg">
+<path d="M40 4L8 18v28c0 20 14 36 32 42 18-6 32-22 32-42V18L40 4z" fill="#141820" stroke="#d4af37" stroke-width="2"></path>
+<text fill="#d4af37" font-size="18" font-weight="800" text-anchor="middle" x="40" y="38">♛</text>
+<circle cx="40" cy="58" fill="#1a1f2a" r="12" stroke="#d4af37" stroke-width="1.5"></circle>
+<text fill="#d4af37" font-size="12" text-anchor="middle" x="40" y="62">⚽</text>
+</svg>
+<div class="hub-brand-name">Majles Al-Kibbar</div>
+<div class="hub-brand-sub">eFOOTBALL</div>
+</div>
+<nav class="hub-nav" id="nav">
+<button class="hub-nav-link active" data-page="tournaments" type="button">
+<svg class="hub-nav-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
           Tournaments
         </button>
-        <button class="hub-nav-link" data-page="matches" type="button">
-          <svg class="hub-nav-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+<button class="hub-nav-link" data-page="matches" type="button">
+<svg class="hub-nav-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
           Matches
         </button>
-        <button class="hub-nav-link" data-page="standings" type="button">
-          <svg class="hub-nav-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+<button class="hub-nav-link" data-page="standings" type="button">
+<svg class="hub-nav-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
           Standings
         </button>
-        <button class="hub-nav-link" data-page="players" type="button">
-          <svg class="hub-nav-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+<button class="hub-nav-link" data-page="players" type="button">
+<svg class="hub-nav-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
           Players
         </button>
-        <button class="hub-nav-link" data-page="statistics" type="button">
-          <svg class="hub-nav-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+<button class="hub-nav-link" data-page="statistics" type="button">
+<svg class="hub-nav-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
           Statistics
         </button>
-        <div class="hub-nav-divider" aria-hidden="true"></div>
-        <span class="hub-nav-group-label">Apps</span>
-        <a href="league/index.html" class="hub-nav-link hub-nav-external">
-          <svg class="hub-nav-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-          Admin Panel
-        </a>
-        <a href="groups-chat/index.html" class="hub-nav-link hub-nav-external">
-          <svg class="hub-nav-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a2 2 0 01-2-2v-1M9 12h6m-6-4h6m-6 8h3"/></svg>
+<div aria-hidden="true" class="hub-nav-divider"></div>
+<span class="hub-nav-group-label">Apps</span>
+<a class="hub-nav-link hub-nav-external" href="league/index.html">
+<svg class="hub-nav-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"></path></svg>League workspace</a>
+<a class="hub-nav-link hub-nav-external" href="groups-chat/index.html">
+<svg class="hub-nav-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a2 2 0 01-2-2v-1M9 12h6m-6-4h6m-6 8h3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
           Groups Chat
         </a>
-      </nav>
-
-      <div class="hub-sidebar-footer">
-        <div class="hub-sidebar-footer-name">Majles Al-Kibbar</div>
-        <div class="hub-sidebar-footer-tag">Where Legends Compete</div>
-      </div>
-    </aside>
-
-    <div class="hub-main">
-      <div class="hub-topbar">
-        <button class="hub-mobile-toggle" id="menuToggle" aria-label="Menu" type="button">☰</button>
-        <div class="hub-topbar-community">
-          <div class="hub-topbar-community-icon">⚽</div>
-          <div class="hub-topbar-community-text">
-            <strong>Majles Al-Kibbar</strong>
+</nav>
+<div class="hub-sidebar-footer">
+<div class="hub-sidebar-footer-name">Majles Al-Kibbar</div>
+<div class="hub-sidebar-footer-tag">Where Legends Compete</div>
+</div>
+</aside>
+<div class="hub-main" id="mainContent">
+<div class="hub-topbar">
+<button aria-controls="sidebar" aria-expanded="false" aria-label="Menu" class="hub-mobile-toggle" id="menuToggle" type="button">☰</button>
+<div class="hub-topbar-community">
+<div class="hub-topbar-community-icon">⚽</div>
+<div class="hub-topbar-community-text">
+<strong>Majles Al-Kibbar</strong>
             The Elite eFootball Community
           </div>
-        </div>
-      </div>
-
-      <header class="hub-page-header" id="hubTop">
-        <div class="hub-page-title">
-          <span class="hub-title-line"></span>
-          <h1>TOURNAMENT HUB — <span class="hub-title-ar">مركز البطولات</span></h1>
-          <span class="hub-title-line"></span>
-        </div>
-        <p class="hub-page-motto">Compete. Conquer. Be Remembered.</p>
-      </header>
-
-      <div class="hub-loading" id="loading">جاري تحميل البيانات…</div>
-
-      <div class="hub-empty-state hidden" id="emptyState">
-        <div class="hub-empty-icon">🏆</div>
-        <h2>تعذّر تحميل البيانات</h2>
-        <p>تحقق من إعدادات Supabase في <code>supabase-config.js</code></p>
-      </div>
-
-      <div id="hubContent" class="hidden">
-        <div class="hub-tabs" id="tabs"></div>
-        <div class="hub-content">
-          <div class="hub-content-main">
-            <div class="hub-card hub-section" id="standingsCard"></div>
-          </div>
-          <aside class="hub-aside" id="asidePanel"></aside>
-        </div>
-        <div class="hub-bottom-grid" id="bottomGrid"></div>
-      </div>
-
-      <footer class="hub-footer">
-        <p class="hub-footer-text">
+</div>
+</div>
+<header class="hub-page-header" id="hubTop">
+<div class="hub-page-title"><div><p class="eyebrow">MAJLES AL-KIBBAR · EFOOTBALL</p><h1>Tournament Hub</h1></div><span class="hub-title-ar" dir="rtl" lang="ar">مجلس الكبار</span></div>
+<p class="hub-page-motto">Every match counts. Every legend starts here.</p><p class="season-summary" id="hubSeasonSummary"></p>
+</header>
+<div class="hub-error" hidden="" id="hubError" role="alert"><p id="hubErrorText"></p><button class="btn btn-secondary" id="retryHub" type="button">Try again</button></div><div class="hub-loading" id="loading" role="status">Loading the league…</div>
+<div class="hub-empty-state hidden" id="emptyState"><div aria-hidden="true" class="hub-empty-icon">◇</div><h2>The next chapter is coming</h2><p>A new season will appear here when the league administrator creates it.</p></div>
+<div class="hidden" id="hubContent">
+<div class="hub-tabs" id="tabs"></div>
+<div class="hub-content">
+<div class="hub-content-main">
+<div class="hub-card hub-section" id="standingsCard"></div>
+</div>
+<aside class="hub-aside" id="asidePanel"></aside>
+</div>
+<div class="hub-bottom-grid" id="bottomGrid"></div>
+</div>
+<footer class="hub-footer">
+<p class="hub-footer-text">
           © <span id="year"></span> Majles Al-Kibbar eFootball | All Rights Reserved
           <span class="hub-footer-crown">♛</span>
-        </p>
-      </footer>
-    </div>
-  </div>
+</p>
+</footer>
+</div>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js"></script>
-  <script src="hub-api.js"></script>
-  <script src="hub.js"></script>
-</body>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0"></script><script src="supabase-config.js"></script><script src="client-runtime.js"></script><script src="auth-runtime.js"></script><script src="hub.js" type="module"></script><div class="toast hidden" id="toast" role="status"></div></body>
 </html>

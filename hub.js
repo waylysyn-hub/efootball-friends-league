@@ -1,3 +1,5 @@
+import { loadTournamentData } from './hub-api.js';
+import { escapeHtml as esc, errorMessage, debounce, setupDrawer, setupConnectivity } from './shared/ui.js';
 // ---------- Helpers ----------
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -27,8 +29,8 @@ function formatTime(iso) {
 
 function teamLogo(team, size) {
   const cls = team.color_class ? ` ${team.color_class}` : '';
-  const style = size ? ` style="width:${size}px;height:${size}px;font-size:0.55rem;"` : '';
-  return `<div class="hub-team-logo${cls}"${style}>${team.abbreviation}</div>`;
+  const style = size ? ' data-size="small"' : '';
+  return `<div class="hub-team-logo${cls}"${style}>${esc(team.abbreviation)}</div>`;
 }
 
 // ---------- Compute standings from fixtures ----------
@@ -112,9 +114,9 @@ function computeQuickStats(fixtures) {
 }
 
 function computeTopScorers(scorers, teams, limit = 5) {
-  const map = {};
+  const map = Object.create(null);
   scorers.forEach((s) => {
-    const key = s.user_id ?? s.player_name;
+    const key = `${s.player_name}::${s.team_id}`;
     if (!map[key]) {
       map[key] = { name: s.player_name || 'Unknown', team: teamById(teams, s.team_id), goals: 0 };
     }
@@ -158,6 +160,9 @@ function resolveStandings(data) {
 
 // ---------- Render ----------
 let activeSeasonId = null;
+let hubProfile = null;
+let requestVersion = 0;
+let hasContent = false;
 
 function renderTabs(seasons, currentId) {
   const tabsEl = $('#tabs');
@@ -171,7 +176,7 @@ function renderTabs(seasons, currentId) {
       (s) => `
     <button class="hub-tab${s.id === currentId ? ' active' : ''}" type="button" data-season-id="${s.id}">
       <div class="hub-tab-icon ${s.active ? 'gold' : 'blue'}">${s.active ? '🏆' : '📅'}</div>
-      <div class="hub-tab-label">${s.name}</div>
+      <div class="hub-tab-label">${esc(s.name)}</div>
       <span class="hub-tab-label-ar">${s.active ? 'الموسم النشط' : 'موسم'}</span>
     </button>`
     )
@@ -181,11 +186,7 @@ function renderTabs(seasons, currentId) {
     btn.addEventListener('click', async () => {
       const sid = btn.dataset.seasonId;
       if (sid === activeSeasonId) return;
-      activeSeasonId = sid;
-      $('#loading').classList.remove('hidden');
-      $('#hubContent').classList.add('hidden');
-      const data = await loadTournamentData(sid);
-      renderHub(data);
+      await loadHub(sid);
     });
   });
 }
@@ -193,13 +194,13 @@ function renderTabs(seasons, currentId) {
 function renderStandings(tournament, standings) {
   const subtitle =
     tournament.total_matches > 0
-      ? `${tournament.season_name || 'Season'} &nbsp;|&nbsp; ${tournament.total_matches} matches played`
-      : tournament.season_name || '';
+      ? `${esc(tournament.season_name || 'Season')} &nbsp;|&nbsp; ${tournament.total_matches} matches played`
+      : esc(tournament.season_name || '');
 
   if (!standings.length) {
     $('#standingsCard').innerHTML = `
       <div class="hub-card-header">
-        <div><div class="hub-card-title">${tournament.name} Standings</div>
+        <div><div class="hub-card-title">${esc(tournament.name)} Standings</div>
         <div class="hub-card-subtitle">${subtitle}</div></div>
       </div>
       <div class="hub-empty-inline"><p>لا توجد فرق أو نتائج بعد.</p></div>`;
@@ -211,7 +212,7 @@ function renderStandings(tournament, standings) {
       (r) => `
     <tr class="rank-${r.rank}">
       <td><span class="hub-rank-badge ${rankBadge(r.rank)}">${r.rank}</span></td>
-      <td><div class="hub-team-cell">${teamLogo(r.team)}<span class="hub-team-name">${r.team.name}</span></div></td>
+      <td><div class="hub-team-cell">${teamLogo(r.team)}<span class="hub-team-name">${esc(r.team.name)}</span></div></td>
       <td>${r.pld}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td>
       <td>${r.gf}</td><td>${r.ga}</td><td>${r.gd > 0 ? '+' : ''}${r.gd}</td>
       <td class="pts">${r.pts}</td>
@@ -221,15 +222,15 @@ function renderStandings(tournament, standings) {
 
   $('#standingsCard').innerHTML = `
     <div class="hub-card-header">
-      <div><div class="hub-card-title">${tournament.name} Standings</div>
+      <div><div class="hub-card-title">${esc(tournament.name)} Standings</div>
       <div class="hub-card-subtitle">${subtitle}</div></div>
     </div>
-    <table class="hub-standings">
+    <div class="table-scroll" tabindex="0" role="region" aria-label="League standings"><table class="hub-standings">
       <thead><tr>
         <th>#</th><th>Team</th><th>PLD</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>PTS</th>
       </tr></thead>
       <tbody>${rows}</tbody>
-    </table>
+    </table></div>
     <div class="hub-card-footer"><a href="league/index.html#leagueTable" class="hub-link">View Full Standings →</a></div>`;
 }
 
@@ -240,7 +241,7 @@ function renderAside(tournament, teams, stats) {
     <div class="hub-card">
       <div class="hub-card-header"><div class="hub-card-title">Tournament Information</div></div>
       <div class="hub-info-list">
-        <div class="hub-info-item"><span>Format</span><span>${tournament.format || '—'}</span></div>
+        <div class="hub-info-item"><span>Format</span><span>${esc(tournament.format || '—')}</span></div>
         <div class="hub-info-item"><span>Teams</span><span>${teams.length}</span></div>
         <div class="hub-info-item"><span>Matches</span><span>${tournament.total_matches || 0}</span></div>
         <div class="hub-info-item"><span>Points System</span><span>${pts}</span></div>
@@ -257,10 +258,10 @@ function renderAside(tournament, teams, stats) {
         <div class="hub-stat"><div class="hub-stat-icon">✈️</div><div class="hub-stat-value">${stats.away_wins}</div><div class="hub-stat-label">Away Wins</div></div>
       </div>
     </div>
-    <a href="league/index.html#recordMatch" class="hub-btn-gold" id="addResultBtn">
+    ${hubProfile?.role === 'admin' ? `<a href="league/index.html#recordMatch" class="hub-btn-gold" id="addResultBtn">
       <span>+ ADD MATCH RESULT</span>
       <span class="hub-btn-gold-sub">Record a new match result</span>
-    </a>`;
+    </a>` : ''}`;
 }
 
 function renderBottom(teams, fixtures, scorers) {
@@ -284,9 +285,9 @@ function renderBottom(teams, fixtures, scorers) {
           return `<li class="hub-match-item">
           <span class="hub-match-date">${formatDate(f.played_at)}</span>
           <div class="hub-match-teams">
-            ${teamLogo(home, 24)}<span>${home.name.toUpperCase()}</span>
+            ${teamLogo(home, 24)}<span>${esc(home.name.toUpperCase())}</span>
             <span class="hub-match-score">${f.home_score} - ${f.away_score}</span>
-            <span>${away.name.toUpperCase()}</span>${teamLogo(away, 24)}
+            <span>${esc(away.name.toUpperCase())}</span>${teamLogo(away, 24)}
           </div></li>`;
         })
         .join('')
@@ -298,7 +299,7 @@ function renderBottom(teams, fixtures, scorers) {
           (s) => `<div class="hub-scorer-item">
         <span class="hub-scorer-rank${s.rank <= 3 ? ' top' : ''}">${s.rank}</span>
         ${teamLogo(s.team, 28)}
-        <div class="hub-scorer-info"><div class="hub-scorer-name">${s.name}</div><div class="hub-scorer-team">${s.team.name}</div></div>
+        <div class="hub-scorer-info"><div class="hub-scorer-name">${esc(s.name)}</div><div class="hub-scorer-team">${esc(s.team.name)}</div></div>
         <span class="hub-scorer-goals">${s.goals}</span></div>`
         )
         .join('')
@@ -312,9 +313,9 @@ function renderBottom(teams, fixtures, scorers) {
           return `<li class="hub-match-item">
           <span class="hub-match-date">${formatDate(f.scheduled_at)}</span>
           <div class="hub-match-teams">
-            ${teamLogo(home, 24)}<span>${home.name.toUpperCase()}</span>
+            ${teamLogo(home, 24)}<span>${esc(home.name.toUpperCase())}</span>
             <span style="color:var(--hub-text-dim);font-size:0.7rem">vs</span>
-            <span>${away.name.toUpperCase()}</span>${teamLogo(away, 24)}
+            <span>${esc(away.name.toUpperCase())}</span>${teamLogo(away, 24)}
           </div>
           <span class="hub-match-time">${formatTime(f.scheduled_at)}</span></li>`;
         })
@@ -336,13 +337,19 @@ function renderHub(data) {
   if (!tournament || !teams.length) {
     $('#loading').classList.add('hidden');
     $('#emptyState').classList.remove('hidden');
+    $('#hubContent').classList.add('hidden');
+    $('#emptyState h2').textContent = 'Your league starts here';
+    $('#emptyState p').textContent = 'Players and results will appear when your league is ready.';
     return;
   }
 
+  $('#emptyState').classList.add('hidden');
   activeSeasonId = seasonId;
   const standings = resolveStandings(data);
   const stats = computeQuickStats(fixtures);
 
+  hasContent = true;
+  $('#hubSeasonSummary').textContent = `${tournament.season_name} · ${teams.length} players · ${stats.total_matches} matches`;
   renderTabs(seasons, activeSeasonId);
   renderStandings(tournament, standings);
   renderAside(tournament, teams, stats);
@@ -354,19 +361,7 @@ function renderHub(data) {
 
 // ---------- Mobile menu ----------
 function initMobileMenu() {
-  const sidebar = $('#sidebar');
-  const overlay = $('#overlay');
-  const toggle = $('#menuToggle');
-
-  toggle?.addEventListener('click', () => {
-    sidebar.classList.toggle('open');
-    overlay.classList.toggle('show');
-  });
-
-  overlay?.addEventListener('click', () => {
-    sidebar.classList.remove('open');
-    overlay.classList.remove('show');
-  });
+  setupDrawer({sidebar: $('#sidebar'), overlay: $('#overlay'), toggles: [$('#menuToggle')]});
 }
 
 // ---------- In-page nav (scroll to hub sections) ----------
@@ -398,13 +393,38 @@ function initNav() {
 }
 
 // ---------- Boot ----------
+async function loadHub(seasonId = activeSeasonId) {
+  const ticket = ++requestVersion;
+  $('#hubError').hidden = true;
+  if (!hasContent) $('#loading').classList.remove('hidden');
+  try {
+    const data = await loadTournamentData(seasonId);
+    if (ticket !== requestVersion) return;
+    renderHub(data);
+  } catch (error) {
+    if (ticket !== requestVersion) return;
+    $('#loading').classList.add('hidden');
+    $('#hubError').hidden = false;
+    $('#hubErrorText').textContent = errorMessage(error, 'Could not load the competition. Please try again.');
+  }
+}
 async function init() {
   $('#year').textContent = new Date().getFullYear();
-  initMobileMenu();
-  initNav();
-
-  const data = await loadTournamentData();
-  renderHub(data);
+  initMobileMenu(); initNav();
+  $('#retryHub').addEventListener('click', () => loadHub());
+  const client = window.EFLClient?.get();
+  if (client) {
+    try { hubProfile = await window.EFLAuth.restore(client); } catch { hubProfile = null; }
+    const refresh = debounce(() => loadHub(), 450);
+    const channel = client.channel('efl-hub');
+    for (const table of ['matches','seasons','players','standings','match_goal_events','match_stats']) {
+      channel.on('postgres_changes', {event:'*',schema:'public',table}, refresh);
+    }
+    channel.subscribe();
+    const unsubscribe = window.EFLAuth.subscribe(client, profile => { hubProfile = profile; refresh(); });
+    window.addEventListener('pagehide', () => { refresh.cancel(); client.removeChannel(channel); unsubscribe(); });
+  }
+  setupConnectivity(() => loadHub());
+  await loadHub();
 }
-
 init();
