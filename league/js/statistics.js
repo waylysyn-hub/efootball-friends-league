@@ -166,8 +166,8 @@ export function renderH2H() {
             <div class="text-dim">Wins</div>
           </div>
           <div class="h2h-vs-col">
-            <div style="margin-bottom:4px">TOTAL<br><span style="font-size:1.5rem;color:var(--neon)">${total}</span></div>
-            <div>DRAWS<br><span style="font-size:1.2rem;color:var(--gold)">${draws}</span></div>
+            <div class="h2h-total">TOTAL<br><span class="h2h-total-value">${total}</span></div>
+            <div>DRAWS<br><span class="h2h-draws-value">${draws}</span></div>
           </div>
           <div class="h2h-player-col">
             <h3>${esc(p2)}</h3>
@@ -203,7 +203,7 @@ export function renderH2H() {
           let badge = `<span class="win-badge draw">DRAW</span>`;
           if (g1 > g2) badge = `<span class="win-badge win">${esc(p1)} W</span>`;
           else if (g2 > g1) badge = `<span class="win-badge win">${esc(p2)} W</span>`;
-          return `<div class="match-card" style="margin-bottom:8px">
+          return `<div class="match-card compact-match">
             <div class="match-card-header"><span>${formatDate(m.date)}</span> | ${badge}</div>
             <div class="match-card-result">
               <div class="match-player">${esc(p1)}</div>
@@ -281,7 +281,7 @@ export function renderRivalries() {
         ${pairArr.sort((a,b)=>b.count-a.count).map(pair=>`
           <div class="mini-standings-row">
             <span class="mini-name">${esc(pair.p1)} vs ${esc(pair.p2)}</span>
-            <span style="color:var(--text-secondary);font-size:.8em;font-family:'Share Tech Mono'">${pair.count} matches</span>
+            <span class="rivalry-count">${pair.count} matches</span>
           </div>`).join('')}
       </div>
     </div>` : ''}`;

@@ -111,17 +111,40 @@ export function setupConnectivity(onReconnect) {
   if (!navigator.onLine) update();
 }
 
-export function setupDrawer({ sidebar, overlay, toggles, onClose }) {
+export function setupDrawer({ sidebar, overlay, toggles, onClose, listen = true }) {
+  const media = window.matchMedia('(max-width: 1024px)');
+  const main = document.getElementById('mainContent');
+  let previous = null;
   function setOpen(open) {
+    const wasOpen = sidebar.classList.contains('open');
+    if (open && !wasOpen) previous = document.activeElement;
     sidebar.classList.toggle('open', open);
+    sidebar.inert = media.matches && !open;
+    if (main) main.inert = media.matches && open;
     overlay.classList.toggle('visible', open);
     overlay.classList.toggle('show', open);
+    document.body.classList.toggle('drawer-open', media.matches && open);
     toggles.forEach(button => button?.setAttribute('aria-expanded', String(open)));
-    if (!open) onClose?.();
+    if (open) sidebar.querySelector('a,button')?.focus();
+    else {
+      if (wasOpen && previous?.isConnected) previous.focus();
+      onClose?.();
+    }
   }
-  toggles.forEach(button => button?.addEventListener('click', () => setOpen(!sidebar.classList.contains('open'))));
-  overlay.addEventListener('click', () => setOpen(false));
-  document.addEventListener('keydown', event => { if (event.key === 'Escape') setOpen(false); });
-  sidebar.addEventListener('click', event => { if (event.target.closest('a, [data-view], [data-page]')) setOpen(false); });
-  return () => setOpen(false);
+  const close = () => setOpen(false);
+  close.toggle = () => setOpen(!sidebar.classList.contains('open'));
+  if (listen) toggles.forEach(button => button?.addEventListener('click', close.toggle));
+  overlay.addEventListener('click', close);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') close();
+    if (event.key !== 'Tab' || !media.matches || !sidebar.classList.contains('open')) return;
+    const items = [...sidebar.querySelectorAll('a[href],button:not(:disabled)')].filter(el => !el.closest('.hidden,[hidden]') && getComputedStyle(el).display !== 'none');
+    const first = items[0], last = items.at(-1);
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+  });
+  sidebar.addEventListener('click', event => { if (event.target.closest('a, [data-view], [data-page]')) close(); });
+  media.addEventListener('change', close);
+  setOpen(false);
+  return close;
 }

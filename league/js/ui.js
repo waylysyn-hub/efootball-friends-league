@@ -9,7 +9,7 @@ import { renderLeagueTable } from './standings.js';
 import { getPlayers, selectProfilePlayer } from './profiles.js';
 import { renderAwards, selectAchievementsPlayer } from './achievements.js';
 import { renderQuestions } from './questions.js';
-import { closeDialog, escapeHtml, isBusy, openDialog, showError as showInlineError, toast, withBusy } from '../../shared/ui.js';
+import { closeDialog, escapeHtml, isBusy, openDialog, showError as showInlineError, setupDrawer, toast, withBusy } from '../../shared/ui.js';
 
 export function navigateTo(page, el) {
   if (!isAdmin() && page === 'recordMatch') {
@@ -89,20 +89,20 @@ export function renderPage(page) {
   }
 }
 
+const drawer = setupDrawer({
+  sidebar: document.getElementById('sidebar'),
+  overlay: document.getElementById('sidebarOverlay'),
+  toggles: [...document.querySelectorAll('[aria-controls="sidebar"]')],
+  listen: false,
+});
 export function toggleSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  const open = !sidebar.classList.contains('open');
-  sidebar.classList.toggle('open', open);
-  document.getElementById('sidebarOverlay').classList.toggle('visible', open);
-  document.querySelectorAll('[aria-controls="sidebar"]').forEach(button => button.setAttribute('aria-expanded', String(open)));
-  if (open) sidebar.querySelector('a')?.focus();
- }
-
+  drawer.toggle();
+  document.querySelectorAll('[aria-controls="sidebar"]').forEach(button => button.setAttribute('aria-expanded', String(document.getElementById('sidebar').classList.contains('open'))));
+}
 export function closeSidebar() {
-  document.getElementById('sidebar')?.classList.remove('open');
-  document.getElementById('sidebarOverlay')?.classList.remove('visible');
+  drawer();
   document.querySelectorAll('[aria-controls="sidebar"]').forEach(button => button.setAttribute('aria-expanded', 'false'));
- }
+}
 
 export function showError(element, message) { showInlineError(element, message); }
 

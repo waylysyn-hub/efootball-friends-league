@@ -148,3 +148,5 @@
 
 .qa-open { display:block; width:100%; text-align:left; color:var(--text); border:0; background:none; padding:12px 0; cursor:pointer; line-height:1.6; }
 .qa-open:hover { color:var(--primary); }
+
+.profile-match-date { float:right; font-size:.8125rem; }.h2h-total { margin-bottom:4px; }.h2h-total-value { font-size:1.5rem; color:var(--primary); }.h2h-draws-value { font-size:1.25rem; color:var(--primary); }.compact-match { margin-bottom:8px; }.rivalry-count { color:var(--muted); font-size:.875rem; }

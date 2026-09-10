@@ -135,7 +135,7 @@ export function selectProfilePlayer(name, btn) {
             <strong>${esc(m.player1)}</strong>
             <span class="recent-match-score"> ${m.goals1}–${m.goals2} </span>
             <strong>${esc(m.player2)}</strong>
-            <span class="text-dim" style="float:right;font-size:.8em">${formatDate(m.date)}</span>
+            <span class="text-dim profile-match-date">${formatDate(m.date)}</span>
           </div>`).join('')}
       </div>
     </div>` : ''}`;

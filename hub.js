@@ -314,7 +314,7 @@ function renderBottom(teams, fixtures, scorers) {
           <span class="hub-match-date">${formatDate(f.scheduled_at)}</span>
           <div class="hub-match-teams">
             ${teamLogo(home, 24)}<span>${esc(home.name.toUpperCase())}</span>
-            <span style="color:var(--hub-text-dim);font-size:0.7rem">vs</span>
+            <span class="match-versus">vs</span>
             <span>${esc(away.name.toUpperCase())}</span>${teamLogo(away, 24)}
           </div>
           <span class="hub-match-time">${formatTime(f.scheduled_at)}</span></li>`;
