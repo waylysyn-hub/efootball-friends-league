@@ -1,0 +1,39 @@
+@media (min-width: 1600px) { .stat-cards-grid { grid-template-columns: repeat(6,minmax(0,1fr)); } }
+@media (max-width: 1200px) {
+  .page { padding: 28px 28px 48px; }.topbar { padding-inline: 28px; }
+  .match-list { grid-template-columns: 1fr; }.settings-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .profile-stats-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .fb-lb-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 1024px) {
+  .sidebar { transform: translateX(-100%); }.sidebar.open { transform: translateX(0); box-shadow: var(--shadow); }
+  .sidebar-overlay.visible { display: block; }.main-content { margin-left: 0; width: 100%; }.mobile-menu-btn { display: grid; }
+  .login-container { gap: 48px; }.login-form-box { padding: 32px; }
+}
+@media (max-width: 768px) {
+  .login-container { grid-template-columns: 1fr; max-width: 480px; gap: 28px; }.login-logo { padding: 0; }.login-logo .brand-mark { margin-bottom: 20px; width: 44px; height: 50px; font-size: 1.5rem; }
+  .login-logo h1 { font-size: 2.5rem; margin: 12px 0 16px; }.login-wordmark { display: none; }.login-logo p { max-width: none; }
+  .login-screen { padding: 32px 20px; }.login-form-box { padding: 28px; }
+  .dashboard-grid, .stats-grid { grid-template-columns: 1fr; }.stat-cards-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .filter-bar { grid-template-columns: repeat(2,minmax(0,1fr)); }.profile-stats-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .ge-header { display: none; }.ge-row { grid-template-columns: minmax(0,1fr) minmax(0,1fr) 44px; gap: 10px; padding: 16px 0; }.ge-owner { grid-column: 1 / 3; }.ge-remove { grid-column: 3; grid-row: 1; }.ge-scorer { grid-column: 1; grid-row: 2; }.ge-assist { grid-column: 2 / 4; grid-row: 2; }.ge-minute { grid-column: 1 / 4; grid-row: 3; }
+  .md-player { font-size: 1.125rem; }.match-details-score { gap: 16px; padding: 32px 20px; }
+}
+@media (max-width: 600px) {
+  .topbar { padding: 0 16px; height: 68px; gap: 12px; }.topbar-right { gap: 8px; }.topbar-player, .viewer-badge, .season-badge { display: none; }
+  .page { padding: 24px 16px 40px; }.page-header { margin-bottom: 24px; }.page-header-flex { align-items: flex-start; flex-direction: column; }
+  .page-title { font-size: 1.8rem; }.page-subtitle { font-size: .9375rem; }
+  .stat-card { padding: 20px 16px; }.stat-card-label { font-size: .8125rem; }.stat-card-icon { right: 14px; top: 20px; }.stat-card-value { font-size: 1.375rem; margin-top: 24px; }
+  .stat-cards-grid { gap: 12px; }.panel-header, .panel-body { padding: 18px; }
+  .match-form-card { padding: 20px 16px; }.match-vs-header { grid-template-columns: 1fr; gap: 8px; }.match-vs-header .vs-badge { min-height: 24px; }
+  .match-score-row { grid-template-columns: minmax(0,1fr) 20px minmax(0,1fr); gap: 8px; }.score-input-group input { height: 84px; font-size: 2.5rem; }
+  .form-row-two { grid-template-columns: 1fr; gap: 0; }.form-actions { flex-wrap: wrap; }.form-actions .btn-primary { flex: 1; }
+  .form-group.inline { flex-direction: column; }.season-card { align-items: flex-start; flex-direction: column; }.season-card-actions { flex-wrap: wrap; }
+  .match-card { padding: 20px 16px; }.match-card-result { gap: 10px; }.match-player { font-size: 1rem; }.match-score { font-size: 1.5rem; }.match-card-actions { flex-wrap: wrap; }.match-card-header { row-gap: 12px; }
+  .match-details-score { grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); padding: 28px 14px; gap: 8px; }.md-player { font-size: 1rem; }.md-score { font-size: 2rem; white-space: nowrap; }
+  .profile-header { padding: 24px 20px; gap: 16px; }.profile-avatar { width: 64px; height: 76px; font-size: 2rem; }.profile-info h3 { font-size: 1.6rem; }.profile-stat-item { padding: 16px; }.psi-value { font-size: 1.375rem; }
+  .awards-grid, .achievements-grid, .settings-grid { grid-template-columns: 1fr; }.award-card, .achievement-badge { padding: 24px; }.award-icon, .achievement-icon { margin-bottom: 16px; }
+  .chart-section { padding: 20px 16px; }.chart-bar-row { grid-template-columns: 100px minmax(0,1fr) 28px; gap: 8px; }.h2h-select-row { grid-template-columns: 1fr; gap: 8px; }.h2h-stat-grid { gap: 12px; }.h2h-big-stat { font-size: 2.5rem; }.h2h-row { gap: 12px; }
+  .qa-card, .qa-answer, .rivalry-card { padding: 20px; }.qa-author { font-size: .9375rem; }.season-filter-row select { max-width: calc(100% - 70px); }
+  .login-screen { padding: 24px 16px; }.login-form-box { padding: 24px; }.login-logo h1 { font-size: 2.3rem; }
+}

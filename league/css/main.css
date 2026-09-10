@@ -1,0 +1,55 @@
+/* League shell and sign-in */
+:root { --neon: var(--primary); --neon2: var(--secondary); --neon3: var(--warning); --gold: var(--primary); --text-primary: var(--text); --text-secondary: var(--muted); }
+.login-screen { min-height: 100dvh; display: grid; place-items: center; padding: 48px 24px; background: radial-gradient(ellipse at 25% 20%, #b3955a0d, transparent 55%), var(--bg); }
+.login-container { width: min(100%, 1056px); display: grid; grid-template-columns: 1.1fr 1fr; align-items: center; gap: 96px; }
+.login-logo { padding: 24px 0; }
+.login-logo .brand-mark { width: 60px; height: 68px; font-size: 2rem; margin-bottom: 36px; }
+.login-logo h1 { font-size: clamp(2.5rem,5vw,4.5rem); font-weight: 600; line-height: 1.05; letter-spacing: -.05em; margin: 16px 0 24px; }
+.login-logo h1 span { color: var(--primary); }
+.login-logo p { max-width: 320px; font-size: 1.0625rem; color: var(--muted); }
+.login-wordmark { margin-top: 48px; display: flex; align-items: center; gap: 16px; color: var(--muted); font-size: .875rem; }
+.login-wordmark::before { content: ''; width: 40px; height: 1px; background: var(--primary); }
+.login-form-box { padding: 40px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); }
+.login-form-box h2 { font-size: 1.75rem; margin-bottom: 8px; }
+.login-form-description { margin-bottom: 32px; color: var(--muted); }
+.login-form-box .btn-primary { width: 100%; }
+.password-field { position: relative; }
+.password-field input { padding-right: 74px; }
+.password-toggle { position: absolute; right: 6px; top: 4px; min-height: 40px; padding: 8px; color: var(--muted); background: transparent; border: 0; border-radius: 6px; font-size: .875rem; }
+.login-hint { margin-top: 20px; font-size: .875rem; color: var(--muted); text-align: center; }
+.login-links { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: .875rem; }
+.login-links button { padding: 0; color: var(--muted); background: transparent; border: 0; font-size: .875rem; min-height: 44px; }
+.main-app { display: flex; min-height: 100dvh; }
+.sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: var(--sidebar-width); background: #101318; border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; transition: transform .25s ease; }
+.sidebar-header { padding: 28px 20px; border-bottom: 1px solid var(--border); }
+.sidebar-logo { display: flex; gap: 12px; align-items: center; }
+.sidebar-title { font-size: 1rem; font-weight: 600; }
+.sidebar-subtitle { color: var(--primary); font-size: .75rem; text-transform: uppercase; letter-spacing: .14em; margin-top: 3px; }
+.sidebar-player { display: flex; gap: 12px; align-items: center; margin: 20px 16px 8px; padding: 14px; background: var(--surface-2); border-radius: var(--radius-sm); }
+.player-avatar { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border: 1px solid var(--border-strong); border-radius: 50%; color: var(--primary); font-weight: 600; }
+.player-name { font-weight: 600; }
+.player-rank { color: var(--muted); font-size: .8125rem; }
+.sidebar-nick { display: none; }
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 12px; scrollbar-width: thin; }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; min-height: 44px; margin-bottom: 3px; color: var(--muted); border: 1px solid transparent; border-radius: 9px; font-size: .9375rem; transition: background var(--transition); }
+.nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-item.active { background: var(--primary-soft); color: var(--primary); border-color: #dec08025; }
+.nav-external { margin-bottom: 10px; }
+.nav-icon { width: 20px; height: 20px; display: grid; place-items: center; flex: none; }
+.nav-icon svg { width: 18px; height: 18px; }
+.sidebar-footer { padding: 16px; border-top: 1px solid var(--border); }
+.btn-logout { width: 100%; }
+.main-content { margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); min-width: 0; }
+.topbar { height: 80px; padding: 0 40px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: #0b0d11ed; backdrop-filter: blur(12px); z-index: 50; }
+.topbar-title { color: var(--muted); flex: 1; font-size: .9375rem; }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.topbar-player { font-size: .9375rem; }
+.season-badge, .viewer-badge { font-size: .8125rem; padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); }
+.viewer-badge { color: var(--secondary); }
+.mobile-menu-btn, .sidebar-toggle { display: none; }
+.sidebar-overlay { display: none; position: fixed; inset: 0; background: #000a; z-index: 99; }
+.page { max-width: 1560px; margin: 0 auto; padding: 36px 40px 64px; animation: appear .18s ease; }
+.page-header { margin-bottom: 28px; }
+.page-title { font-size: clamp(1.8rem, 2.7vw, 2.5rem); text-transform: none; letter-spacing: -.035em; }
+.page-subtitle { margin-top: 8px; color: var(--muted); }
+.page-header-flex { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
