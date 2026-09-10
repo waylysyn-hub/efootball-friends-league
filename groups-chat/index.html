@@ -1,170 +1,159 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Circle · Groups & Friends Chat</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet"
-  />
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <!-- LOGIN -->
-  <div id="loginScreen" class="login-screen">
-    <div class="login-box">
-      <div class="login-brand">
-        <div class="brand-logo lg">C</div>
-        <h1>Circle Chat</h1>
-        <p class="muted">Sign in with your league account</p>
-      </div>
-      <div class="form-group">
-        <label>Player</label>
-        <select id="loginUsername">
-          <option value="">— SELECT PLAYER —</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="loginPassword" placeholder="Enter password" />
-      </div>
-      <p id="loginError" class="login-error" hidden></p>
-      <button class="btn-primary" type="button" onclick="handleLogin()">Sign in</button>
-      <a href="../index.html" class="login-back">← Back to Tournament Hub</a>
-    </div>
-  </div>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Majles Al-Kibbar · League Chat</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 
-  <div class="app hidden" id="appRoot">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-logo">C</div>
-        <div class="brand-text">
-          <span class="brand-name">Circle</span>
-          <span class="brand-sub">Groups &amp; Friends</span>
-        </div>
-      </div>
 
-      <nav class="nav">
-        <a href="../index.html" class="nav-item nav-external">
-          <span class="nav-icon">🏛</span>
-          <span>Tournament Hub</span>
-        </a>
-        <button class="nav-item active" data-view="groups" type="button">
-          <span class="nav-icon">▦</span>
-          <span>Groups</span>
-        </button>
-        <button class="nav-item" data-view="invites" type="button">
-          <span class="nav-icon">✦</span>
-          <span>Invitations</span>
-          <span class="badge" id="inviteBadge">0</span>
-        </button>
-      </nav>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&amp;family=Outfit:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/><link href="../shared/tokens.css" rel="stylesheet"/><link href="../shared/components.css" rel="stylesheet"/><link href="style.css" rel="stylesheet"/></head>
+<body><a class="skip-link" href="#mainContent">Skip to content</a><div class="connection-status" hidden="" id="connectionStatus" role="status"></div>
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+<div class="login-box">
+<div class="login-brand"><p class="eyebrow">MAJLES AL-KIBBAR · LEAGUE CHAT</p>
+<div class="brand-logo lg">M</div>
+<h1>Keep the league talking.</h1>
+<p class="muted">Results, rivalries and the next big match. Sign in with your league account.</p>
+</div><form data-busy-region="" id="loginForm"><div class="form-group">
+<label for="loginUsername">Player</label>
+<select autocomplete="username" id="loginUsername" required="">
+<option value="">— SELECT PLAYER —</option>
+</select>
+</div><div class="form-group">
+<label for="loginPassword">Password</label>
+<input autocomplete="current-password" id="loginPassword" placeholder="Enter password" required="" type="password"/>
+</div><p class="login-error" hidden="" id="loginError"></p><button class="btn btn-primary" disabled="" id="loginButton" type="submit">Sign in</button><button class="btn btn-ghost" id="retryLogin" type="button">Refresh players</button></form>
 
-      <div class="sidebar-footer">
-        <div class="me">
-          <div class="avatar" id="meAvatar">?</div>
-          <div class="me-text">
-            <span class="me-name" id="meName">—</span>
-            <span class="me-status">● Online</span>
-          </div>
-        </div>
-        <button class="theme-toggle" id="themeToggle" title="Toggle theme" type="button">
-          <span class="theme-icon">🌙</span>
-        </button>
-        <button class="logout-btn" id="logoutBtn" title="Sign out" type="button">⏻</button>
-      </div>
-    </aside>
 
-    <main class="main">
-      <section class="view active" id="view-groups">
-        <header class="view-header">
-          <div>
-            <h1>Groups</h1>
-            <p class="muted">Your league chat circles.</p>
-          </div>
-          <div class="view-header-actions">
-            <button class="btn-create" id="createGroupBtn" type="button">+ New Group</button>
-            <div class="search">
-              <span>⌕</span>
-              <input type="text" id="groupSearch" placeholder="Search groups…" />
-            </div>
-          </div>
-        </header>
-        <div class="groups-grid" id="groupsGrid"></div>
-      </section>
 
-      <section class="view" id="view-chat">
-        <header class="chat-header">
-          <button class="back-btn" id="backToGroups" type="button">←</button>
-          <div class="chat-title">
-            <div class="avatar" id="chatAvatar">G</div>
-            <div>
-              <h2 id="chatGroupName">Group</h2>
-              <span class="muted" id="chatGroupMeta">0 members</span>
-            </div>
-          </div>
-        </header>
-        <div class="chat-invite-bar hidden" id="chatInviteBar">
-          <select id="invitePlayerSelect"></select>
-          <button type="button" class="btn-create sm" id="sendInviteBtn">Invite</button>
-        </div>
-        <div class="messages" id="messages"></div>
-        <form class="composer" id="composer">
-          <input type="text" id="messageInput" placeholder="Type a message…" autocomplete="off" />
-          <button type="submit" class="send-btn" id="sendBtn">➤</button>
-        </form>
-      </section>
 
-      <section class="view" id="view-invites">
-        <header class="view-header">
-          <div>
-            <h1>Invitations</h1>
-            <p class="muted">Pending group invites.</p>
-          </div>
-        </header>
-        <div class="invites-list" id="invitesList"></div>
-        <div class="empty" id="invitesEmpty" hidden>
-          <div class="empty-emoji">📭</div>
-          <h3>You're all caught up</h3>
-          <p class="muted">No pending invitations right now.</p>
-        </div>
-      </section>
-    </main>
-  </div>
+<a class="login-back" href="../index.html">← Back to Tournament Hub</a>
+</div>
+</div>
+<div class="app hidden" id="appRoot"><div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="sidebar">
+<div class="brand">
+<div class="brand-logo">C</div>
+<div class="brand-text">
+<span class="brand-name">Majles Al-Kibbar</span>
+<span class="brand-sub">League Chat</span>
+</div>
+</div>
+<nav class="nav">
+<a class="nav-item nav-external" href="../index.html">
+<span class="nav-icon">🏛</span>
+<span>Tournament Hub</span>
+</a>
+<button class="nav-item active" data-view="groups" type="button">
+<span class="nav-icon">▦</span>
+<span>Groups</span>
+</button>
+<button class="nav-item" data-view="invites" type="button">
+<span class="nav-icon">✦</span>
+<span>Invitations</span>
+<span class="badge" id="inviteBadge">0</span>
+</button>
+<a class="nav-item nav-external" href="../league/index.html"><span aria-hidden="true" class="nav-icon">◈</span><span>League workspace</span></a></nav>
+<div class="sidebar-footer">
+<div class="me">
+<div class="avatar" id="meAvatar">?</div>
+<div class="me-text">
+<span class="me-name" id="meName">—</span>
+<span class="me-status">● Online</span>
+</div>
+</div>
+<button class="theme-toggle" id="themeToggle" title="Toggle theme" type="button">
+<span class="theme-icon">🌙</span>
+</button>
+<button aria-label="Sign out" class="logout-btn" id="logoutBtn" title="Sign out" type="button">⏻</button>
+</div>
+</aside>
+<main class="main" id="mainContent"><div class="chat-topbar"><button aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation" class="menu-toggle btn btn-ghost" id="chatMenuToggle" type="button">☰</button><span class="eyebrow">THE CONVERSATION CONTINUES</span><button class="btn btn-ghost" id="refreshChats" type="button">Refresh</button></div><p class="error-msg" hidden="" id="chatDataError" role="alert"></p>
+<section class="view active" id="view-groups">
+<header class="view-header">
+<div>
+<h1>Your circles</h1>
+<p class="muted">Where the match carries on.</p><span class="group-count" id="groupCount">Loading groups…</span>
+</div>
+<div class="view-header-actions">
+<button class="btn-create" id="createGroupBtn" type="button">+ New Group</button>
+<div class="search">
+<span>⌕</span>
+<input aria-label="Search groups…" id="groupSearch" placeholder="Search groups…" type="text"/>
+</div>
+</div>
+</header>
+<div class="groups-grid" id="groupsGrid"></div>
+</section>
+<section class="view" id="view-chat">
+<header class="chat-header">
+<button aria-label="Back to groups" class="back-btn" id="backToGroups" type="button">←</button>
+<div class="chat-title">
+<div class="avatar" id="chatAvatar">G</div>
+<div>
+<h2 id="chatGroupName">Group</h2>
+<span class="muted" id="chatGroupMeta">0 members</span><p class="member-names" id="memberNames"></p>
+</div>
+</div>
+</header>
+<div class="chat-invite-bar hidden" data-busy-region="" id="chatInviteBar">
+<select aria-label="Choose a player" id="invitePlayerSelect"></select>
+<button class="btn-create sm" id="sendInviteBtn" type="button">Invite</button>
+</div>
+<button class="btn btn-ghost older-button" hidden="" id="loadOlder" type="button">Load earlier messages</button><p class="error-msg" hidden="" id="messageError" role="alert"></p><div aria-label="Conversation" aria-live="polite" aria-relevant="additions" class="messages" id="messages" role="log"></div>
+<form class="composer" data-busy-region="" id="composer">
+<input aria-label="Message" autocomplete="off" id="messageInput" maxlength="2000" placeholder="Type a message…" required="" type="text"/>
+<button aria-label="Send message" class="send-btn" id="sendBtn" type="submit">➤</button>
+</form>
+</section>
+<section class="view" id="view-invites">
+<header class="view-header">
+<div>
+<h1>Invitations</h1>
+<p class="muted">Pending group invites.</p>
+</div>
+</header>
+<div class="invites-list" id="invitesList"></div>
+<div class="empty" hidden="" id="invitesEmpty">
+<div class="empty-emoji">📭</div>
+<h3>You're all caught up</h3>
+<p class="muted">No pending invitations right now.</p>
+</div>
+</section>
+</main>
+</div>
+<!-- CREATE GROUP MODAL -->
+<div class="modal hidden" id="createGroupModal">
+<div class="modal-box">
+<h3>New Group</h3>
+<form data-busy-region="" id="createGroupForm"><p class="error-msg" hidden="" id="groupError" role="alert"></p>
+<div class="form-group">
+<label for="newGroupName">Name</label>
+<input id="newGroupName" maxlength="80" placeholder="e.g. Match Day Chat" required="" type="text"/>
+</div>
+<div class="form-group">
+<label for="newGroupEmoji">Emoji</label>
+<input id="newGroupEmoji" maxlength="16" placeholder="⚽" type="text"/>
+</div>
+<div class="form-group">
+<label for="newGroupDesc">Description</label>
+<input id="newGroupDesc" maxlength="200" placeholder="What's this group for?" type="text"/>
+</div>
+<div class="modal-actions">
+<button class="btn-secondary" data-dialog-cancel="" id="cancelCreateGroup" type="button">Cancel</button>
+<button class="btn-primary" id="saveGroupButton" type="submit">Create</button>
+</div>
+</form>
+</div>
+</div>
+<div class="toast" id="toast"></div>
 
-  <!-- CREATE GROUP MODAL -->
-  <div class="modal hidden" id="createGroupModal">
-    <div class="modal-box">
-      <h3>New Group</h3>
-      <form id="createGroupForm">
-        <div class="form-group">
-          <label>Name</label>
-          <input type="text" id="newGroupName" required maxlength="80" placeholder="e.g. Match Day Chat" />
-        </div>
-        <div class="form-group">
-          <label>Emoji</label>
-          <input type="text" id="newGroupEmoji" maxlength="4" placeholder="⚽" />
-        </div>
-        <div class="form-group">
-          <label>Description</label>
-          <input type="text" id="newGroupDesc" maxlength="200" placeholder="What's this group for?" />
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-secondary" id="cancelCreateGroup">Cancel</button>
-          <button type="submit" class="btn-primary">Create</button>
-        </div>
-      </form>
-    </div>
-  </div>
 
-  <div class="toast" id="toast"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="../supabase-config.js"></script>
-  <script src="api.js"></script>
-  <script src="script.js"></script>
-</body>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0"></script><script src="../supabase-config.js"></script><script src="../client-runtime.js"></script><script src="../auth-runtime.js"></script><script src="script.js" type="module"></script></body>
 </html>
