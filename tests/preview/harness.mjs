@@ -21,11 +21,13 @@ async function show(screen,width){
   if(screen==='edit')w.League.openEditModal('20000000-0000-4000-8000-000000000001');
   if(screen==='recordMatch'){d.getElementById('matchPlayer1').value='Wael';d.getElementById('matchPlayer2').value='Omar';d.getElementById('matchGoals1').value='1';w.League.updateMatchPreview();w.League.addGoalEventRow('goalEventsList');}
  }
+ await d.fonts.ready;
  await new Promise(resolve=>w.requestAnimationFrame(()=>w.requestAnimationFrame(resolve)));
  const overflow=d.documentElement.scrollWidth>d.documentElement.clientWidth+1;
  return {screen,width,overflow,errors:[...errors],scrollWidth:d.documentElement.scrollWidth};
 }
 document.getElementById('load').onclick=async()=>{
+ status.textContent='Loading preview…';
  try{const result=await show(document.getElementById('screen').value,Number(document.getElementById('width').value));status.textContent=result.errors.length||result.overflow?'Issue found':'Ready';report.textContent=JSON.stringify(result,null,2);}catch(error){status.textContent=error.message;}
 };
 document.getElementById('matrix').onclick=async()=>{

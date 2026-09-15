@@ -1,15 +1,15 @@
-# Validation record — 10 September 2026
+# Validation record — 15 September 2026
 
 This branch is a review candidate. Production password login and migration rollout remain release gates; fixture sessions are not evidence of real account authentication.
 
 ## Observed passing checks
 
 - Static security regression checks: public-safe profile selection, private auth mapping, database admin enforcement, database-derived standings/achievements, no plaintext-password queries/storage, no service-role keys, no `document.write` bootstrap, explicit script order, valid relative assets and consistent CSS tokens.
-- Node/PGlite suite: **23 passing tests** (13 frontend scenarios, 9 nested SQL scenarios and their parent test). The PostgreSQL tests run real grants, RLS, constraints, triggers and functions in an isolated engine, including a repeat installation of the additive migration.
+- Node/PGlite suite: **25 passing tests** (15 frontend scenarios, 9 nested SQL scenarios and their parent test). The PostgreSQL tests run real grants, RLS, constraints, triggers and functions in an isolated engine, including a repeat installation of the additive migration.
 - Browser fixture matrix: **161 screen/width combinations**, zero reported application JavaScript errors or document-level horizontal overflow. The same-origin frame has the exact specified viewport width; it is not a scaled CSS approximation. Desktop heights are 1080 at 1920px and 768 at 1366px; smaller widths use 768/844px heights.
 - Widths: **1920, 1366, 1024, 768, 430, 390, 360**. Each runs 23 views: Hub; League login, dashboard, table, history, detail, record, edit dialog, profile, statistics, football-player performance, achievements, awards, head-to-head, rivalries, seasons, Q&A and settings; Chat login, groups, conversation, invitations and create-group dialog.
 - Visual inspection exposed an incorrectly positioned Chat dialog and uneven Hub heading layout; both were corrected. The mobile match form was inspected for stacked controls and readable score inputs.
-- The frontend suite was rerun after dialog/drawer corrections: **13/13 passed**.
+- The full suite was rerun after the final retry/session fixes, local Cairo font and semantic Hub headings: **25/25 passed**. The responsive matrix was rerun after font loading: **161/161 passed**; measurements wait for the document fonts to settle.
 
 ## Functional coverage
 
@@ -20,12 +20,21 @@ This branch is a review candidate. Production password login and migration rollo
 - Every normal player is denied admin RPCs/direct match inserts/derived writes and role escalation. Anonymous users cannot read auth mappings; authenticated users cannot select UUID columns.
 - Q&A ownership, answer linkage and closure checks; group privacy, owner membership, involved-only invitations, idempotent acceptance and message-author enforcement.
 - Chat failure retains text, retry preserves the message ID, late responses do not appear in another group, and realtime includes messages from the same author in another tab.
+- A Q&A retry recovers an already committed post after a lost response; a late initial loader cannot reopen the League after session expiry.
 
 ## Browser suite
 
 `npm run test:browser` provides 35 Playwright smoke cases (five scenarios × seven widths). CI runs Chromium plus the security/integration suite. It checks app/roster readiness, the major League views, Hub navigation, conversation sending, dialogs and safe overflow. These tests always use synthetic clients; there are no test passwords or production writes.
 
-The interactive harness uses the same fixtures and was exercised through the available browser. Its measured matrix is distinct from the Playwright CLI/CI results.
+The interactive harness uses the same fixtures and was exercised through the available browser. Its measured matrix is distinct from the Playwright CLI/CI results. GitHub Actions also passed the full 35-case Chromium suite and the security/integration job on the initial review head ([run 34443958801](https://github.com/waylysyn-hub/efootball-friends-league/actions/runs/34443958801)).
+
+## Review screenshots and measured output
+
+The following screenshots use synthetic fixture data, captured on 15 September 2026 with the final shared Cairo font. They contain no production conversations. Full width results are saved in [responsive-matrix.json](responsive-matrix.json).
+
+- [League dashboard, 1366 × 768](screenshots/league-desktop.jpg)
+- [Tournament Hub, 1366 × 768](screenshots/hub-desktop.jpg)
+- [Chat conversation, 390 × 844](screenshots/chat-mobile.jpg)
 
 ## Remaining release gates and scope limits
 
