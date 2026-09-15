@@ -194,13 +194,13 @@ function renderTabs(seasons, currentId) {
 function renderStandings(tournament, standings) {
   const subtitle =
     tournament.total_matches > 0
-      ? `${esc(tournament.season_name || 'Season')} &nbsp;|&nbsp; ${tournament.total_matches} matches played`
+      ? `${esc(tournament.season_name || 'Season')} &nbsp;|&nbsp; ${tournament.total_matches} ${tournament.total_matches === 1 ? 'match' : 'matches'} played`
       : esc(tournament.season_name || '');
 
   if (!standings.length) {
     $('#standingsCard').innerHTML = `
       <div class="hub-card-header">
-        <div><div class="hub-card-title">${esc(tournament.name)} Standings</div>
+        <div><h2 class="hub-card-title">${esc(tournament.name)} Standings</h2>
         <div class="hub-card-subtitle">${subtitle}</div></div>
       </div>
       <div class="hub-empty-inline"><p>لا توجد فرق أو نتائج بعد.</p></div>`;
@@ -222,7 +222,7 @@ function renderStandings(tournament, standings) {
 
   $('#standingsCard').innerHTML = `
     <div class="hub-card-header">
-      <div><div class="hub-card-title">${esc(tournament.name)} Standings</div>
+      <div><h2 class="hub-card-title">${esc(tournament.name)} Standings</h2>
       <div class="hub-card-subtitle">${subtitle}</div></div>
     </div>
     <div class="table-scroll" tabindex="0" role="region" aria-label="League standings"><table class="hub-standings">
@@ -239,7 +239,7 @@ function renderAside(tournament, teams, stats) {
 
   $('#asidePanel').innerHTML = `
     <div class="hub-card">
-      <div class="hub-card-header"><div class="hub-card-title">Tournament Information</div></div>
+      <div class="hub-card-header"><h2 class="hub-card-title">Tournament Information</h2></div>
       <div class="hub-info-list">
         <div class="hub-info-item"><span>Format</span><span>${esc(tournament.format || '—')}</span></div>
         <div class="hub-info-item"><span>Teams</span><span>${teams.length}</span></div>
@@ -248,7 +248,7 @@ function renderAside(tournament, teams, stats) {
       </div>
     </div>
     <div class="hub-card hub-section" id="section-statistics">
-      <div class="hub-card-header"><div class="hub-card-title">Quick Stats</div></div>
+      <div class="hub-card-header"><h2 class="hub-card-title">Quick Stats</h2></div>
       <div class="hub-stats-grid">
         <div class="hub-stat"><div class="hub-stat-icon">⚽</div><div class="hub-stat-value">${stats.total_matches}</div><div class="hub-stat-label">Total Matches</div></div>
         <div class="hub-stat"><div class="hub-stat-icon">🥅</div><div class="hub-stat-value">${stats.total_goals}</div><div class="hub-stat-label">Total Goals</div></div>
@@ -323,11 +323,11 @@ function renderBottom(teams, fixtures, scorers) {
     : '<div class="hub-empty-inline"><p>لا توجد مباريات قادمة.</p></div>';
 
   $('#bottomGrid').innerHTML = `
-    <div class="hub-card hub-section" id="section-matches"><div class="hub-card-header"><div class="hub-card-title">Recent Matches</div></div>
+    <div class="hub-card hub-section" id="section-matches"><div class="hub-card-header"><h2 class="hub-card-title">Recent Matches</h2></div>
       <ul class="hub-match-list">${recentHtml}</ul></div>
-    <div class="hub-card hub-section" id="section-players"><div class="hub-card-header"><div class="hub-card-title">Top Scorers</div></div>
+    <div class="hub-card hub-section" id="section-players"><div class="hub-card-header"><h2 class="hub-card-title">Top Scorers</h2></div>
       <div>${scorersHtml}</div></div>
-    <div class="hub-card hub-section" id="section-upcoming"><div class="hub-card-header"><div class="hub-card-title">Upcoming Matches</div></div>
+    <div class="hub-card hub-section" id="section-upcoming"><div class="hub-card-header"><h2 class="hub-card-title">Upcoming Matches</h2></div>
       <ul class="hub-match-list">${upcomingHtml}</ul></div>`;
 }
 
@@ -349,7 +349,7 @@ function renderHub(data) {
   const stats = computeQuickStats(fixtures);
 
   hasContent = true;
-  $('#hubSeasonSummary').textContent = `${tournament.season_name} · ${teams.length} players · ${stats.total_matches} matches`;
+  $('#hubSeasonSummary').textContent = `${tournament.season_name} · ${teams.length} players · ${stats.total_matches} ${stats.total_matches === 1 ? 'match' : 'matches'}`;
   renderTabs(seasons, activeSeasonId);
   renderStandings(tournament, standings);
   renderAside(tournament, teams, stats);

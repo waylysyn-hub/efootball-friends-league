@@ -43,7 +43,13 @@ for(const page of ['index.html','league/index.html','groups-chat/index.html']) {
 }
 for(const file of files.filter(f=>f.endsWith('.js')))parse(read(file),{ecmaVersion:'latest',sourceType:'module'});
 const tokens=new Set([...read('shared/tokens.css').matchAll(/(--[\w-]+)\s*:/g)].map(m=>m[1]));
-const css=files.filter(f=>f.endsWith('.css')).map(read).join('\n');
+const cssFiles=files.filter(f=>f.endsWith('.css'));
+for(const file of cssFiles)for(const match of read(file).matchAll(/url\(\s*['"]?([^)'"\s]+)['"]?\s*\)/g)) {
+ const href=match[1];if(/^(?:https?:|data:|#)/.test(href))continue;
+ assert.ok(!href.startsWith('/'),file+' must work on GitHub project paths');
+ assert.ok(fs.existsSync(path.resolve(root,path.dirname(file),href.split('#')[0])),file+' broken CSS asset '+href);
+}
+const css=cssFiles.map(read).join('\n');
 for(const m of css.matchAll(/(--[\w-]+)\s*:/g))tokens.add(m[1]);
 for(const m of css.matchAll(/var\((--[\w-]+)\)/g))assert.ok(tokens.has(m[1]),'Undefined design token '+m[1]);
 console.log('Security, script order, syntax, design tokens and GitHub Pages paths passed.');

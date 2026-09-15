@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'Cairo';
+  src: url('./fonts/Cairo-Variable.ttf') format('truetype');
+  font-weight: 200 1000;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
   --bg: #0b0d11;
