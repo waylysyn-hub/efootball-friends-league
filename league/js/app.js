@@ -23,7 +23,7 @@ const actions = { ...ui, ...matches, ...details, ...goals, ...seasons, ...profil
   refresh: refreshFromRemote, retryLogin: loadRoster };
 for (const name of ['submitQuestion', 'submitAnswer']) {
   const action = actions[name];
-  actions[name] = (...args) => withBusy(name, document.activeElement, () => action(...args));
+  actions[name] = (...args) => withBusy(name, document.getElementById(name === 'submitQuestion' ? 'postQuestionButton' : 'postAnswerButton'), () => action(...args));
 }
 window.League = Object.freeze(actions);
 

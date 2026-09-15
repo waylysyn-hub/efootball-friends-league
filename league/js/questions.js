@@ -3,6 +3,23 @@ import { isAdmin, requireAdmin } from './admin.js';
 import { esc, formatDate, showConfirm, showError, showToast } from './ui.js';
 import { isQaTableMissing, mapAnswer, mapQuestion } from './api.js';
 
+const pendingPosts = new Map();
+async function postOnce(table, content) {
+  const signature = JSON.stringify(content);
+  let draft = pendingPosts.get(table);
+  if (!draft || draft.signature !== signature) {
+    draft = { signature, row: { id: crypto.randomUUID(), ...content, timestamp: Date.now() } };
+    pendingPosts.set(table, draft);
+  }
+  let result = await sb.from(table).insert(draft.row).select().single();
+  if (result.error?.code === '23505') {
+    const existing = await sb.from(table).select().eq('id', draft.row.id).single();
+    if (!existing.error && Object.entries(content).every(([key,value]) => existing.data?.[key] === value)) result = existing;
+  }
+  if (!result.error) pendingPosts.delete(table);
+  return result;
+}
+
 export function getQuestionAnswers(questionId) {
   return state.db.answers.filter(a => a.questionId === questionId)
     .sort((a, b) => a.timestamp - b.timestamp);
@@ -54,7 +71,7 @@ export function renderQuestions() {
     <div class="qa-list-view">
       <div class="panel qa-ask-panel">
         <div class="panel-header">Ask the league</div>
-        <div class="panel-body">
+        <div class="panel-body" data-busy-region>
           <label for="qaAskBody">Your question</label><textarea id="qaAskBody" maxlength="2000" rows="3" placeholder="Write your question for the league..."></textarea>
           <div id="qaAskError" class="login-error hidden"></div>
           <button id="postQuestionButton" type="button" class="btn-primary" onclick="League.submitQuestion()">Post question</button>
@@ -130,7 +147,7 @@ export function renderQuestionDetail(id) {
       ${canAnswer ? `
       <div class="panel qa-answer-panel">
         <div class="panel-header">Join the discussion</div>
-        <div class="panel-body">
+        <div class="panel-body" data-busy-region>
           <label for="qaAnswerBody">Your answer</label><textarea id="qaAnswerBody" maxlength="4000" rows="3" placeholder="Write your answer..."></textarea>
           <div id="qaAnswerError" class="login-error hidden"></div>
           <button id="postAnswerButton" type="button" class="btn-primary" onclick="League.submitAnswer('${q.id}')">Post answer</button>
@@ -145,16 +162,17 @@ export async function submitQuestion() {
   if (!sb) return showError(err, 'Connection unavailable. Please refresh.');
   if (!state.user) return showError(err, 'Please log in.');
   if (!body) return showError(err, 'Please write a question.');
-  if (body.length < 3) return showError(err, 'Question is too short.');
+  if (body.length < 3 || body.length > 2000) return showError(err, 'Use 3 to 2,000 characters for your question.');
 
-  const { data, error } = await sb.from('questions')
-    .insert({ author: state.user, body, timestamp: Date.now() })
-    .select().single();
+  const author = state.user;
+  const { data, error } = await postOnce('questions', { author, body });
+  if (state.user !== author) return;
   if (error) {
     if (isQaTableMissing(error)) return showError(err, 'Questions are unavailable. Please contact the league administrator.');
     return showError(err, 'Could not post question.');
   }
 
+  state.db.questions = state.db.questions.filter(question => question.id !== data.id);
   state.db.questions.unshift(mapQuestion(data));
 
   err?.classList.add('hidden');
@@ -172,16 +190,17 @@ export async function submitAnswer(questionId) {
   if (!q) return;
   if (q.closed) return showError(err, 'This question is closed.');
   if (!body) return showError(err, 'Please write an answer.');
-  if (body.length < 2) return showError(err, 'Answer is too short.');
+  if (body.length < 2 || body.length > 4000) return showError(err, 'Use 2 to 4,000 characters for your answer.');
 
-  const { data, error } = await sb.from('answers')
-    .insert({ question_id: questionId, author: state.user, body, timestamp: Date.now() })
-    .select().single();
+  const author = state.user;
+  const { data, error } = await postOnce('answers', { question_id: questionId, author, body });
+  if (state.user !== author) return;
   if (error) {
     if (isQaTableMissing(error)) return showError(err, 'Questions are unavailable. Please contact the league administrator.');
     return showError(err, 'Could not post answer.');
   }
 
+  state.db.answers = state.db.answers.filter(answer => answer.id !== data.id);
   state.db.answers.push(mapAnswer(data));
 
   err?.classList.add('hidden');

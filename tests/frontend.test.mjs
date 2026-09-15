@@ -92,3 +92,16 @@ test('Dialogs trap focus and close with Escape',async t=>{
  d.getElementById('createGroupBtn').focus();d.getElementById('createGroupBtn').click();assert.equal(d.getElementById('createGroupModal').getAttribute('aria-modal'),'true');
  d.getElementById('createGroupModal').dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.equal(d.getElementById('createGroupModal').classList.contains('hidden'),true);assert.equal(d.activeElement.id,'createGroupBtn');
 });
+
+test('Q&A recovers a committed post after a lost response without duplicating it',async t=>{
+ const app=await mount('league/index.html',{profile:'Omar'});t.after(()=>app.close());const {window:w,document:d,client}=app;
+ w.League.navigateTo('questions');d.getElementById('qaAskBody').value='A retry-safe question?';client.fail='questions';await w.League.submitQuestion();
+ const pending=client.calls.filter(c=>c.table==='questions'&&c.operation==='insert').at(-1).value;
+ client.db.questions.push({...pending});client.fail=null;await w.League.submitQuestion();
+ assert.equal(client.db.questions.filter(q=>q.id===pending.id).length,1);assert.equal(app.module('league/js/state.js').state.db.questions.filter(q=>q.id===pending.id).length,1);
+});
+
+test('Session expiry prevents a late loader from reopening the League app',async t=>{
+ const app=await mount('league/index.html',{profile:'Wael'});t.after(()=>app.close());
+ app.client.emitAuth('SIGNED_OUT',null);await settle();app.module('league/js/auth-ui.js').enterApp();assert.equal(app.document.getElementById('mainApp').classList.contains('hidden'),true);
+});

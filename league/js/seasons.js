@@ -45,9 +45,15 @@ export async function createSeason() {
   if (!name || name.length > 80) return showToast('Enter a season name up to 80 characters.', true);
   if (state.db.seasons.some(season => season.name.toLowerCase() === name.toLowerCase())) return showToast('A season with that name exists.', true);
   return withBusy('create-season', document.getElementById('createSeasonButton'), async () => {
-    const { error } = await sb.from('seasons').insert({ id: state.pendingSeasonId ||= crypto.randomUUID(), name, active: false, created: Date.now() });
-    if (error) throw error;
-    state.pendingSeasonId = null;
+    if (state.pendingSeason?.name !== name) state.pendingSeason = { id: crypto.randomUUID(), name, active: false, created: Date.now() };
+    const draft = state.pendingSeason;
+    const { error } = await sb.from('seasons').insert(draft);
+    if (error) {
+      if (error.code !== '23505') throw error;
+      const existing = await sb.from('seasons').select('id,name').eq('id', draft.id).single();
+      if (existing.error || existing.data?.name !== name) throw error;
+    }
+    state.pendingSeason = null;
     input.value = '';
     await fetchAllData(); populateSeasonDropdowns(); renderSeasons(); showToast('Season created.');
   });

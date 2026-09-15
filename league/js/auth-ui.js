@@ -62,6 +62,7 @@ export function clearSession() {
 }
 
 export function enterApp() {
+  if (!state.user || !state.profile) return;
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('mainApp').classList.remove('hidden');
   updateSidebarPlayer();
