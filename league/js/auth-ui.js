@@ -9,6 +9,7 @@ import { computeLeagueTable } from './standings.js';
 import { nickChip } from './profiles.js';
 
 export function showLogin() {
+  document.querySelector('.skip-link')?.setAttribute('href', '#loginForm');
   document.getElementById('loginScreen')?.classList.remove('hidden');
   document.getElementById('mainApp')?.classList.add('hidden');
   document.getElementById('loginPassword').value = '';
@@ -63,6 +64,7 @@ export function clearSession() {
 
 export function enterApp() {
   if (!state.user || !state.profile) return;
+  document.querySelector('.skip-link')?.setAttribute('href', '#mainContent');
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('mainApp').classList.remove('hidden');
   updateSidebarPlayer();

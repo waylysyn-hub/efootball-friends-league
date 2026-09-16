@@ -12,41 +12,58 @@
 <link href="css/main.css" rel="stylesheet"/>
 <link href="css/components.css" rel="stylesheet"/>
 <link href="css/responsive.css" rel="stylesheet"/>
+<link href="css/login.css" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
 </head>
 <body>
-<a class="skip-link" href="#mainContent">Skip to content</a>
+<a class="skip-link" href="#loginForm">Skip to content</a>
 <div class="connection-status" hidden="" id="connectionStatus" role="status"></div>
 <!-- LOGIN SCREEN -->
 <div class="login-screen" id="loginScreen">
-<div class="login-container">
-<div class="login-logo">
-<a aria-label="Tournament Hub" class="brand-mark" href="../index.html">♛</a>
-<div class="eyebrow">Majles Al-Kibbar · eFootball</div>
-<h1>The league.<br/><span>Your legacy.</span></h1>
-<p>Every result counts. Sign in to follow the competition and your next milestone.</p>
-<div class="login-wordmark">FRIENDS LEAGUE</div>
-</div>
-<form class="login-form-box" data-busy-region="" id="loginForm">
-<h2>Welcome back</h2>
-<p class="login-form-description">Choose your player to enter the league.</p>
+<div aria-hidden="true" class="login-stadium"><img alt="" decoding="async" fetchpriority="high" height="1024" src="assets/login-stadium.webp" width="1536"/></div>
+<header class="login-topbar login-wrap">
+<a aria-label="Majles Al-Kibbar — Tournament Hub" class="login-brand" href="../index.html">
+<svg aria-hidden="true" class="login-crest" fill="none" viewBox="0 0 48 56"><path d="M24 2 44 9v19c0 12-9 21-20 26C13 49 4 40 4 28V9L24 2Z"/><path d="M24 7 39 12v16c0 9-6 16-15 21-9-5-15-12-15-21V12L24 7Z"/><path d="m15 21 5 5 4-9 4 9 5-5-3 13H18l-3-13Zm3 17h12"/><circle cx="24" cy="15" r="1"/></svg>
+<span><span class="login-brand-name" dir="rtl" lang="ar">مجلس الكبار</span><span class="login-brand-caption">MAJLES AL-KIBBAR</span></span>
+</a>
+<span class="login-topbar-note">THE BEAUTIFUL GAME. OUR WAY.</span>
+<a aria-label="Tournament Hub" class="login-hub-link" href="../index.html"><span>Tournament Hub</span><svg aria-hidden="true" fill="none" viewBox="0 0 24 24"><path d="M7 17 17 7M7 7h10v10"/></svg></a>
+</header>
+<div class="login-layout login-wrap">
+<section aria-labelledby="loginHeadline" class="login-story">
+<div class="login-eyebrow"><span aria-hidden="true"></span>THE FRIENDS LEAGUE</div>
+<h1 id="loginHeadline">Your game.<br/><span>Your legacy.</span></h1>
+<p class="login-story-copy">Great rivals. Better friends.<br/>Make every match part of your story.</p>
+<div class="login-story-signature"><span aria-hidden="true" class="login-signature-line"></span><p dir="rtl" lang="ar">المنافسة تجمعنا.<br/><strong>والملعب يحكي قصتنا.</strong></p></div>
+</section>
+<div class="login-entry">
+<form aria-labelledby="loginTitle" class="login-form-box" data-busy-region="" id="loginForm" tabindex="-1">
+<div class="login-card-label"><svg aria-hidden="true" fill="none" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-4 8-8 10-4-2-8-5-8-10V6l8-3Z"/><path d="m8 12 3 3 5-6"/></svg>PLAYER ACCESS<span aria-hidden="true" class="login-card-rule"></span></div>
+<h2 id="loginTitle">Welcome back.</h2>
+<p class="login-form-description">Your next match starts here.</p>
 <div class="form-group">
-<label for="loginUsername">Player</label>
+<div class="login-label-row"><label for="loginUsername">Player</label><button aria-label="Reload players" class="login-reload" onclick="League.retryLogin()" type="button">Refresh list <span aria-hidden="true">↻</span></button></div>
+<div class="login-field">
+<svg aria-hidden="true" class="login-field-icon" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg>
 <select autocomplete="username" disabled="" id="loginUsername" name="username" required=""><option value="">Loading players…</option></select>
+</div>
 </div>
 <div class="form-group">
 <label for="loginPassword">Password</label>
-<div class="password-field">
+<div class="login-field password-field">
+<svg aria-hidden="true" class="login-field-icon" fill="none" viewBox="0 0 24 24"><rect height="11" rx="2" width="16" x="4" y="10"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg>
 <input aria-describedby="loginError" autocomplete="current-password" id="loginPassword" name="password" placeholder="Enter your password" required="" type="password"/>
 <button aria-label="Show or hide password" aria-pressed="false" class="password-toggle" id="loginPasswordToggle" type="button">Show</button>
 </div>
 </div>
 <div class="login-error hidden" id="loginError" role="alert"></div>
-<button class="btn-primary" disabled="" id="loginButton" type="submit">Sign in →</button>
-<p class="login-hint">Need access? Contact your league administrator.</p>
-<div class="login-links"><a href="../index.html">← Tournament Hub</a><button onclick="League.retryLogin()" type="button">Try again</button></div>
+<button class="btn-primary login-submit" disabled="" id="loginButton" type="submit">Enter the league</button>
+<p class="login-hint">Need a place in the league?<br/><span>Contact your league administrator.</span></p>
 </form>
+<p class="login-entry-caption"><span aria-hidden="true"></span>YOUR LEAGUE. YOUR PEOPLE.</p>
 </div>
+</div>
+<footer class="login-footer login-wrap"><span>© Majles Al-Kibbar</span><span>Respect the game. Respect your rivals.</span></footer>
 </div>
 <!-- MAIN APP -->
 <div class="main-app hidden" id="mainApp">

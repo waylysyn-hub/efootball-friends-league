@@ -8,12 +8,8 @@
 @media (max-width: 1024px) {
   .sidebar { transform: translateX(-100%); }.sidebar.open { transform: translateX(0); box-shadow: var(--shadow); }
   .sidebar-overlay.visible { display: block; }.main-content { margin-left: 0; width: 100%; }.mobile-menu-btn { display: grid; }
-  .login-container { gap: 48px; }.login-form-box { padding: 32px; }
 }
 @media (max-width: 768px) {
-  .login-container { grid-template-columns: 1fr; max-width: 480px; gap: 28px; }.login-logo { padding: 0; }.login-logo .brand-mark { margin-bottom: 20px; width: 44px; height: 50px; font-size: 1.5rem; }
-  .login-logo h1 { font-size: 2.5rem; margin: 12px 0 16px; }.login-wordmark { display: none; }.login-logo p { max-width: none; }
-  .login-screen { padding: 32px 20px; }.login-form-box { padding: 28px; }
   .dashboard-grid, .stats-grid { grid-template-columns: 1fr; }.stat-cards-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .filter-bar { grid-template-columns: repeat(2,minmax(0,1fr)); }.profile-stats-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .ge-header { display: none; }.ge-row { grid-template-columns: minmax(0,1fr) minmax(0,1fr) 44px; gap: 10px; padding: 16px 0; }.ge-owner { grid-column: 1 / 3; }.ge-remove { grid-column: 3; grid-row: 1; }.ge-scorer { grid-column: 1; grid-row: 2; }.ge-assist { grid-column: 2 / 4; grid-row: 2; }.ge-minute { grid-column: 1 / 4; grid-row: 3; }
@@ -35,5 +31,4 @@
   .awards-grid, .achievements-grid, .settings-grid { grid-template-columns: 1fr; }.award-card, .achievement-badge { padding: 24px; }.award-icon, .achievement-icon { margin-bottom: 16px; }
   .chart-section { padding: 20px 16px; }.chart-bar-row { grid-template-columns: 100px minmax(0,1fr) 28px; gap: 8px; }.h2h-select-row { grid-template-columns: 1fr; gap: 8px; }.h2h-stat-grid { gap: 12px; }.h2h-big-stat { font-size: 2.5rem; }.h2h-row { gap: 12px; }
   .qa-card, .qa-answer, .rivalry-card { padding: 20px; }.qa-author { font-size: .9375rem; }.season-filter-row select { max-width: calc(100% - 70px); }
-  .login-screen { padding: 24px 16px; }.login-form-box { padding: 24px; }.login-logo h1 { font-size: 2.3rem; }
 }

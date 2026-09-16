@@ -1,24 +1,5 @@
-/* League shell and sign-in */
+/* Authenticated League shell. Sign-in has its own scoped stylesheet. */
 :root { --neon: var(--primary); --neon2: var(--secondary); --neon3: var(--warning); --gold: var(--primary); --text-primary: var(--text); --text-secondary: var(--muted); }
-.login-screen { min-height: 100dvh; display: grid; place-items: center; padding: 48px 24px; background: radial-gradient(ellipse at 25% 20%, #b3955a0d, transparent 55%), var(--bg); }
-.login-container { width: min(100%, 1056px); display: grid; grid-template-columns: 1.1fr 1fr; align-items: center; gap: 96px; }
-.login-logo { padding: 24px 0; }
-.login-logo .brand-mark { width: 60px; height: 68px; font-size: 2rem; margin-bottom: 36px; }
-.login-logo h1 { font-size: clamp(2.5rem,5vw,4.5rem); font-weight: 600; line-height: 1.05; letter-spacing: -.05em; margin: 16px 0 24px; }
-.login-logo h1 span { color: var(--primary); }
-.login-logo p { max-width: 320px; font-size: 1.0625rem; color: var(--muted); }
-.login-wordmark { margin-top: 48px; display: flex; align-items: center; gap: 16px; color: var(--muted); font-size: .875rem; }
-.login-wordmark::before { content: ''; width: 40px; height: 1px; background: var(--primary); }
-.login-form-box { padding: 40px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); }
-.login-form-box h2 { font-size: 1.75rem; margin-bottom: 8px; }
-.login-form-description { margin-bottom: 32px; color: var(--muted); }
-.login-form-box .btn-primary { width: 100%; }
-.password-field { position: relative; }
-.password-field input { padding-right: 74px; }
-.password-toggle { position: absolute; right: 6px; top: 4px; min-height: 40px; padding: 8px; color: var(--muted); background: transparent; border: 0; border-radius: 6px; font-size: .875rem; }
-.login-hint { margin-top: 20px; font-size: .875rem; color: var(--muted); text-align: center; }
-.login-links { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: .875rem; }
-.login-links button { padding: 0; color: var(--muted); background: transparent; border: 0; font-size: .875rem; min-height: 44px; }
 .main-app { display: flex; min-height: 100dvh; }
 .sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: var(--sidebar-width); background: #101318; border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; transition: transform .25s ease; }
 .sidebar-header { padding: 28px 20px; border-bottom: 1px solid var(--border); }

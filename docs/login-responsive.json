@@ -1,0 +1,51 @@
+[
+  {
+    "screen": "login",
+    "width": 1920,
+    "overflow": false,
+    "errors": [],
+    "scrollWidth": 1920
+  },
+  {
+    "screen": "login",
+    "width": 1366,
+    "overflow": false,
+    "errors": [],
+    "scrollWidth": 1366
+  },
+  {
+    "screen": "login",
+    "width": 1024,
+    "overflow": false,
+    "errors": [],
+    "scrollWidth": 1024
+  },
+  {
+    "screen": "login",
+    "width": 768,
+    "overflow": false,
+    "errors": [],
+    "scrollWidth": 753
+  },
+  {
+    "screen": "login",
+    "width": 430,
+    "overflow": false,
+    "errors": [],
+    "scrollWidth": 415
+  },
+  {
+    "screen": "login",
+    "width": 390,
+    "overflow": false,
+    "errors": [],
+    "scrollWidth": 375
+  },
+  {
+    "screen": "login",
+    "width": 360,
+    "overflow": false,
+    "errors": [],
+    "scrollWidth": 345
+  }
+]

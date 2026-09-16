@@ -46,3 +46,7 @@ The following screenshots use synthetic fixture data, captured on 15 September 2
 6. The original database schemas remain at their established root paths, indexed in `supabase/README.md`, to avoid duplicate migration trees or breaking existing setup links.
 
 No production schema/data mutation, main-branch commit, merge or deployment was performed.
+
+## Login design follow-up — 16 September 2026
+
+The League login received a new stadium composition, responsive access card and keyboard skip-link target. The existing security and Node/PGlite suite passed 25/25; the isolated login fixture passed all seven widths without horizontal overflow or reported JavaScript errors. [Design notes, asset provenance and fresh review screenshots](LOGIN_DESIGN.md) document the follow-up. This does not replace the release gates above.
