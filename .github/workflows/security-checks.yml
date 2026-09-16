@@ -25,8 +25,8 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y postgresql-16 postgresql-server-dev-16
-          make -C .safeupdate-test PG_CONFIG=/usr/lib/postgresql/16/bin/pg_config
-          sudo make -C .safeupdate-test PG_CONFIG=/usr/lib/postgresql/16/bin/pg_config install
+          make -C .safeupdate-test PG_CONFIG=/usr/lib/postgresql/16/bin/pg_config with_llvm=no
+          sudo make -C .safeupdate-test PG_CONFIG=/usr/lib/postgresql/16/bin/pg_config with_llvm=no install
           sudo systemctl start postgresql
           sudo -u postgres createdb efl_safeupdate_test
       - name: Reproduce the old failure and verify the fix with safeupdate enabled
