@@ -15,11 +15,16 @@ Run these SQL files in order from **Supabase → SQL Editor**:
 2. `supabase-groups-chat-migration.sql` — creates chat/group tables with RLS enabled and no open writes.
 3. `supabase-security-migration.sql` — installs private identity helpers, least-privilege grants, admin/ownership RLS, and chat membership rules.
 4. `supabase-derived-data-migration.sql` — installs Postgres triggers for standings and achievements.
+5. `supabase-consistency-migration.sql` — installs transactional writes, season triggers and Q&A guards. Run this before deploying the refactored frontend.
 
 Then create the first user in **Authentication → Users**. The frontend expects deterministic private-league addresses:
 
 - `Wael` → `wael@efootball-friends.example`
 - `Abdul Rahim` → `abdul-rahim@efootball-friends.example`
+- `Omar` → `omar@efootball-friends.example`
+- `Mohammad` → `mohammad@efootball-friends.example`
+- `Mustafa` → `mustafa@efootball-friends.example`
+- `Abdul Qader` → `abdul-qader@efootball-friends.example`
 
 After creating Wael, copy that user's UUID and link it once:
 
@@ -36,10 +41,10 @@ Wael's row in `public.players` already has `role = 'admin'`. Database RLS uses t
 Do **not** run `supabase-schema.sql` against an existing populated database because it recreates league tables.
 
 1. Back up the database.
-2. Run `supabase-groups-chat-migration.sql` only if chat tables do not already exist.
+2. Run `supabase-groups-chat-migration.sql` only if chat tables do not already exist. Create any missing optional tables with the questions, match-stats and match-goal-events migrations **before** step 3. These optional scripts no longer install broad write policies.
 3. Run `supabase-security-migration.sql`.
 4. Run `supabase-derived-data-migration.sql`.
-5. Create/link the first Supabase Auth user as shown above.
+5. Run `supabase-consistency-migration.sql`, then create/link the first Supabase Auth user as shown above if needed.
 6. Create/link the remaining player Auth users.
 7. Verify normal users cannot mutate matches/seasons and the admin can.
 8. Rotate every password that ever appeared in this repository or Git history.
@@ -57,7 +62,7 @@ alter table public.players drop column if exists password;
 - Chat groups/messages are visible only to members.
 - Joining a chat requires an accepted invitation unless the group owner is adding the member.
 - Invitations are restricted to involved users.
-- `localStorage` is only a non-sensitive cache/last-player convenience and is never trusted as authentication.
+- `localStorage` retains only the last selected player and optional chat theme as application preferences. Supabase manages its own Auth session. Legacy custom login/cache markers are purged and are never trusted as authentication.
 - Sensitive RLS helper functions live in a non-exposed `private` schema.
 
 ## API keys
@@ -68,7 +73,7 @@ Never commit a Supabase secret/service-role key, database password, JWT secret, 
 
 ## Derived data
 
-`standings` and `achievements` are recalculated inside Postgres whenever matches/player profiles change. The browser does not delete and rebuild these tables, avoiding concurrent-session race conditions.
+`standings` and `achievements` are recalculated inside Postgres whenever matches, player profiles or seasons change. The browser does not delete and rebuild these tables, avoiding concurrent-session race conditions.
 
 ## Performance
 
@@ -90,6 +95,28 @@ Then open `http://localhost:8000`.
 
 GitHub Pages, Netlify, Vercel, Cloudflare Pages, or another static host can serve the frontend. Supabase remains the backend and authorization boundary.
 
-## CI
+## Tests and visual QA
 
-`.github/workflows/security-checks.yml` validates JavaScript syntax and runs static security regression checks. The checks block regressions such as plaintext-password queries, allow-everything RLS writes, public auth mapping, and browser-side standings persistence.
+```bash
+npm ci
+npm test
+npm run dev:qa
+# A browser opens an isolated fixture harness, without production writes.
+# Optional browser suite on a developer machine or CI:
+npx playwright install chromium
+npm run test:browser
+```
+
+Node 22.12+ is supported. The development dependencies are tests/preview tooling only; GitHub Pages serves the committed HTML/CSS/ES modules directly and runs no build.
+
+`npm test` retains and expands security regression checks and runs DOM integration tests plus actual PostgreSQL/RLS tests using PGlite. Browser tests use synthetic fixtures at 1920, 1366, 1024, 768, 430, 390 and 360 pixels. Fixture auth proves the UI lifecycle, not a production password login.
+
+`npm run dev` also opens the synthetic QA harness. `npm run dev:live` serves the real application configuration for deliberate live testing; writes there target your configured Supabase project. The QA substitution exists solely in Vite's `qa` mode, never in application code or the published HTML.
+
+The GitHub workflow runs the security/integration suite and Chromium smoke tests. See [docs/VALIDATION.md](docs/VALIDATION.md) for observed results and remaining release gates.
+
+## Competition backup scope
+
+Export/import covers seasons, results, aggregate match stats and goal events. Standings and achievements are rebuilt by database triggers. It intentionally preserves Auth accounts, private mappings, Q&A and chat. This JSON is a competition backup, not a full database backup; use normal Supabase database backups for disaster recovery.
+
+Imports are validated before confirmation and committed in one transaction. Invalid imports roll back both deletes and inserts. A legacy backup can preserve its competition content; account/password fields are ignored and are never restored.

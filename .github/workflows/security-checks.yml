@@ -1,33 +1,37 @@
-name: Security Checks
-
+name: Regression Checks
 on:
   push:
-    branches: [main, 'fix/**']
+    branches: [main, 'fix/**', 'refactor/**']
   pull_request:
-
 permissions:
   contents: read
-
 jobs:
-  static-security:
+  security-and-integration:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Check JavaScript syntax
-        shell: bash
-        run: |
-          set -euo pipefail
-          while IFS= read -r -d '' file; do
-            echo "Checking $file"
-            node --check "$file"
-          done < <(find . -type f -name '*.js' -not -path './.git/*' -print0)
-
-      - name: Run security regression checks
-        run: node tests/security-static.mjs
+          cache: npm
+      - run: npm ci
+      - run: npm test
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failures
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

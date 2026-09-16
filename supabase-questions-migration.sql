@@ -28,12 +28,10 @@ alter table public.questions enable row level security;
 alter table public.answers enable row level security;
 
 drop policy if exists "public_all_questions" on public.questions;
-create policy "public_all_questions" on public.questions
-  for all to anon, authenticated using (true) with check (true);
+-- Apply supabase-security-migration.sql after creating missing tables.
 
 drop policy if exists "public_all_answers" on public.answers;
-create policy "public_all_answers" on public.answers
-  for all to anon, authenticated using (true) with check (true);
+-- Apply supabase-security-migration.sql after creating missing tables.
 
 do $$
 begin

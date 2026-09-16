@@ -15,8 +15,7 @@ create index if not exists match_goal_events_match_idx on public.match_goal_even
 alter table public.match_goal_events enable row level security;
 
 drop policy if exists "public_all_match_goal_events" on public.match_goal_events;
-create policy "public_all_match_goal_events" on public.match_goal_events
-  for all to anon, authenticated using (true) with check (true);
+-- Apply supabase-security-migration.sql after creating missing tables.
 
 do $$
 begin

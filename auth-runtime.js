@@ -25,16 +25,7 @@
       if (remembered) localStorage.setItem('efl_last_user', remembered);
       localStorage.removeItem('efl_user');
 
-      const raw = localStorage.getItem('efl_cache');
-      if (raw) {
-        const cache = JSON.parse(raw);
-        if (cache && cache.accounts) {
-          Object.values(cache.accounts).forEach((account) => {
-            if (account && typeof account === 'object') delete account.password;
-          });
-          localStorage.setItem('efl_cache', JSON.stringify(cache));
-        }
-      }
+      localStorage.removeItem('efl_cache');
     } catch (_) {}
   }
 
@@ -89,11 +80,40 @@
 
   async function signOut(client) {
     if (!client) return;
-    await client.auth.signOut();
+    const { error } = await client.auth.signOut();
+    if (error) throw error;
   }
 
-  async function createPlayerAccount() {
-    throw new Error('Account creation and password resets are managed in Supabase Authentication.');
+  function remember(name) {
+    try { localStorage.setItem('efl_last_user', name); } catch (_) { /* Storage is optional. */ }
+  }
+
+  function lastPlayer() {
+    try { return localStorage.getItem('efl_last_user') || ''; } catch (_) { return ''; }
+  }
+
+  // Keep Supabase API calls outside the auth callback to avoid auth-lock deadlocks.
+  function subscribe(client, onChange) {
+    if (!client) return () => {};
+    let revision = 0;
+    const { data } = client.auth.onAuthStateChange((event, session) => {
+      const ticket = ++revision;
+      if (event === 'SIGNED_OUT') {
+        onChange(null, event);
+        return;
+      }
+      if (!session || event === 'INITIAL_SESSION') return;
+      setTimeout(async () => {
+        try {
+          const profile = await getProfile(client);
+          if (ticket === revision) onChange(profile, event);
+        } catch (error) {
+          console.warn('[Auth] Profile refresh unavailable:', error?.code || 'network');
+          if (ticket === revision) onChange(null, 'PROFILE_UNAVAILABLE');
+        }
+      }, 0);
+    });
+    return () => { revision++; data.subscription.unsubscribe(); };
   }
 
   sanitizeLegacyStorage();
@@ -104,7 +124,9 @@
     restore,
     signIn,
     signOut,
-    createPlayerAccount,
+    subscribe,
+    remember,
+    lastPlayer,
     sanitizeLegacyStorage,
   });
 })();

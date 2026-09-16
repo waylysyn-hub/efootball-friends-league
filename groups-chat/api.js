@@ -1,23 +1,8 @@
 /** Groups Chat — Supabase API */
 
-let _chatClient = null;
+export function chatClient() { return window.EFLClient?.get() || null; }
 
-function chatClient() {
-  if (
-    typeof SUPABASE_CONFIG === 'undefined' ||
-    !SUPABASE_CONFIG.url ||
-    SUPABASE_CONFIG.url === 'YOUR_SUPABASE_URL' ||
-    !window.supabase
-  ) {
-    return null;
-  }
-  if (!_chatClient) {
-    _chatClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
-  }
-  return _chatClient;
-}
-
-async function chatFetchPlayers() {
+export async function chatFetchPlayers() {
   const sb = chatClient();
   if (!sb) return [];
   const { data, error } = await sb.from('players').select('name').order('name');
@@ -25,63 +10,48 @@ async function chatFetchPlayers() {
   return data || [];
 }
 
-async function chatLogin(username, password) {
+export async function chatLogin(username, password) {
+  const profile = await window.EFLAuth.signIn(chatClient(), username, password);
+  return profile.name;
+ }
+
+export async function chatFetchGroups(player) {
   const sb = chatClient();
-  if (!sb) return null;
-  try {
-    const profile = await EFLAuth.signIn(sb, username, password);
-    return profile?.name || null;
-  } catch (_) {
-    return null;
-  }
-}
-
-async function chatFetchGroups(player) {
-  const sb = chatClient();
-  if (!sb) return [];
-
-  const { data: memberships, error } = await sb
-    .from('chat_group_members')
-    .select('group_id, chat_groups(id, name, emoji, description, palette_index, created_by, created_at)')
-    .eq('player', player);
-
+  const { data, error } = await sb.from('chat_group_members')
+    .select('group_id, chat_groups(id, name, emoji, description, palette_index, created_by, created_at)').eq('player', player);
   if (error) throw error;
+  const groups = (data || []).map(row => row.chat_groups).filter(Boolean);
+  if (!groups.length) return [];
+  const { data: members, error: memberError } = await sb.from('chat_group_members').select('group_id, player').in('group_id', groups.map(group => group.id));
+  if (memberError) throw memberError;
+  return groups.map(group => ({ ...group, members: (members || []).filter(member => member.group_id === group.id).length,
+    memberNames: (members || []).filter(member => member.group_id === group.id).map(member => member.player) }));
+ }
 
-  const groups = (memberships || []).map((m) => m.chat_groups).filter(Boolean);
-  return Promise.all(
-    groups.map(async (g) => {
-      const { count, error: countError } = await sb
-        .from('chat_group_members')
-        .select('group_id', { count: 'exact', head: true })
-        .eq('group_id', g.id);
-      if (countError) throw countError;
-      return { ...g, members: count || 0 };
-    })
-  );
-}
-
-async function chatFetchMessages(groupId) {
-  const sb = chatClient();
-  if (!sb) return [];
-  const { data, error } = await sb
-    .from('chat_messages')
-    .select('id, author, body, created_at')
-    .eq('group_id', groupId)
-    .order('created_at', { ascending: true });
+export async function chatFetchMessages(groupId, before = null) {
+  let query = chatClient().from('chat_messages').select('id, group_id, author, body, created_at')
+    .eq('group_id', groupId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(100);
+  if (before) query = query.or('created_at.lt.' + before.created_at + ',and(created_at.eq.' + before.created_at + ',id.lt.' + before.id + ')');
+  const { data, error } = await query;
   if (error) throw error;
-  return data || [];
-}
+  return (data || []).reverse();
+ }
 
-async function chatSendMessage(groupId, author, body) {
-  const sb = chatClient();
-  if (!sb) throw new Error('Not configured');
+export async function chatSendMessage(groupId, author, body, id) {
   const clean = String(body || '').trim();
-  if (!clean) return;
-  const { error } = await sb.from('chat_messages').insert({ group_id: groupId, author, body: clean });
+  if (!clean || clean.length > 4000) throw new Error('Enter a message up to 4,000 characters.');
+  const sb = chatClient();
+  const { data, error } = await sb.from('chat_messages').insert({ id, group_id: groupId, author, body: clean }).select('id, group_id, author, body, created_at').single();
+  if (error?.code === '23505') {
+    const existing = await sb.from('chat_messages').select('id, group_id, author, body, created_at').eq('id', id).single();
+    if (existing.error || existing.data?.body !== clean || existing.data?.group_id !== groupId) throw error;
+    return existing.data;
+  }
   if (error) throw error;
-}
+  return data;
+ }
 
-async function chatFetchInvitations(player) {
+export async function chatFetchInvitations(player) {
   const sb = chatClient();
   if (!sb) return [];
   const { data, error } = await sb
@@ -94,59 +64,20 @@ async function chatFetchInvitations(player) {
   return data || [];
 }
 
-async function chatRespondInvite(inviteId, accepted) {
-  const sb = chatClient();
-  if (!sb) throw new Error('Not configured');
+export async function chatRespondInvite(inviteId, accepted) {
+  const { error } = await chatClient().rpc('respond_chat_invitation', { invitation_id: inviteId, accept: accepted });
+  if (error) throw error;
+ }
 
-  const { data: invite, error: fetchErr } = await sb
-    .from('chat_invitations')
-    .select('id, group_id, invited_player, status')
-    .eq('id', inviteId)
-    .maybeSingle();
-  if (fetchErr || !invite) throw fetchErr || new Error('Invite not found');
+export async function chatCreateGroup(name, description, emoji, paletteIndex, createdBy, id) {
+  const { data, error } = await chatClient().rpc('create_league_chat_group', {
+    group_id: id, group_name: name.trim(), group_description: description.trim(), group_emoji: emoji || '⚽', palette: paletteIndex,
+  });
+  if (error) throw error;
+  return data;
+ }
 
-  const { error: updErr } = await sb
-    .from('chat_invitations')
-    .update({ status: accepted ? 'accepted' : 'rejected' })
-    .eq('id', inviteId);
-  if (updErr) throw updErr;
-
-  if (accepted) {
-    const { error: memErr } = await sb
-      .from('chat_group_members')
-      .upsert({ group_id: invite.group_id, player: invite.invited_player }, { onConflict: 'group_id,player' });
-    if (memErr) throw memErr;
-  }
-}
-
-async function chatCreateGroup(name, description, emoji, paletteIndex, createdBy) {
-  const sb = chatClient();
-  if (!sb) throw new Error('Not configured');
-
-  const { data: group, error: gErr } = await sb
-    .from('chat_groups')
-    .insert({
-      name: String(name || '').trim(),
-      description: String(description || '').trim(),
-      emoji: emoji || '⚽',
-      palette_index: paletteIndex,
-      created_by: createdBy,
-    })
-    .select('id, name, emoji, description, palette_index, created_by, created_at')
-    .single();
-  if (gErr) throw gErr;
-
-  const { error: mErr } = await sb
-    .from('chat_group_members')
-    .insert({ group_id: group.id, player: createdBy });
-  if (mErr) {
-    await sb.from('chat_groups').delete().eq('id', group.id);
-    throw mErr;
-  }
-  return group;
-}
-
-async function chatInvitePlayer(groupId, invitedPlayer, invitedBy) {
+export async function chatInvitePlayer(groupId, invitedPlayer, invitedBy) {
   const sb = chatClient();
   if (!sb) throw new Error('Not configured');
   const { error } = await sb.from('chat_invitations').insert({
@@ -158,7 +89,7 @@ async function chatInvitePlayer(groupId, invitedPlayer, invitedBy) {
   if (error) throw error;
 }
 
-async function chatFetchRoster(excludePlayer) {
+export async function chatFetchRoster(excludePlayer) {
   const sb = chatClient();
   if (!sb) return [];
   const { data, error } = await sb.from('players').select('name').neq('name', excludePlayer).order('name');
@@ -166,7 +97,7 @@ async function chatFetchRoster(excludePlayer) {
   return (data || []).map((p) => p.name);
 }
 
-function chatSubscribeMessages(groupId, onMessage) {
+export function chatSubscribeMessages(groupId, onMessage) {
   const sb = chatClient();
   if (!sb || !groupId) return null;
   return sb
@@ -179,7 +110,7 @@ function chatSubscribeMessages(groupId, onMessage) {
     .subscribe();
 }
 
-function chatUnsubscribe(channel) {
+export function chatUnsubscribe(channel) {
   const sb = chatClient();
   if (sb && channel) sb.removeChannel(channel);
 }
