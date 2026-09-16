@@ -105,3 +105,24 @@ test('Session expiry prevents a late loader from reopening the League app',async
  const app=await mount('league/index.html',{profile:'Wael'});t.after(()=>app.close());
  app.client.emitAuth('SIGNED_OUT',null);await settle();app.module('league/js/auth-ui.js').enterApp();assert.equal(app.document.getElementById('mainApp').classList.contains('hidden'),true);
 });
+
+test('Season reset retains data on failure and reloads server-derived results after retry',async t=>{
+ const app=await mount('league/index.html',{profile:'Wael'});t.after(()=>app.close());
+ const {window:w,document:d,client}=app;const state=app.module('league/js/state.js').state;
+ w.League.navigateTo('settings');client.fail='delete';w.League.confirmResetSeason();
+ await d.getElementById('confirmYes').onclick();
+ assert.equal(state.db.matches.length,1);assert.equal(state.db.achievements.length,1);
+ assert.equal(d.getElementById('confirmModal').classList.contains('hidden'),false);
+ client.fail=null;
+ client.hold=({table,operation})=>{
+  if(table==='matches'&&operation==='delete') {
+   client.db.match_goal_events=[];client.db.achievements=[];
+   client.db.standings=[{season:'all',player:'Wael',played:0,points:0,rank:1}];
+  }
+ };
+ await d.getElementById('confirmYes').onclick();
+ assert.equal(state.db.matches.length,0);assert.equal(state.db.goalEvents.length,0);
+ assert.equal(state.db.achievements.length,0);assert.equal(state.db.standings[0].played,0);
+ assert.equal(d.getElementById('confirmModal').classList.contains('hidden'),true);
+ assert.deepEqual(app.errors,[]);
+});

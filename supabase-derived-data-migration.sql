@@ -15,7 +15,8 @@ security definer
 set search_path=''
 as $$
 begin
-  delete from public.standings;
+  -- Explicit primary-key scope is required by Supabase's pg-safeupdate guard.
+  delete from public.standings where player is not null;
 
   insert into public.standings
     (season,player,played,wins,draws,losses,goals_for,goals_against,goal_diff,points,rank,updated_at)
@@ -94,7 +95,7 @@ security definer
 set search_path=''
 as $$
 begin
-  delete from public.achievements;
+  delete from public.achievements where player is not null;
 
   with expanded as (
     select id,season_id,player1 player,goals1 gf,goals2 ga,timestamp from public.matches

@@ -57,8 +57,10 @@ begin
     or jsonb_typeof(backup->'goalEvents') is distinct from 'array'
     or jsonb_typeof(backup->'matchStats') is distinct from 'array'
   then raise exception 'Invalid competition backup'; end if;
-  delete from public.matches;
-  delete from public.seasons;
+  -- This admin-only restore intentionally replaces the competition. Explicit
+  -- primary-key predicates keep the operation compatible with pg-safeupdate.
+  delete from public.matches where id is not null;
+  delete from public.seasons where id is not null;
   insert into public.seasons(id,name,active,created)
     select (s->>'id')::uuid,s->>'name',coalesce((s->>'active')::boolean,false),
       coalesce((s->>'created')::bigint,0) from jsonb_array_elements(backup->'seasons') s;

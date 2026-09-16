@@ -6,6 +6,32 @@ on:
 permissions:
   contents: read
 jobs:
+  database-safeupdate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/checkout@v4
+        with:
+          repository: eradman/pg-safeupdate
+          ref: 37dbc9c4acf5e2504adf2b218e9c6b41751022f3
+          path: .safeupdate-test
+          persist-credentials: false
+      - name: Prepare isolated PostgreSQL with the production API guard
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-16 postgresql-server-dev-16
+          make -C .safeupdate-test PG_CONFIG=/usr/lib/postgresql/16/bin/pg_config with_llvm=no
+          sudo make -C .safeupdate-test PG_CONFIG=/usr/lib/postgresql/16/bin/pg_config with_llvm=no install
+          sudo systemctl start postgresql
+          sudo -u postgres createdb efl_safeupdate_test
+      - name: Reproduce the old failure and verify the fix with safeupdate enabled
+        run: |
+          sudo -u postgres env PATH="$PATH" EFL_NATIVE_POSTGRES=1 PGHOST=/var/run/postgresql PGUSER=postgres PGDATABASE=efl_safeupdate_test node --test tests/database.test.mjs
   security-and-integration:
     runs-on: ubuntu-latest
     steps:
