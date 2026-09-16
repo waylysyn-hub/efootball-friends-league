@@ -16,3 +16,7 @@ The existing root SQL filenames remain stable so bookmarked installation instruc
 Installing the consistency migration is additive: it creates functions/triggers and does not invoke the reset/restore functions or remove existing rows. Those RPCs remain subject to caller identity and RLS. Its public functions use `security invoker`, an empty search path, explicit authenticated-only EXECUTE grants, and qualified object names.
 
 No migration was applied to production as part of this refactor. Test the upgrade in staging and take a normal database backup before rollout. See [SETUP.md](../SETUP.md) for account creation and deployment order. SQL integration tests run all core migrations and the additive migration twice in an isolated PostgreSQL engine (PGlite).
+
+## Existing installations: safeupdate compatibility
+
+`migrations/20260916114754_safeupdate_compatibility.sql` patches four internal DELETE statements in three existing functions. Supabase API connections preload `pg-safeupdate`, so derived-data refreshes and competition restores require explicit predicates even inside functions. Function ownership, execution grants, RLS, and the API guard remain unchanged; installing this patch does not execute a reset or change application rows. The root SQL files include the same predicates for new installations. The patch is idempotent and stops if it finds an unexpected function definition.
