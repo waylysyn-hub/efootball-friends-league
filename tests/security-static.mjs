@@ -25,6 +25,13 @@ for(const [regex,message] of [
 ])assert.match(security,regex,message);
 assert.match(schema,/create table public\.player_accounts/i);
 assert.match(derived,/private\.refresh_league_standings/);assert.match(derived,/private\.refresh_league_achievements/);assert.match(derived,/create trigger matches_refresh_derived/i);
+// PGlite does not load pg-safeupdate; production PostgREST does. Guard every
+// runtime DELETE/UPDATE, including statements executed inside trigger functions.
+for(const file of ['supabase-derived-data-migration.sql','supabase-consistency-migration.sql']) {
+ for(const [statement] of read(file).matchAll(/^\s*(?:delete\s+from\s+\S+|update\s+\S+\s+set\b)[^;]*;/gim)) {
+  assert.match(statement,/\bwhere\b/i,file+' runtime writes must include explicit predicates for pg-safeupdate');
+ }
+}
 assert.match(auth,/auth\.signInWithPassword/);assert.match(auth,/from\('player_accounts'\)/);assert.match(auth,/localStorage\.removeItem\('efl_user'\)/);
 assert.match(read('league/js/admin.js'),/state\.profile\?\.role === 'admin'/,'Admin UI reads authenticated profile');
 for(const page of ['index.html','league/index.html','groups-chat/index.html']) {

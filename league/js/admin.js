@@ -35,14 +35,10 @@ export function confirmResetSeason() {
   showConfirm('Reset Season', `Delete all ${count} match(es) from "${active.name}"? This cannot be undone.`, async () => {
     if (!sb) return showToast('Supabase is not configured.', true);
     const { error } = await sb.from('matches').delete().eq('season_id', active.id);
-    if (error) return showToast('Could not reset season.', true);
-
-    state.db.matches = state.db.matches.filter(m => m.season !== active.id);
-    const keptIds = new Set(state.db.matches.map(m => m.id));
-    state.db.goalEvents = state.db.goalEvents.filter(e => keptIds.has(e.matchId));
-    state.db.matchStats = state.db.matchStats.filter(s => keptIds.has(s.matchId));
-
-
+    if (error) throw error;
+    // Standings and achievements are recalculated by database triggers.
+    await fetchAllData();
+    populateSeasonDropdowns();
     updateSidebarPlayer();
     renderPage(state.page);
     showToast('Season reset.');
