@@ -28,10 +28,11 @@ jobs:
           make -C .safeupdate-test PG_CONFIG=/usr/lib/postgresql/16/bin/pg_config with_llvm=no
           sudo make -C .safeupdate-test PG_CONFIG=/usr/lib/postgresql/16/bin/pg_config with_llvm=no install
           sudo systemctl start postgresql
-          sudo -u postgres createdb efl_safeupdate_test
+          sudo -u postgres createuser --superuser "$USER"
+          sudo -u postgres createdb --owner="$USER" efl_safeupdate_test
       - name: Reproduce the old failure and verify the fix with safeupdate enabled
         run: |
-          sudo -u postgres env PATH="$PATH" EFL_NATIVE_POSTGRES=1 PGHOST=/var/run/postgresql PGUSER=postgres PGDATABASE=efl_safeupdate_test node --test tests/database.test.mjs
+          EFL_NATIVE_POSTGRES=1 PGHOST=/var/run/postgresql PGUSER="$USER" PGDATABASE=efl_safeupdate_test node --test tests/database.test.mjs
   security-and-integration:
     runs-on: ubuntu-latest
     steps:
