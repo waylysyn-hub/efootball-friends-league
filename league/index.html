@@ -100,6 +100,7 @@
 <a class="nav-item" data-page="matchHistory" href="#matchHistory">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 5h16v16H4V5Zm3-3v6m10-6v6M4 11h16"></path></svg></span><span class="nav-label">Match History</span>
 </a>
+<a class="nav-item" data-page="squads" href="#squads"><span class="nav-icon" aria-hidden="true">♟</span><span class="nav-label">التشكيلات</span></a>
 <a class="nav-item" data-page="footballStats" href="#footballStats">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"></path></svg></span><span class="nav-label">Player Performance</span>
 </a>
@@ -262,18 +263,18 @@
 </div>
 </div>
 <div class="qa-setup-banner hidden" id="goalEventsSetupBanner"></div>
-<div class="panel goal-events-panel">
-<div class="panel-header">⚽ GOAL EVENTS</div>
+<div class="panel goal-events-panel" dir="rtl" lang="ar">
+<div class="panel-header">⚽ تفاصيل الأهداف</div>
 <div class="panel-body">
-<p class="match-stats-hint">Add each goal: team owner (friend), scorer &amp; assist (football players), and minute. Total goals must match the score above.</p>
+<p class="match-stats-hint">اختر صاحب الفريق، ثم المسجّل وصانع الأسيست من تشكيلته. اختر «بدون أسيست» عند عدم وجود تمريرة حاسمة. سجّل تفاصيل كل هدف لتطابق النتيجة.</p>
 <div class="goal-events-list" id="goalEventsList"></div>
 <div class="ge-actions">
-<button class="btn-sm btn-ge-add" onclick="League.addGoalEventRow('goalEventsList')" type="button">+ ADD GOAL EVENT</button>
-<button class="btn-sm" onclick="League.syncScoreFromGoalEvents('goalEventsList')" type="button">↻ Sync score from goals</button>
+<button class="btn-sm btn-ge-add" onclick="League.addGoalEventRow('goalEventsList')" type="button">+ إضافة هدف</button>
+<button class="btn-sm" onclick="League.syncScoreFromGoalEvents('goalEventsList')" type="button">↻ احتساب النتيجة من الأهداف</button>
 </div>
 <div class="goal-events-summary" id="goalEventsSummary"></div>
 <div class="match-awards-preview-wrap">
-<span class="match-stats-hint">Match awards preview:</span>
+<span class="match-stats-hint">جوائز المباراة:</span>
 <div class="match-awards-preview" id="matchAwardsPreview"></div>
 </div>
 </div>
@@ -477,6 +478,12 @@
 <div id="qaContent"></div>
 </div>
 <!-- SETTINGS PAGE -->
+<section class="page hidden" id="page-squads" dir="rtl" lang="ar">
+<div class="page-header"><h2 class="page-title">التشكيلات</h2><div class="page-subtitle">فريقك، مسجّلوك وصنّاع أهدافك — في مكان واحد.</div></div>
+<div class="squad-toolbar"><div class="form-group"><label for="squadOwner">صاحب الفريق</label><select id="squadOwner" onchange="League.selectSquad(this.value)"></select></div><button id="addSquadPlayer" type="button" class="btn-primary" onclick="League.openSquadPlayer()">+ إضافة لاعب</button></div>
+<p class="match-stats-hint" id="squadPermission"></p><p class="squad-count" id="squadCount" aria-live="polite"></p>
+<div class="squad-grid" id="squadPlayers"></div>
+</section>
 <div class="page hidden" id="page-settings">
 <div class="page-header">
 <h2 class="page-title">Settings</h2>
@@ -544,13 +551,13 @@
 <input id="editGoals2" max="99" min="0" oninput="League.updateGoalEventsUI('editGoalEventsList')" step="1" type="number" value="0"/>
 </div>
 </div>
-<div class="panel goal-events-panel compact">
-<div class="panel-header">⚽ GOAL EVENTS</div>
+<div class="panel goal-events-panel compact" dir="rtl" lang="ar">
+<div class="panel-header">⚽ تفاصيل الأهداف</div>
 <div class="panel-body">
 <div class="goal-events-list" id="editGoalEventsList"></div>
 <div class="ge-actions">
-<button class="btn-sm btn-ge-add" onclick="League.addGoalEventRow('editGoalEventsList')" type="button">+ ADD GOAL</button>
-<button class="btn-sm" onclick="League.syncScoreFromGoalEvents('editGoalEventsList')" type="button">↻ Sync score</button>
+<button class="btn-sm btn-ge-add" onclick="League.addGoalEventRow('editGoalEventsList')" type="button">+ إضافة هدف</button>
+<button class="btn-sm" onclick="League.syncScoreFromGoalEvents('editGoalEventsList')" type="button">↻ احتساب النتيجة</button>
 </div>
 <div class="goal-events-summary" id="editGoalEventsSummary"></div>
 <div class="match-awards-preview" id="editMatchAwardsPreview"></div>
@@ -590,6 +597,14 @@
 </div>
 </div>
 <!-- TOAST -->
+<div class="modal-overlay hidden" id="squadPlayerModal" dir="rtl" lang="ar" data-busy-region>
+<div class="modal"><div class="modal-header"><h3 id="squadPlayerTitle">إضافة لاعب</h3><button class="modal-close" type="button" aria-label="إغلاق" onclick="League.closeSquadPlayer()">✕</button></div>
+<form class="modal-body" id="squadPlayerForm">
+<div class="form-group"><label for="squadPlayerName">اسم لاعب كرة القدم</label><input id="squadPlayerName" maxlength="100" required placeholder="مثال: Lionel Messi" autocomplete="off" dir="auto"/></div>
+<div class="form-group"><label for="squadPlayerPosition">المركز</label><select id="squadPlayerPosition"><option value="GK">حارس</option><option value="DF">دفاع</option><option value="MF">وسط</option><option value="FW">هجوم</option></select></div>
+<p class="match-stats-hint">سيظهر اللاعب ضمن خيارات المسجّل والأسيست لهذا الفريق.</p><div id="squadPlayerError" class="form-error hidden"></div>
+<div class="form-actions"><button type="submit" class="btn-primary" id="saveSquadPlayer">حفظ اللاعب</button><button type="button" class="btn-secondary" onclick="League.closeSquadPlayer()">إلغاء</button></div>
+</form></div></div>
 <div class="toast hidden" id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0"></script>
 <script src="../supabase-config.js"></script>

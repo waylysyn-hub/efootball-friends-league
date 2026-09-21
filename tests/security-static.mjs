@@ -5,7 +5,7 @@ import { JSDOM } from 'jsdom';
 import { parse } from 'acorn';
 const root=path.resolve(import.meta.dirname,'..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
-const walk=dir=>fs.readdirSync(path.join(root,dir),{withFileTypes:true}).flatMap(entry=>entry.name.startsWith('.') || entry.name==='node_modules' ? [] : entry.isDirectory()?walk(path.join(dir,entry.name)):[path.join(dir,entry.name)]);
+const walk=dir=>fs.readdirSync(path.join(root,dir),{withFileTypes:true}).flatMap(entry=>entry.name.startsWith('.') || ['node_modules','playwright-report','test-results'].includes(entry.name) ? [] : entry.isDirectory()?walk(path.join(dir,entry.name)):[path.join(dir,entry.name)]);
 const files=walk('.');
 const source=files.filter(f=>f.endsWith('.js')&&!f.startsWith('tests/')).map(read).join('\n');
 const schema=read('supabase-schema.sql'),security=read('supabase-security-migration.sql'),derived=read('supabase-derived-data-migration.sql'),auth=read('auth-runtime.js');

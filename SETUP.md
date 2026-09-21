@@ -120,3 +120,7 @@ The GitHub workflow runs the security/integration suite and Chromium smoke tests
 Export/import covers seasons, results, aggregate match stats and goal events. Standings and achievements are rebuilt by database triggers. It intentionally preserves Auth accounts, private mappings, Q&A and chat. This JSON is a competition backup, not a full database backup; use normal Supabase database backups for disaster recovery.
 
 Imports are validated before confirmation and committed in one transaction. Invalid imports roll back both deletes and inserts. A legacy backup can preserve its competition content; account/password fields are ignored and are never restored.
+
+## Latest update: saved squads
+
+For existing installations that already applied consistency and safeupdate, apply `supabase/migrations/20260920075946_squad_goal_selection.sql` next. For fresh installations, add it after the existing migration sequence above. Deploy the frontend only after the migration succeeds. Each account can then populate its squad from **التشكيلات**; the administrator can manage all squads. See [docs/SQUADS.md](docs/SQUADS.md).

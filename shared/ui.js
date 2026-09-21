@@ -11,13 +11,31 @@ export function debounce(callback, delay = 250) {
   return run;
 }
 
-export function errorMessage(error, fallback = 'Could not complete this action. Please try again.') {
-  if (!navigator.onLine || error?.name === 'TypeError' || error?.status === 0) {
-    return 'Connection unavailable. Check your internet connection and try again.';
-  }
-  if (error?.status === 401 || error?.code === 'PGRST301') return 'Your session expired. Please sign in again.';
-  if (error?.code === '42501' || error?.status === 403) return 'You do not have permission to make this change.';
-  if (error?.code === '23505') return 'This record already exists. Refresh before trying again.';
+export function errorMessage(error, fallback = 'تعذّر تنفيذ العملية. حاول مجددًا؛ وإذا تكرر الخطأ حدّث الصفحة.') {
+  const message = String(error?.message || '');
+  const known = {
+    EFL_INVALID_MATCH: 'بيانات المباراة غير مكتملة. اختر لاعبين مختلفين وتحقق من النتيجة والتاريخ والموسم.',
+    EFL_GOAL_COUNT: 'عدد الأهداف لا يطابق النتيجة. أكمل تفاصيل كل هدف أو استخدم «احتساب النتيجة من الأهداف».',
+    EFL_SELF_ASSIST: 'المسجّل لا يمكن أن يصنع الأسيست لنفسه. اختر زميلًا من التشكيلة أو «بدون أسيست».',
+    EFL_SCORER_NOT_IN_SQUAD: 'المسجّل غير موجود في تشكيلة صاحب الفريق. حدّث التشكيلة ثم أعد اختيار المسجّل.',
+    EFL_ASSIST_NOT_IN_SQUAD: 'صانع الأسيست غير موجود في تشكيلة صاحب الفريق. أعد اختياره أو اختر «بدون أسيست».',
+    'This question is closed or unavailable': 'السؤال مغلق أو لم يعد موجودًا. حدّث الصفحة قبل إرسال إجابة.',
+    'Invitation already answered': 'تم الرد على هذه الدعوة بالفعل. حدّث قائمة الدعوات.',
+    'Invitation not found': 'الدعوة لم تعد متاحة لهذا الحساب. حدّث قائمة الدعوات.',
+    'Season not found': 'الموسم لم يعد موجودًا. حدّث الصفحة واختر موسمًا آخر.',
+  };
+  if (Object.hasOwn(known, message)) return known[message];
+  if (!navigator.onLine || error?.status === 0 || /failed to fetch|networkerror|load failed/i.test(message)) return 'تعذّر الاتصال بالخادم. تحقق من الإنترنت ثم أعد المحاولة؛ احتفظ بالصفحة مفتوحة حتى لا تفقد المدخلات.';
+  if (error?.status === 401 || ['PGRST301', 'PGRST303'].includes(error?.code)) return 'انتهت جلسة الدخول. سجّل الدخول مجددًا ثم أعد المحاولة.';
+  if (error?.code === '42501' || error?.status === 403) return 'ليس لديك صلاحية لتنفيذ هذه العملية. تحقق من الحساب الذي سجلت الدخول به.';
+  if (error?.code === '23505') return 'هذه البيانات موجودة بالفعل. حدّث القائمة وتحقق من السجل قبل إضافته مجددًا.';
+  if (error?.code === '23503') return 'أحد اللاعبين أو المواسم المرتبطة بالعملية لم يعد موجودًا. حدّث القائمة وأعد الاختيار.';
+  if (['23514', '23502', '22P02', '22003', '22007', '22008'].includes(error?.code)) return 'بعض القيم غير صحيحة أو ناقصة. راجع الأسماء والنتيجة والدقيقة والتاريخ ثم أعد الحفظ.';
+  if (['42P01', 'PGRST202', 'PGRST205'].includes(error?.code)) return 'هذه الميزة غير جاهزة حاليًا. حدّث الصفحة؛ وإذا استمرت المشكلة تواصل مع مدير الدوري لإكمال التحديث.';
+  if (error?.status === 429) return 'الطلبات متقاربة جدًا. انتظر قليلًا ثم أعد المحاولة.';
+  if (error?.code === '57014' || error?.status === 504) return 'استغرقت العملية وقتًا أطول من المتوقع. حدّث النتائج للتحقق من الحفظ قبل إعادة المحاولة.';
+  if (error?.status >= 500) return 'الخادم غير متاح مؤقتًا. بيانات النموذج ما زالت موجودة؛ حاول مجددًا بعد قليل.';
+  if (error?.code === '21000') return 'تعذّر إكمال العملية بسبب تعارض في البيانات. حدّث الصفحة؛ وإذا تكرر الخطأ تواصل مع مدير الدوري.';
   return fallback;
 }
 

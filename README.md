@@ -36,3 +36,7 @@ All Node dependencies are development-only. A normal static HTTP server is suffi
 ## Security boundaries
 
 Passwords are handled by Supabase Auth. Public profiles expose `name`, `role` and `created`; private `player_accounts` rows resolve only the signed-in user. Admin UI follows the authenticated profile, while RLS and private helpers enforce permission independently of the browser. Standings and achievements are derived by database triggers. Competition imports preserve identities and private conversations.
+
+### Saved squads
+
+Use **التشكيلات** to manage each friend's football players. Goal entry selects scorers and assists from that team's squad, with an explicit **بدون أسيست** option and Arabic validation messages. See [the feature and rollout notes](docs/SQUADS.md).
