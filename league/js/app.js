@@ -15,11 +15,12 @@ import * as statistics from './statistics.js';
 import * as achievements from './achievements.js';
 import * as questions from './questions.js';
 import * as admin from './admin.js';
+import * as squads from './squads.js';
 
 // One explicit compatibility namespace for existing HTML actions. Data and
 // authenticated state stay module-local; RLS remains the authorization boundary.
 const actions = { ...ui, ...matches, ...details, ...goals, ...seasons, ...profiles,
-  ...standings, ...statistics, ...achievements, ...questions, ...admin, handleLogin, handleLogout,
+  ...standings, ...statistics, ...achievements, ...questions, ...admin, ...squads, handleLogin, handleLogout,
   refresh: refreshFromRemote, retryLogin: loadRoster };
 for (const name of ['submitQuestion', 'submitAnswer']) {
   const action = actions[name];
@@ -28,6 +29,7 @@ for (const name of ['submitQuestion', 'submitAnswer']) {
 window.League = Object.freeze(actions);
 
 document.getElementById('loginForm').addEventListener('submit', event => { event.preventDefault(); handleLogin(); });
+document.getElementById('squadPlayerForm').addEventListener('submit', event => { event.preventDefault(); squads.saveSquadPlayer(); });
 document.getElementById('loginPasswordToggle').addEventListener('click', event => {
   const input = document.getElementById('loginPassword');
   const visible = input.type === 'password';

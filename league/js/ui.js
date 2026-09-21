@@ -9,6 +9,7 @@ import { renderLeagueTable } from './standings.js';
 import { getPlayers, selectProfilePlayer } from './profiles.js';
 import { renderAwards, selectAchievementsPlayer } from './achievements.js';
 import { renderQuestions } from './questions.js';
+import { renderSquads } from './squads.js';
 import { closeDialog, escapeHtml, isBusy, openDialog, showError as showInlineError, setupDrawer, toast, withBusy } from '../../shared/ui.js';
 
 export function navigateTo(page, el) {
@@ -42,7 +43,7 @@ export function navigateTo(page, el) {
     playerProfile: 'Player Profiles', headToHead: 'Head to Head',
     seasons: 'Seasons', awards: 'Awards', achievements: 'Achievements',
     rivalries: 'Rivalries', statistics: 'Statistics', questions: 'League Q&A',
-    settings: 'Settings'
+    settings: 'Settings', squads: 'التشكيلات'
   };
   const topTitle = document.getElementById('topbarTitle');
   if (topTitle) topTitle.textContent = titles[page] || page;
@@ -86,6 +87,7 @@ export function renderPage(page) {
     case 'recordMatch': initRecordForm(); break;
     case 'headToHead': renderH2H(); break;
     case 'questions': renderQuestions(); break;
+    case 'squads': renderSquads(); break;
   }
 }
 

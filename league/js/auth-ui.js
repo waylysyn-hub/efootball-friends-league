@@ -58,6 +58,7 @@ export function clearSession() {
   state.matchId = null;
   stopRealtime();
   closeDialog('editMatchModal');
+  closeDialog('squadPlayerModal');
   closeDialog('confirmModal');
   showLogin();
 }

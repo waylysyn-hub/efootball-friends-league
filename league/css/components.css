@@ -47,13 +47,36 @@
 .form-actions { display: flex; gap: 12px; margin-top: 24px; }
 .goal-events-panel { margin-top: 12px; }
 .match-stats-hint { color: var(--muted); font-size: .875rem; margin-bottom: 20px; }
-.ge-header, .ge-row { display: grid; grid-template-columns: minmax(100px,1fr) minmax(100px,1.2fr) minmax(100px,1.2fr) 64px 44px; gap: 8px; align-items: center; }
-.ge-header { color: var(--muted); font-size: .8125rem; margin-bottom: 8px; }
-.ge-row { padding: 10px 0; border-bottom: 1px solid var(--border); }
-.ge-row input, .ge-row select { padding: 10px; font-size: .9375rem; }
-.ge-row select { padding-right: 26px; background-position: right 8px center; }
+.goal-events-list { display: grid; gap: 16px; }
+.ge-row { border: 1px solid var(--border); border-radius: 14px; padding: 18px; background: var(--surface-2); min-width: 0; }
+.ge-card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.ge-number { color: var(--primary); font-size: .875rem; font-weight: 700; }
+.ge-remove { width: 36px; min-height: 36px; padding: 4px; }
+.ge-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.ge-field { min-width: 0; }
+.ge-field label { display: block; color: var(--text); font-size: .8125rem; margin-bottom: 8px; }
+.ge-field label span { color: var(--muted); font-size: .75rem; }
+.ge-row input, .ge-row select { width: 100%; min-width: 0; min-height: 46px; font-family: inherit; font-size: .875rem; padding: 10px 12px; }
+.ge-row select { padding-right: 28px; background-position: right 8px center; }
+.ge-squad-note { margin-top: 14px; color: var(--muted); font-size: .8125rem; overflow-wrap: anywhere; }
+.ge-manage { margin-top: 10px; }
+.squad-toolbar { display: flex; align-items: center; gap: 24px; margin-bottom: 16px; }
+.squad-toolbar .form-group { flex: 1; max-width: 360px; margin: 0; }
+.squad-toolbar button { margin-top: 20px; }
+.squad-count { color: var(--primary); font-weight: 600; margin-bottom: 20px; }
+.squad-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.squad-card { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.squad-position { flex: 0 0 44px; display: grid; place-items: center; min-height: 44px; color: var(--primary); background: var(--primary-soft); border-radius: 10px; font-family: var(--font-numeric); font-weight: 700; }
+.squad-player-name { flex: 1; display: grid; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+.squad-player-name strong { font-size: 1rem; }
+.squad-player-name span { color: var(--muted); font-size: .8125rem; }
+.squad-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.squad-archived { border-style: dashed; }
+.squad-archived .squad-position { color: var(--muted); background: var(--surface-2); }
+#squadPlayerModal { z-index: 1200; }
+#squadPlayerModal .modal { max-width: 480px; }
 .ge-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
-.ms-total-line { color: var(--warning); font-size: .9375rem; padding: 12px 0; }
+.ms-total-line { display: flex; flex-wrap: wrap; gap: 8px 16px; color: var(--warning); font-size: .9375rem; padding: 12px 0; }
 .ms-total-line.ok { color: var(--success); }
 .match-awards { display: flex; flex-wrap: wrap; gap: 8px; }
 .match-award-chip { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: .8125rem; border: 1px solid var(--border); background: var(--surface-2); border-radius: 6px; padding: 6px 8px; }

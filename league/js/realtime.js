@@ -3,6 +3,7 @@ import { fetchAllData } from './api.js';
 import { updateSidebarPlayer } from './auth-ui.js';
 import { errorMessage, isBusy } from '../../shared/ui.js';
 import { populateSeasonDropdowns } from './seasons.js';
+import { refreshGoalSquadOptions } from './goal-events.js';
 import { renderPage } from './ui.js';
 
 let channel = null;
@@ -12,7 +13,7 @@ let timer;
 export function subscribeRealtime() {
   if (!sb || channel) return;
   channel = sb.channel('efl-league');
-  for (const table of ['matches', 'seasons', 'players', 'questions', 'answers', 'match_stats', 'match_goal_events', 'standings', 'achievements']) {
+  for (const table of ['matches', 'seasons', 'players', 'questions', 'answers', 'match_stats', 'match_goal_events', 'squad_players', 'standings', 'achievements']) {
     channel.on('postgres_changes', { event: '*', schema: 'public', table }, scheduleRefresh);
   }
   channel.subscribe(status => {
@@ -46,6 +47,7 @@ export async function refreshFromRemote() {
     do { refreshAgain = false; await fetchAllData(); } while (refreshAgain);
     if (!state.user) return;
     setSyncStatus('');
+    refreshGoalSquadOptions();
     updateSidebarPlayer();
     const editing = !document.getElementById('editMatchModal').classList.contains('hidden');
     const questionDraft = [...document.querySelectorAll('#qaAskBody, #qaAnswerBody')].some(input => input.value.trim());

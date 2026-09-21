@@ -95,14 +95,14 @@ export function fetchAllData() {
 
 async function loadSnapshot() {
   if (!sb) throw new Error('Connection unavailable');
-  const tables = ['players', 'seasons', 'matches', 'questions', 'answers', 'match_stats', 'match_goal_events', 'standings', 'achievements'];
+  const tables = ['players', 'seasons', 'matches', 'questions', 'answers', 'match_stats', 'match_goal_events', 'squad_players', 'standings', 'achievements'];
   const results = await Promise.all(tables.map(table =>
     sb.from(table).select(table === 'players' ? 'name, role, created' : '*')
   ));
   const data = {};
   results.forEach((result, index) => {
     const table = tables[index];
-    const optional = ['questions', 'answers', 'match_stats', 'match_goal_events'].includes(table);
+    const optional = ['questions', 'answers', 'match_stats', 'match_goal_events', 'squad_players'].includes(table);
     if (result.error && !(optional && isQaTableMissing(result.error))) throw result.error;
     data[table] = result.error ? null : result.data || [];
   });
@@ -110,6 +110,7 @@ async function loadSnapshot() {
   state.qaReady = data.questions !== null && data.answers !== null;
   state.statsReady = data.match_stats !== null;
   state.goalsReady = data.match_goal_events !== null;
+  state.squadsReady = data.squad_players !== null;
   state.db = {
     accounts: Object.fromEntries(data.players.map(p => [p.name, p])),
     seasons: data.seasons.map(mapSeason).sort((a, b) => a.created - b.created),
@@ -118,6 +119,7 @@ async function loadSnapshot() {
     answers: (data.answers || []).map(mapAnswer),
     matchStats: (data.match_stats || []).map(mapMatchStat),
     goalEvents: (data.match_goal_events || []).map(mapGoalEvent),
+    squads: data.squad_players || [],
     standings: data.standings,
     achievements: data.achievements,
   };

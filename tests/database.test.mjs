@@ -12,6 +12,8 @@ test('Postgres security and transactional behavior',async t=>{
  for(const file of migrations)await db.exec(await fs.readFile(new URL('../'+file,import.meta.url),'utf8'));
  // Reapplying the additive migration must remain safe.
  await db.exec(await fs.readFile(new URL('../supabase-consistency-migration.sql',import.meta.url),'utf8'));
+ const squadMigration=await fs.readFile(new URL('../supabase/migrations/20260920075946_squad_goal_selection.sql',import.meta.url),'utf8');
+ await db.exec(squadMigration);await db.exec(squadMigration);
  const accounts=Object.fromEntries(players.map(name=>[name,randomUUID()]));
  for(const [name,id] of Object.entries(accounts))await db.query('insert into public.player_accounts(name,auth_user_id) values($1,$2)',[name,id]);
  const as=(name,sql,params=[])=>db.transaction(async tx=>{
@@ -68,6 +70,45 @@ test('Postgres security and transactional behavior',async t=>{
    await assert.rejects(as(name,"update public.standings set points=999 where player=$1",[name]),/permission denied/);
    await assert.rejects(as(name,"update public.players set role='admin' where name=$1 returning name",[name]),/permission denied/);
   }
+ });
+ await t.test('squads are editable only by owner/admin and cannot be reassigned',async()=>{
+  await assert.rejects(as(null,'select * from public.squad_players'),/permission denied/);
+  await as('Wael',"insert into public.squad_players(owner,name,position) values('Wael','Zlatan','FW'),('Wael','Ronaldinho','MF')");
+  await as('Omar',"insert into public.squad_players(owner,name) values('Omar','Drogba')");
+  await assert.rejects(as('Omar',"insert into public.squad_players(owner,name) values('Wael','Impersonated')"),/row-level security/);
+  assert.deepEqual(await as('Omar',"update public.squad_players set name='Changed' where owner='Wael' returning id"),[]);
+  await assert.rejects(as('Omar',"update public.squad_players set owner='Wael' where owner='Omar'"),/permission denied/);
+  await assert.rejects(as('Omar',"delete from public.squad_players where owner='Omar'"),/permission denied/);
+  await assert.rejects(as('Omar',"insert into public.squad_players(owner,name) values('Omar','drogba')"),/duplicate key/);
+  assert.equal((await as('Wael',"update public.squad_players set position='FW' where owner='Omar' returning id")).length,1);
+ });
+ await t.test('new goals require a squad scorer, same-team assist and exact counts',async()=>{
+  for(const [rows,message] of [
+   [[],/EFL_GOAL_COUNT/],
+   [[{...events[0],scorer:'Drogba'}],/EFL_SCORER_NOT_IN_SQUAD/],
+   [[{...events[0],assist:'Drogba'}],/EFL_ASSIST_NOT_IN_SQUAD/],
+   [[{...events[0],assist:'Zlatan'}],/EFL_SELF_ASSIST/],
+   [[{...events[0],owner:'Mustafa'}],/EFL_GOAL_COUNT/],
+  ]) await assert.rejects(as('Wael','select public.save_league_match($1,$2)',[payload,rows]),message);
+  assert.equal((await as(null,'select id from public.matches')).length,0);
+  await as('Wael','select public.save_league_match($1,$2)',[payload,[{...events[0],assist:''}]]);
+  assert.equal((await as(null,'select assist from public.match_goal_events where match_id=$1',[match]))[0].assist,'');
+ });
+ await t.test('archived names stay in historical edits but cannot enter a new match',async()=>{
+  await as('Wael',"update public.squad_players set active=false where name='Zlatan' and owner='Wael'");
+  await as('Wael','select public.save_league_match($1,$2)',[payload,[{...events[0],assist:''}]]);
+  await assert.rejects(as('Wael','select public.save_league_match($1,$2)',[{...payload,id:randomUUID()},events]),/EFL_SCORER_NOT_IN_SQUAD/);
+  await as('Wael',"update public.squad_players set active=true where name='Zlatan' and owner='Wael'");
+ });
+ await t.test('pre-squad historical names and score-only matches remain editable',async()=>{
+  const old=randomUUID(),scoreOnly=randomUUID();
+  await as('Wael',"insert into public.matches(id,player1,player2,goals1,goals2,date,season_id) values($1,'Wael','Omar',1,0,current_date,$3),($2,'Wael','Omar',1,0,current_date,$3)",[old,scoreOnly,season]);
+  await as('Wael',"insert into public.match_goal_events(match_id,owner,scorer,assist,minute) values($1,'Wael','Legacy scorer','Legacy assist',5)",[old]);
+  await as('Wael','select public.save_league_match($1,$2)',[{...payload,id:old},[{owner:'Wael',scorer:'Legacy scorer',assist:'Legacy assist',minute:6}]]);
+  await assert.rejects(as('Wael','select public.save_league_match($1,$2)',[{...payload,id:randomUUID()},[{owner:'Wael',scorer:'Legacy scorer',assist:'',minute:0}]]),/EFL_SCORER_NOT_IN_SQUAD/);
+  await as('Wael','select public.save_league_match($1,$2)',[{...payload,id:scoreOnly},[]]);
+  await assert.rejects(as('Wael','select public.save_league_match($1,$2)',[{...payload,id:scoreOnly,goals1:2},[]]),/EFL_GOAL_COUNT/);
+  await as('Wael','delete from public.matches where id in ($1,$2)',[old,scoreOnly]);
  });
  await t.test('match + events commit together and database refreshes standings/achievements',async()=>{
   await as('Wael','select public.save_league_match($1,$2)',[payload,events]);
@@ -138,5 +179,6 @@ test('Postgres security and transactional behavior',async t=>{
   assert.equal((await as(null,'select id from public.matches')).length,0);assert.equal((await as(null,"select achievement_id from public.achievements where achievement_id='first_win'")).length,0);
   assert.equal((await db.query('select name from public.player_accounts')).rows.length,6);assert.equal((await as(null,'select id from public.questions')).length,2);
   assert.equal((await as('Omar','select id from public.chat_messages')).length,1);
+  assert.equal((await as('Wael','select id from public.squad_players')).length,3);
  });
 });

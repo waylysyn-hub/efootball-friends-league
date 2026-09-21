@@ -1,6 +1,6 @@
 import { test,expect } from '@playwright/test';
 import { players,ids } from '../helpers/fixture.mjs';
-const leaguePages=['dashboard','leagueTable','matchHistory','matchDetails','recordMatch','playerProfile','statistics','footballStats','headToHead','rivalries','seasons','awards','achievements','questions','settings'];
+const leaguePages=['dashboard','leagueTable','matchHistory','matchDetails','recordMatch','squads','playerProfile','statistics','footballStats','headToHead','rivalries','seasons','awards','achievements','questions','settings'];
 async function noOverflow(page){await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);}
 function watchErrors(page){const errors=[];page.on('pageerror',error=>errors.push(error.message));return errors;}
 for(const app of ['league','groups-chat'])test(app+' login exposes all six players',async({page})=>{
@@ -27,4 +27,23 @@ test('Chat conversation, invitation view and group dialog remain usable',async({
  const errors=watchErrors(page);await page.goto('/groups-chat/index.html?fixture=admin');await expect(page.locator('#appRoot')).toBeVisible();await page.locator('.open-btn').click();await expect(page.locator('.msg')).toHaveCount(2);await expect(page.locator('#composer')).toBeVisible();await noOverflow(page);
  await page.locator('#messageInput').fill('A synthetic browser test message');await page.locator('#sendBtn').click();await expect(page.locator('.msg')).toHaveCount(3);await expect(page.locator('#messageInput')).toHaveValue('');
  await page.locator('#backToGroups').click();await page.locator('#createGroupBtn').click();await expect(page.locator('#createGroupModal')).toBeVisible();await noOverflow(page);await page.keyboard.press('Escape');await expect(page.locator('#createGroupModal')).toBeHidden();expect(errors).toEqual([]);
+});
+
+test('Squad goal cards select teammates, add a missing player and save without an assist',async({page})=>{
+ const errors=watchErrors(page);await page.goto('/league/index.html?fixture=admin');await expect(page.locator('#mainApp')).toBeVisible();
+ await page.evaluate(()=>window.League.navigateTo('recordMatch'));
+ await page.locator('#matchPlayer1').selectOption('Wael');await page.locator('#matchPlayer2').selectOption('Omar');await page.locator('#matchGoals1').fill('1');
+ await page.locator('#page-recordMatch .btn-ge-add').click();
+ const row=page.locator('#goalEventsList .ge-row').first();
+ await row.locator('.ge-scorer').selectOption('Ronaldinho');
+ await expect(row.locator('.ge-assist option[value="Ronaldinho"]')).toHaveCount(0);
+ await row.locator('.ge-owner').selectOption('Omar');await expect(row.locator('.ge-scorer')).toHaveValue('');await expect(row.locator('.ge-assist')).toHaveValue('');
+ await expect(row.locator('.ge-scorer option[value="Ronaldinho"]')).toHaveCount(0);
+ await row.locator('.ge-owner').selectOption('Wael');await row.locator('.ge-manage').click();
+ await page.locator('#squadPlayerName').fill('Test striker');await page.locator('#saveSquadPlayer').click();await expect(page.locator('#squadPlayerModal')).toBeHidden();
+ await expect(page.locator('#matchGoals1')).toHaveValue('1');await expect(page.locator('#goalEventsList .ge-row')).toHaveCount(1);
+ await page.locator('#goalEventsList .ge-scorer').selectOption('Test striker');await expect(page.locator('#goalEventsList .ge-assist')).toHaveValue('');
+ await noOverflow(page);await page.locator('#saveMatchButton').click();await expect(page.locator('#toast')).toContainText('تم تسجيل المباراة');
+ await page.evaluate(()=>window.League.navigateTo('squads'));await expect(page.locator('#squadPlayers')).toContainText('Test striker');await noOverflow(page);
+ expect(errors).toEqual([]);
 });

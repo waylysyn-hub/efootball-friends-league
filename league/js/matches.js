@@ -1,7 +1,7 @@
 import { sb, state } from './state.js';
 import { getActiveSeason, populateSeasonDropdowns } from './seasons.js';
 import { getPlayers, matchPlayerLabel, populateMatchPlayerDropdowns } from './profiles.js';
-import { collectGoalEventsFromForm, getMatchGoalEvents, matchAwardsHTML, matchGoalSummaryHTML, ownerOptionsHTML, renderGoalEventsForm, updateGoalEventsUI, validateGoalEvents } from './goal-events.js';
+import { collectGoalEventsFromForm, getMatchGoalEvents, matchAwardsHTML, matchGoalSummaryHTML, refreshGoalOwnerOptions, renderGoalEventsForm, updateGoalEventsUI, validateGoalEvents } from './goal-events.js';
 import { closeDialog, errorMessage, isBusy, openDialog, withBusy } from '../../shared/ui.js';
 import { esc, renderPage, showConfirm, showError, showToast } from './ui.js';
 import { isAdmin, requireAdmin } from './admin.js';
@@ -50,7 +50,7 @@ export function updateMatchPreview() {
 
   if (!p1 || !p2) {
     document.getElementById('previewResult').textContent = '— vs —';
-    if (state.goalsReady) updateGoalEventsUI('goalEventsList');
+    if (state.goalsReady) refreshGoalOwnerOptions('goalEventsList');
     return;
   }
 
@@ -61,11 +61,7 @@ export function updateMatchPreview() {
 
   document.getElementById('previewResult').textContent = `${p1} ${g1} — ${g2} ${p2}  |  ${result}`;
   if (state.goalsReady) {
-    document.querySelectorAll('#goalEventsList .ge-owner').forEach(select => {
-      const previous = select.value;
-      select.innerHTML = ownerOptionsHTML(p1, p2, previous);
-      if (previous !== p1 && previous !== p2) select.value = '';
-    });
+    refreshGoalOwnerOptions('goalEventsList');
     updateGoalEventsUI('goalEventsList');
   }
 }
@@ -190,7 +186,7 @@ export async function saveEditMatch() { return saveMatchForm(true); }
 export async function saveMatchForm(editing) {
   const prefix = editing ? 'edit' : 'match';
   const errorElement = document.getElementById(editing ? 'editError' : 'matchFormError');
-  if (!isAdmin()) return showError(errorElement, 'Administrator permission is required.');
+  if (!isAdmin()) return showError(errorElement, 'تسجيل النتائج وتعديلها متاح لمدير الدوري فقط.');
   const p1 = document.getElementById(prefix + 'Player1').value;
   const p2 = document.getElementById(prefix + 'Player2').value;
   const raw1 = document.getElementById(prefix + 'Goals1').value;
@@ -198,12 +194,13 @@ export async function saveMatchForm(editing) {
   const goals1 = Number(raw1), goals2 = Number(raw2);
   const date = document.getElementById(prefix + 'Date').value;
   const season = document.getElementById(prefix + 'Season').value;
-  if (!getPlayers().includes(p1) || !getPlayers().includes(p2) || p1 === p2) return showError(errorElement, 'Select two different league players.');
-  if (!raw1 || !raw2 || !Number.isInteger(goals1) || !Number.isInteger(goals2) || goals1 < 0 || goals2 < 0 || goals1 > 99 || goals2 > 99) return showError(errorElement, 'Enter whole-number scores between 0 and 99.');
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return showError(errorElement, 'Choose a valid match date.');
-  if (!state.db.seasons.some(row => row.id === season)) return showError(errorElement, 'Choose an existing season.');
+  if (!getPlayers().includes(p1) || !getPlayers().includes(p2) || p1 === p2) return showError(errorElement, 'اختر لاعبين مختلفين من قائمة لاعبي الدوري.');
+  if (!raw1 || !raw2 || !Number.isInteger(goals1) || !Number.isInteger(goals2) || goals1 < 0 || goals2 < 0 || goals1 > 99 || goals2 > 99) return showError(errorElement, 'أدخل نتيجة صحيحة لكل فريق من 0 إلى 99، دون كسور.');
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return showError(errorElement, 'اختر تاريخًا صحيحًا للمباراة.');
+  if (!state.db.seasons.some(row => row.id === season)) return showError(errorElement, 'اختر موسمًا موجودًا قبل الحفظ.');
+  if (!state.squadsReady || !state.goalsReady) return showError(errorElement, 'تعذّر تحميل التشكيلات أو الأهداف. حدّث الصفحة قبل حفظ المباراة.');
   const goalRows = collectGoalEventsFromForm(editing ? 'editGoalEventsList' : 'goalEventsList');
-  const invalid = validateGoalEvents(goalRows, p1, p2, goals1, goals2);
+  const invalid = validateGoalEvents(goalRows, p1, p2, goals1, goals2, { requireSquad: true, matchId: editing ? document.getElementById('editMatchId').value : null });
   if (invalid) return showError(errorElement, invalid);
   const key = editing ? 'edit-match' : 'save-match';
   return withBusy(key, document.getElementById(editing ? 'saveEditButton' : 'saveMatchButton'), async () => {
@@ -222,7 +219,7 @@ export async function saveMatchForm(editing) {
       if (editing) { closeDialog('editMatchModal'); renderPage(state.page); }
       else clearMatchForm(true);
       updateSidebarPlayer();
-      showToast(editing ? 'Match updated.' : 'Match recorded.');
-    } catch (error) { showError(errorElement, errorMessage(error, 'Could not save the result. Your form is kept; retrying will not create a duplicate.')); }
+      showToast(editing ? 'تم تحديث المباراة.' : 'تم تسجيل المباراة.');
+    } catch (error) { showError(errorElement, errorMessage(error, 'تعذّر حفظ المباراة. بياناتك محفوظة في النموذج؛ يمكنك إعادة المحاولة دون تكرارها.')); }
   });
  }
