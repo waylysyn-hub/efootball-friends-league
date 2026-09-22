@@ -1,3 +1,4 @@
+import { displaySeason } from './shared/locale.js';
 /**
  * Tournament Hub — loads real data from Supabase (Friends League).
  */
@@ -94,11 +95,11 @@ export async function loadTournamentData(seasonId = null) {
       : allMatches;
 
     const tournament = {
-      name: activeSeason ? `${activeSeason.name} League` : 'Friends League',
-      season_name: activeSeason?.name || 'All Time',
+      name: activeSeason ? `دوري ${displaySeason(activeSeason.name)}` : "دوري الأصدقاء",
+      season_name: displaySeason(activeSeason?.name) || "كل المواسم",
       season_id: activeSeason?.id || null,
       type: 'league',
-      format: 'Round Robin',
+      format: "دوري بنظام الكل ضد الكل",
       total_matches: seasonMatches.length,
       points_win: 3,
       points_draw: 1,

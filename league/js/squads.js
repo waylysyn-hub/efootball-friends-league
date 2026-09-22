@@ -1,3 +1,4 @@
+import { displayName } from '../../shared/locale.js';
 import { sb, state } from './state.js';
 import { isAdmin } from './admin.js';
 import { getPlayers } from './profiles.js';
@@ -15,7 +16,7 @@ export function renderSquads() {
   const select = document.getElementById('squadOwner');
   const owner = getPlayers().includes(state.selectedSquad) ? state.selectedSquad : state.user;
   state.selectedSquad = owner;
-  select.innerHTML = getPlayers().map(name => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
+  select.innerHTML = getPlayers().map(name => `<option value="${esc(name)}">${esc(displayName(name))}</option>`).join('');
   select.value = owner || '';
   const canEdit = canManageSquad(owner) && state.squadsReady;
   document.getElementById('addSquadPlayer').hidden = !canEdit;
@@ -31,7 +32,7 @@ export function renderSquads() {
     .sort((a, b) => Number(b.active) - Number(a.active) || a.name.localeCompare(b.name));
   document.getElementById('squadCount').textContent = `${members.filter(p => p.active).length} لاعب في التشكيلة`;
   container.innerHTML = members.length ? members.map(p => `<article class="squad-card ${p.active ? '' : 'squad-archived'}">
-    <span class="squad-position">${esc(p.position)}</span>
+    <span class="squad-position">${POSITIONS[p.position] || "—"}</span>
     <div class="squad-player-name"><strong dir="auto">${esc(p.name)}</strong><span>${POSITIONS[p.position] || ''}${p.active ? '' : ' · خارج التشكيلة'}</span></div>
     ${canEdit ? `<div class="squad-actions"><button class="btn-sm" data-squad-edit="${esc(p.id)}" type="button">تعديل</button><button class="btn-sm" data-squad-toggle="${esc(p.id)}" type="button">${p.active ? 'إبعاد' : 'إعادة'}</button></div>` : ''}
   </article>`).join('') : '<div class="empty-state">التشكيلة فارغة. ابدأ بإضافة أسماء لاعبي الفريق.</div>';
@@ -46,7 +47,7 @@ export function openSquadPlayer(owner = state.selectedSquad || state.user, id = 
   const member = id ? state.db.squads.find(p => p.id === id && p.owner === owner) : null;
   if (id && !member) return;
   state.squadEditor = { owner, id, pendingId: crypto.randomUUID() };
-  document.getElementById('squadPlayerTitle').textContent = `${member ? 'تعديل لاعب' : 'إضافة لاعب'} · ${owner}`;
+  document.getElementById('squadPlayerTitle').textContent = `${member ? 'تعديل لاعب' : 'إضافة لاعب'} · ${displayName(owner)}`;
   document.getElementById('squadPlayerName').value = member?.name || '';
   document.getElementById('squadPlayerPosition').value = member?.position || 'FW';
   document.getElementById('squadPlayerError').classList.add('hidden');

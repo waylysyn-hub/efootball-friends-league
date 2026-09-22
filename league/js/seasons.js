@@ -1,3 +1,4 @@
+import { displaySeason } from '../../shared/locale.js';
 import { sb, state } from './state.js';
 import { isAdmin, requireAdmin } from './admin.js';
 import { esc, showConfirm, showToast } from './ui.js';
@@ -22,14 +23,14 @@ export function populateSeasonDropdowns() {
         id === 'awardsSeasonFilter' || id === 'statsSeasonFilter' || id === 'fbStatsSeasonFilter') {
       const all = document.createElement('option');
       all.value = 'all';
-      all.textContent = id === 'tableSeasonFilter' || id === 'statsSeasonFilter' ? 'All Seasons' : 'All Seasons (Overall)';
+      all.textContent = id === 'tableSeasonFilter' || id === 'statsSeasonFilter' ? "كل المواسم" : "كل المواسم (الإجمالي)";
       el.appendChild(all);
     }
 
     state.db.seasons.forEach(s => {
       const opt = document.createElement('option');
       opt.value = s.id;
-      opt.textContent = s.name + (s.active ? ' ★' : '');
+      opt.textContent = displaySeason(s.name) + (s.active ? ' ★' : '');
       el.appendChild(opt);
     });
 
@@ -42,8 +43,8 @@ export async function createSeason() {
   if (!requireAdmin()) return;
   const input = document.getElementById('newSeasonName');
   const name = input.value.trim();
-  if (!name || name.length > 80) return showToast('Enter a season name up to 80 characters.', true);
-  if (state.db.seasons.some(season => season.name.toLowerCase() === name.toLowerCase())) return showToast('A season with that name exists.', true);
+  if (!name || name.length > 80) return showToast("أدخل اسمًا للموسم لا يتجاوز 80 حرفًا.", true);
+  if (state.db.seasons.some(season => season.name.toLowerCase() === name.toLowerCase())) return showToast("يوجد موسم بهذا الاسم بالفعل.", true);
   return withBusy('create-season', document.getElementById('createSeasonButton'), async () => {
     if (state.pendingSeason?.name !== name) state.pendingSeason = { id: crypto.randomUUID(), name, active: false, created: Date.now() };
     const draft = state.pendingSeason;
@@ -55,7 +56,7 @@ export async function createSeason() {
     }
     state.pendingSeason = null;
     input.value = '';
-    await fetchAllData(); populateSeasonDropdowns(); renderSeasons(); showToast('Season created.');
+    await fetchAllData(); populateSeasonDropdowns(); renderSeasons(); showToast("تم إنشاء الموسم.");
   });
  }
 
@@ -65,8 +66,8 @@ export async function setActiveSeason(id) {
     const { error } = await sb.rpc('set_league_active_season', { target: id });
     if (error) throw error;
     await fetchAllData(); populateSeasonDropdowns(); renderSeasons(); updateSidebarPlayer();
-    document.getElementById('topbarSeason').textContent = getActiveSeason()?.name || 'No active season';
-    showToast('Active season updated.');
+    document.getElementById('topbarSeason').textContent = displaySeason(getActiveSeason()?.name) || "لا يوجد موسم نشط";
+    showToast("تم تحديث الموسم النشط.");
   });
  }
 
@@ -76,12 +77,12 @@ export function deleteSeason(id) {
   if (!season) return;
   const matchCount = state.db.matches.filter(m => m.season === id).length;
   showConfirm(
-    'Delete Season',
-    `Delete "${season.name}"? This will also delete ${matchCount} match(es).`,
+    "حذف الموسم",
+    `هل تريد حذف «${displaySeason(season.name)}»؟ سيُحذف معه ${matchCount} من المباريات.`,
     async () => {
-      if (!sb) return showToast('Supabase is not configured.', true);
+      if (!sb) return showToast("الاتصال بالخادم غير جاهز. تواصل مع مدير الدوري.", true);
       const { error } = await sb.from('seasons').delete().eq('id', id);
-      if (error) return showToast('Could not delete season.', true);
+      if (error) return showToast("تعذّر حذف الموسم.", true);
 
       state.db.matches = state.db.matches.filter(m => m.season !== id);
       const keptIds = new Set(state.db.matches.map(m => m.id));
@@ -91,7 +92,7 @@ export function deleteSeason(id) {
       if (state.db.seasons.length > 0 && !state.db.seasons.find(s => s.active)) {
         const last = state.db.seasons[state.db.seasons.length - 1];
         const { error: activationError } = await sb.rpc('set_league_active_season', { target: last.id });
-        if (activationError) showToast('Season deleted. Choose a new active season.', true);
+        if (activationError) showToast("تم حذف الموسم. اختر موسمًا نشطًا جديدًا.", true);
         else last.active = true;
       }
 
@@ -99,7 +100,7 @@ export function deleteSeason(id) {
       populateSeasonDropdowns();
       renderSeasons();
       updateSidebarPlayer();
-      showToast('Season deleted.');
+      showToast("تم حذف الموسم.");
     }
   );
 }
@@ -108,7 +109,7 @@ export function renderSeasons() {
   const cont = document.getElementById('seasonsList');
   if (!cont) return;
   if (state.db.seasons.length === 0) {
-    cont.innerHTML = '<div class="empty-state">No seasons yet. Create one above.</div>';
+    cont.innerHTML = "<div class=\"empty-state\">لا توجد مواسم بعد. يمكن لمدير الدوري إنشاء موسم جديد.</div>";
     return;
   }
   cont.innerHTML = state.db.seasons.map(s => {
@@ -116,13 +117,13 @@ export function renderSeasons() {
     return `
       <div class="season-card">
         <div class="season-card-info">
-          <h4>${esc(s.name)}</h4>
-          <p>${matchCount} match${matchCount !== 1 ? 'es' : ''} recorded</p>
+          <h4>${esc(displaySeason(s.name))}</h4>
+          <p>عدد المباريات المسجّلة: ${matchCount}</p>
         </div>
         <div class="season-card-actions">
-          ${s.active ? '<span class="season-badge-active">ACTIVE</span>' :
-            (isAdmin() ? `<button class="btn-sm" onclick="League.setActiveSeason('${s.id}')">Set Active</button>` : '')}
-          ${isAdmin() ? `<button class="btn-sm delete" onclick="League.deleteSeason('${s.id}')">Delete</button>` : ''}
+          ${s.active ? "<span class=\"season-badge-active\">نشط</span>" :
+            (isAdmin() ? `<button class="btn-sm" onclick="League.setActiveSeason('${s.id}')">تعيين كنشط</button>` : '')}
+          ${isAdmin() ? `<button class="btn-sm delete" onclick="League.deleteSeason('${s.id}')">حذف</button>` : ''}
         </div>
       </div>`;
   }).join('');

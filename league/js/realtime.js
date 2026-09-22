@@ -17,7 +17,7 @@ export function subscribeRealtime() {
     channel.on('postgres_changes', { event: '*', schema: 'public', table }, scheduleRefresh);
   }
   channel.subscribe(status => {
-    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setSyncStatus('Live updates paused. Use Refresh to try again.');
+    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setSyncStatus("توقفت التحديثات المباشرة. اضغط تحديث للمحاولة مجددًا.");
     else if (status === 'SUBSCRIBED') setSyncStatus('');
   });
 }
@@ -54,6 +54,6 @@ export async function refreshFromRemote() {
     const formPage = ['recordMatch', 'settings'].includes(state.page) || questionDraft || isBusy('submitQuestion') || isBusy('submitAnswer');
     if (!editing && !formPage) { populateSeasonDropdowns(); renderPage(state.page); }
   } catch (error) {
-    setSyncStatus(errorMessage(error, 'Could not refresh the league. Your last loaded results are still shown.'));
+    setSyncStatus(errorMessage(error, "تعذّر تحديث الدوري. تُعرض آخر نتائج تم تحميلها."));
   } finally { refreshing = false; }
 }

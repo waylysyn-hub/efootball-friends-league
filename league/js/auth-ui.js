@@ -1,3 +1,4 @@
+import { displayName, playerInitials } from '../../shared/locale.js';
 import { applyAdminUI } from './admin.js';
 import { closeSidebar, navigateTo, showError } from './ui.js';
 import { closeDialog, errorMessage, withBusy } from '../../shared/ui.js';
@@ -21,8 +22,8 @@ export async function handleLogin() {
   const username = document.getElementById('loginUsername').value;
   const passwordInput = document.getElementById('loginPassword');
   const error = document.getElementById('loginError');
-  if (!username) return showError(error, 'Choose your player to continue.');
-  if (!passwordInput.value) return showError(error, 'Enter your password.');
+  if (!username) return showError(error, "اختر حسابك للمتابعة.");
+  if (!passwordInput.value) return showError(error, "أدخل كلمة المرور.");
   return withBusy('login', document.getElementById('loginButton'), async () => {
     state.signingIn = true;
     error.classList.add('hidden');
@@ -38,17 +39,17 @@ export async function handleLogin() {
       state.profile = null;
       state.user = null;
       showError(error, errorMessage(failure, failure?.code === 'invalid_credentials'
-        ? 'The player and password do not match. Please try again.'
-        : 'Could not sign in or load your league. Please try again.'));
+        ? "اسم اللاعب أو كلمة المرور غير صحيح. حاول مجددًا."
+        : "تعذّر الدخول أو تحميل الدوري. حاول مجددًا."));
     } finally { state.signingIn = false; }
-  }, 'Signing in…');
+  }, "جارٍ تسجيل الدخول…");
 }
 
 export async function handleLogout() {
   return withBusy('logout', document.getElementById('logoutButton'), async () => {
     await window.EFLAuth.signOut(sb);
     clearSession();
-  }, 'Signing out…');
+  }, "جارٍ تسجيل الخروج…");
 }
 
 export function clearSession() {
@@ -79,10 +80,10 @@ export function enterApp() {
 
 export function updateSidebarPlayer() {
   if (!state.user) return;
-  document.getElementById('sidebarPlayerName').textContent = state.user;
-  document.getElementById('sidebarAvatar').textContent = state.user.charAt(0).toUpperCase();
-  document.getElementById('topbarPlayer').textContent = state.user;
+  document.getElementById('sidebarPlayerName').textContent = displayName(state.user);
+  document.getElementById('sidebarAvatar').textContent = playerInitials(state.user);
+  document.getElementById('topbarPlayer').textContent = displayName(state.user);
   const rank = computeLeagueTable('all').findIndex(row => row.player === state.user) + 1;
-  document.getElementById('sidebarPlayerRank').textContent = rank ? `Rank #${rank}` : 'Unranked';
+  document.getElementById('sidebarPlayerRank').textContent = rank ? `الترتيب: ${rank}` : "غير مصنّف";
   document.getElementById('sidebarNick').innerHTML = nickChip(state.user);
 }

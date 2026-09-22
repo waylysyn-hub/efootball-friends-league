@@ -16,7 +16,7 @@ for(const page of ['league/index.html','groups-chat/index.html']) {
   client.emitAuth('SIGNED_OUT',null);await settle();assert.equal(d.getElementById('loginScreen').classList.contains('hidden'),false);
  });
  test(page+' handles empty roster and unavailable backend',async t=>{
-  const app=await mount(page,{empty:true});t.after(()=>app.close());assert.equal(app.document.getElementById('loginButton').disabled,true);assert.match(app.document.getElementById('loginError').textContent,/No players/);assert.deepEqual(app.errors,[]);
+  const app=await mount(page,{empty:true});t.after(()=>app.close());assert.equal(app.document.getElementById('loginButton').disabled,true);assert.match(app.document.getElementById('loginError').textContent,/لم يُسجّل لاعبون/);assert.deepEqual(app.errors,[]);
  });
 }
 

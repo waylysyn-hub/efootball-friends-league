@@ -1,3 +1,4 @@
+import { displayName } from '../../shared/locale.js';
 import { state } from './state.js';
 import { esc, showToast } from './ui.js';
 import { updateMatchPreview } from './matches.js';
@@ -20,7 +21,7 @@ function editingMatchId(containerId) { return containerId === 'editGoalEventsLis
 
 export function ownerOptionsHTML(p1, p2, selected) {
   return '<option value="">اختر صاحب الفريق</option>' + [...new Set([p1, p2])].filter(Boolean)
-    .map(name => `<option value="${esc(name)}"${name === selected ? ' selected' : ''}>${esc(name)}</option>`).join('');
+    .map(name => `<option value="${esc(name)}"${name === selected ? ' selected' : ''}>${esc(displayName(name))}</option>`).join('');
 }
 function previousName(matchId, owner, field, name) {
   return !!matchId && !!name && getMatchGoalEvents(matchId).some(e => e.owner === owner && e[field] === name);
@@ -133,19 +134,19 @@ export function validateGoalEvents(events, p1, p2, g1, g2, { requireSquad = fals
   for (let i = 0; i < events.length; i++) {
     const e = events[i], label = `الهدف ${i + 1}: `;
     if (![p1, p2].includes(e.owner) || !e.owner) return label + 'اختر صاحب الفريق من طرفَي المباراة.';
-    if (!e.scorer) return label + 'اختر المسجّل من تشكيلة ' + e.owner + '.';
+    if (!e.scorer) return label + 'اختر المسجّل من تشكيلة ' + displayName(e.owner) + '.';
     if (!Number.isInteger(e.minute) || e.minute < 0 || e.minute > 120) return label + 'الدقيقة يجب أن تكون عددًا صحيحًا بين 0 و120.';
     if (e.scorer.length > 100 || e.assist.length > 100) return label + 'اسم اللاعب يجب ألا يتجاوز 100 حرف.';
     if (e.assist && e.scorer.toLowerCase() === e.assist.toLowerCase()) return label + 'المسجّل لا يمكن أن يصنع الأسيست لنفسه. اختر زميلًا أو «بدون أسيست».';
     if (requireSquad) for (const field of ['scorer', 'assist']) {
       const name = e[field];
       if (name && !getSquad(e.owner).some(p => p.name === name) && !previousName(matchId, e.owner, field, name)) {
-        return label + (field === 'scorer' ? 'المسجّل' : 'صانع الأسيست') + ' غير موجود في تشكيلة ' + e.owner + '. حدّث التشكيلة ثم أعد اختياره.';
+        return label + (field === 'scorer' ? 'المسجّل' : 'صانع الأسيست') + ' غير موجود في تشكيلة ' + displayName(e.owner) + '. حدّث التشكيلة ثم أعد اختياره.';
       }
     }
   }
   const { c1, c2 } = countGoalsByOwner(events, p1, p2);
-  if (c1 !== g1 || c2 !== g2) return `تفاصيل الأهداف لا تطابق النتيجة: ${p1} (${c1} من ${g1})، ${p2} (${c2} من ${g2}). أكمل الأهداف أو اضغط «احتساب النتيجة من الأهداف».`;
+  if (c1 !== g1 || c2 !== g2) return `تفاصيل الأهداف لا تطابق النتيجة: ${displayName(p1)} (${c1} من ${g1})، ${displayName(p2)} (${c2} من ${g2}). أكمل الأهداف أو اضغط «احتساب النتيجة من الأهداف».`;
   return null;
 }
 export function goalEventsSummaryHTML(containerId, events) {
@@ -153,7 +154,7 @@ export function goalEventsSummaryHTML(containerId, events) {
   if (!events.length && g1 + g2 > 0 && canKeepLegacyScore(editingMatchId(containerId), p1, p2, g1, g2)) return '<div class="ms-total-line">مباراة سابقة دون تفاصيل أهداف. يمكنك حفظ التعديلات مع إبقاء النتيجة كما هي.</div>';
   const { c1, c2 } = countGoalsByOwner(events, p1, p2);
   const ok = c1 === g1 && c2 === g2 && events.every(e => e.scorer);
-  return `<div class="ms-total-line ${ok ? 'ok' : 'bad'}"><span>${ok ? '✓ الأهداف مكتملة' : 'أكمل تفاصيل الأهداف'}</span><strong dir="auto">${esc(p1 || 'الفريق الأول')} ${c1} / ${g1}</strong><strong dir="auto">${esc(p2 || 'الفريق الثاني')} ${c2} / ${g2}</strong></div>`;
+  return `<div class="ms-total-line ${ok ? 'ok' : 'bad'}"><span>${ok ? '✓ الأهداف مكتملة' : 'أكمل تفاصيل الأهداف'}</span><strong dir="auto">${esc(displayName(p1) || 'الفريق الأول')} ${c1} / ${g1}</strong><strong dir="auto">${esc(displayName(p2) || 'الفريق الثاني')} ${c2} / ${g2}</strong></div>`;
 }
 export function updateGoalEventsUI(containerId) {
   const events = collectGoalEventsFromForm(containerId);
@@ -162,7 +163,7 @@ export function updateGoalEventsUI(containerId) {
   document.querySelectorAll(`#${containerId} .ge-row`).forEach((row, idx) => {
     const e = events[idx], members = getSquad(e.owner);
     const note = row.querySelector('.ge-squad-note');
-    note.textContent = !e.owner ? 'اختر صاحب الفريق لعرض تشكيلته.' : !members.length ? `تشكيلة ${e.owner} فارغة. أضف لاعبي الفريق أولًا.` : `${members.length} لاعب متاح من تشكيلة ${e.owner}`;
+    note.textContent = !e.owner ? 'اختر صاحب الفريق لعرض تشكيلته.' : !members.length ? `تشكيلة ${displayName(e.owner)} فارغة. أضف لاعبي الفريق أولًا.` : `${members.length} لاعب متاح من تشكيلة ${displayName(e.owner)}`;
     row.querySelector('.ge-manage').hidden = !e.owner || !canManageSquad(e.owner) || !state.squadsReady;
     row.querySelector('.ge-scorer').disabled = !e.owner || !state.squadsReady;
     row.querySelector('.ge-assist').disabled = !e.owner || !state.squadsReady;
@@ -202,21 +203,21 @@ export function computeMatchAwards(matchId, events) {
 
   if (maxGoals > 0) {
     owners.filter(o => byOwner[o].goals === maxGoals).forEach(o => {
-      awards.push({ icon: '⚽', title: 'Match Top Scorer', player: o, detail: `${byOwner[o].goals} goal${byOwner[o].goals !== 1 ? 's' : ''}` });
+      awards.push({ icon: '⚽', title: 'هداف المباراة', player: o, detail: `الأهداف: ${byOwner[o].goals}` });
     });
   }
   if (maxAssists > 0) {
     owners.filter(o => byOwner[o].assists === maxAssists).forEach(o => {
-      awards.push({ icon: '🎯', title: 'Best Playmaker', player: o, detail: `${byOwner[o].assists} assist${byOwner[o].assists !== 1 ? 's' : ''}` });
+      awards.push({ icon: '🎯', title: 'أفضل صانع أهداف', player: o, detail: `التمريرات الحاسمة: ${byOwner[o].assists}` });
     });
   }
   if (maxMvp > 0) {
     owners.filter(o => byOwner[o].goals * 2 + byOwner[o].assists === maxMvp).forEach(o => {
-      awards.push({ icon: '👑', title: 'MVP', player: o, detail: `${byOwner[o].goals}G · ${byOwner[o].assists}A` });
+      awards.push({ icon: '👑', title: "أفضل لاعب", player: o, detail: `الأهداف: ${byOwner[o].goals} · التمريرات الحاسمة: ${byOwner[o].assists}` });
     });
   }
   owners.filter(o => byOwner[o].goals >= 3).forEach(o => {
-    awards.push({ icon: '🎩', title: 'Hat-trick', player: o, detail: `${byOwner[o].goals} goals` });
+    awards.push({ icon: '🎩', title: 'ثلاثية', player: o, detail: `الأهداف: ${byOwner[o].goals}` });
   });
   return awards;
 }
@@ -226,7 +227,7 @@ export function matchAwardsHTML(matchId, events) {
   if (!awards.length) return '';
   return `<div class="match-awards">${awards.map(a =>
     `<span class="match-award-chip" title="${esc(a.title)} — ${esc(a.detail)}">` +
-    `${a.icon} <strong>${esc(a.player)}</strong> <span class="match-award-title">${esc(a.title)}</span></span>`
+    `${a.icon} <strong>${esc(displayName(a.player))}</strong> <span class="match-award-title">${esc(a.title)}</span></span>`
   ).join('')}</div>`;
 }
 
@@ -240,7 +241,7 @@ export function goalEventTimelineHTML(matchId) {
     return `<div class="goal-timeline-item">
       <div class="goal-timeline-main">⚽ <span class="goal-min">${min}</span> <strong>${esc(e.scorer)}</strong></div>
       ${assist}
-      <div class="goal-timeline-owner">${esc(e.owner)}</div>
+      <div class="goal-timeline-owner">${esc(displayName(e.owner))}</div>
     </div>`;
   }).join('')}</div>`;
 }
@@ -248,7 +249,7 @@ export function goalEventTimelineHTML(matchId) {
 export function matchGoalSummaryHTML(matchId) {
   const n = getMatchGoalEvents(matchId).length;
   if (!n) return '';
-  return `<span class="match-goal-count">${n} goal event${n !== 1 ? 's' : ''}</span>`;
+  return `<span class="match-goal-count">تفاصيل الأهداف المسجّلة: ${n}</span>`;
 }
 
 

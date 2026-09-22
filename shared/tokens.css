@@ -38,8 +38,8 @@
   --shadow: 0 20px 60px #0005;
   --shadow-sm: 0 6px 20px #0002;
   --transition: 180ms ease;
-  --font: 'Outfit', 'Cairo', system-ui, sans-serif;
-  --font-numeric: 'Outfit', system-ui, sans-serif;
+  --font: 'Cairo', system-ui, sans-serif;
+  --font-numeric: 'Cairo', system-ui, sans-serif;
   --sidebar-width: 256px;
 }
 [data-theme='light'] {
