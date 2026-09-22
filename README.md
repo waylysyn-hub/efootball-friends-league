@@ -40,3 +40,7 @@ Passwords are handled by Supabase Auth. Public profiles expose `name`, `role` an
 ### Saved squads
 
 Use **التشكيلات** to manage each friend's football players. Goal entry selects scorers and assists from that team's squad, with an explicit **بدون أسيست** option and Arabic validation messages. See [the feature and rollout notes](docs/SQUADS.md).
+
+### Private game nights
+
+The administrator opens **سهرة اللعب** (`league/index.html#evenings`), selects the present league players and starts a saved random draw. Each attendee appears once; an odd count gives one player a rest. **تجهيز المباراة** fills the existing result form without creating a result. End the evening to archive its draw and start another. Only the mapped administrator can read, create or close evenings, enforced by database grants and RLS. See [EVENINGS.md](docs/EVENINGS.md).

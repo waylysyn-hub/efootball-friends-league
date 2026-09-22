@@ -16,6 +16,8 @@ Run these SQL files in order from **Supabase → SQL Editor**:
 3. `supabase-security-migration.sql` — installs private identity helpers, least-privilege grants, admin/ownership RLS, and chat membership rules.
 4. `supabase-derived-data-migration.sql` — installs Postgres triggers for standings and achievements.
 5. `supabase-consistency-migration.sql` — installs transactional writes, season triggers and Q&A guards. Run this before deploying the refactored frontend.
+6. `supabase/migrations/20260920075946_squad_goal_selection.sql` — saved team squads and validated scorer/assist selection.
+7. `supabase/migrations/20260922115643_admin_evening_draw.sql` — admin-only attendance, persistent random pairings and evening history.
 
 Then create the first user in **Authentication → Users**. The frontend expects deterministic private-league addresses:
 
@@ -59,6 +61,7 @@ alter table public.players drop column if exists password;
 - Anonymous visitors get read-only Tournament Hub/league data.
 - Signed-in league players can read league data and participate in Q&A.
 - Only the player whose mapped profile has `role = 'admin'` can mutate matches, seasons, match stats, and goal events.
+- Game nights and their attendance/draw are readable and writable only by the mapped admin. Other players cannot read them, even through the API.
 - Chat groups/messages are visible only to members.
 - Joining a chat requires an accepted invitation unless the group owner is adding the member.
 - Invitations are restricted to involved users.
@@ -121,6 +124,10 @@ Export/import covers seasons, results, aggregate match stats and goal events. St
 
 Imports are validated before confirmation and committed in one transaction. Invalid imports roll back both deletes and inserts. A legacy backup can preserve its competition content; account/password fields are ignored and are never restored.
 
-## Latest update: saved squads
+## Saved squads
 
 For existing installations that already applied consistency and safeupdate, apply `supabase/migrations/20260920075946_squad_goal_selection.sql` next. For fresh installations, add it after the existing migration sequence above. Deploy the frontend only after the migration succeeds. Each account can then populate its squad from **التشكيلات**; the administrator can manage all squads. See [docs/SQUADS.md](docs/SQUADS.md).
+
+## Latest update: private game nights
+
+Apply `supabase/migrations/20260922115643_admin_evening_draw.sql` after the saved-squad migration and before deploying the evening UI. It creates a new table and functions without rewriting league data or changing account permissions. The existing competition export/import does not include evenings; they remain in the database and normal database backups. Deleting a season preserves its evenings and clears their season reference. See [docs/EVENINGS.md](docs/EVENINGS.md).
