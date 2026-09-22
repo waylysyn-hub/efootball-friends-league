@@ -14,6 +14,8 @@ test('Postgres security and transactional behavior',async t=>{
  await db.exec(await fs.readFile(new URL('../supabase-consistency-migration.sql',import.meta.url),'utf8'));
  const squadMigration=await fs.readFile(new URL('../supabase/migrations/20260920075946_squad_goal_selection.sql',import.meta.url),'utf8');
  await db.exec(squadMigration);await db.exec(squadMigration);
+ const eveningMigration=await fs.readFile(new URL('../supabase/migrations/20260922115643_admin_evening_draw.sql',import.meta.url),'utf8');
+ await db.exec(eveningMigration);await db.exec(eveningMigration);
  const accounts=Object.fromEntries(players.map(name=>[name,randomUUID()]));
  for(const [name,id] of Object.entries(accounts))await db.query('insert into public.player_accounts(name,auth_user_id) values($1,$2)',[name,id]);
  const as=(name,sql,params=[])=>db.transaction(async tx=>{
@@ -70,6 +72,48 @@ test('Postgres security and transactional behavior',async t=>{
    await assert.rejects(as(name,"update public.standings set points=999 where player=$1",[name]),/permission denied/);
    await assert.rejects(as(name,"update public.players set role='admin' where name=$1 returning name",[name]),/permission denied/);
   }
+ });
+ const startEvening=(name,id,attendees,title='سهرة الأصدقاء')=>as(name,'select public.start_league_evening($1,$2,array(select jsonb_array_elements_text($3::jsonb)),$4) as evening',[id,title,attendees,season]);
+ await t.test('evenings are private to the admin at the table and RPC boundaries',async()=>{
+  const id=randomUUID();
+  await assert.rejects(as(null,'select * from public.league_evenings'),/permission denied/);
+  await assert.rejects(startEvening(null,id,['Wael','Omar']),/permission denied/);
+  await assert.rejects(as(null,'select public.end_league_evening($1)',[id]),/permission denied/);
+  const saved=(await startEvening('Wael',id,['Wael','Omar','Mustafa']))[0].evening;
+  assert.equal(saved.created_by,'Wael');assert.equal(saved.ended_at,null);
+  assert.deepEqual([...saved.drawn_order].sort(),['Mustafa','Omar','Wael']);
+  for(const name of players.filter(name=>name!=='Wael')){
+   assert.deepEqual(await as(name,'select * from public.league_evenings'),[]);
+   await assert.rejects(startEvening(name,randomUUID(),['Wael','Omar']),/insufficient_privilege|permission denied/i);
+   await assert.rejects(as(name,'select public.end_league_evening($1)',[id]),/insufficient_privilege|permission denied/i);
+   await assert.rejects(as(name,"insert into public.league_evenings(title,participants) values('Intrusion',array['Wael','Omar'])"),/insufficient_privilege|permission denied|row-level security/i);
+   assert.deepEqual(await as(name,'update public.league_evenings set ended_at=now() where id=$1 returning id',[id]),[]);
+  }
+  assert.deepEqual((await startEvening('Wael',id,['Mustafa','Wael','Omar']))[0].evening,saved,'retries keep the exact saved draw');
+  await assert.rejects(startEvening('Wael',id,['Wael','Omar']),/EFL_EVENING_CHANGED/);
+  await assert.rejects(startEvening('Wael',randomUUID(),['Wael','Omar']),/EFL_EVENING_ACTIVE/);
+  for(const statement of ["update public.league_evenings set drawn_order=array['Omar','Wael'] where id=$1","update public.league_evenings set created_by='Omar' where id=$1",'delete from public.league_evenings where id=$1'])await assert.rejects(as('Wael',statement,[id]),/permission denied/);
+  const ended=(await as('Wael','select public.end_league_evening($1) as evening',[id]))[0].evening;
+  assert.ok(ended.ended_at);assert.deepEqual(ended.drawn_order,saved.drawn_order);
+  assert.deepEqual((await as('Wael','select public.end_league_evening($1) as evening',[id]))[0].evening,ended);
+  await assert.rejects(as('Wael','update public.league_evenings set ended_at=null where id=$1',[id]),/EFL_EVENING_CLOSED/);
+  await assert.rejects(as('Wael','select public.end_league_evening($1)',[randomUUID()]),/EFL_EVENING_MISSING/);
+ });
+ await t.test('attendance validation and server draws handle every roster size without affecting matches',async()=>{
+  for(const attendees of [[],['Wael'],['Wael','Wael'],['Wael','Unknown'],['Wael',null]])await assert.rejects(startEvening('Wael',randomUUID(),attendees),/EFL_EVENING_ATTENDEES/);
+  await assert.rejects(startEvening('Wael',randomUUID(),['Wael','Omar'],'  '),/EFL_EVENING_TITLE/);
+  await assert.rejects(as('Wael',"insert into public.league_evenings(title,participants) values('Bad',array[['Wael','Omar'],['Mustafa','Mohammad']])"),/EFL_EVENING_ATTENDEES/);
+  await assert.rejects(as('Wael',"insert into public.league_evenings(title,participants,drawn_order) values('Fixed',array['Wael','Omar'],array['Wael','Omar'])"),/permission denied/);
+  for(let count=2;count<=players.length;count++){
+   const id=randomUUID(),attendees=players.slice(0,count);
+   const saved=(await startEvening('Wael',id,attendees))[0].evening;
+   assert.deepEqual([...saved.drawn_order].sort(),[...attendees].sort());
+   assert.equal(new Set(saved.drawn_order).size,count);
+   await as('Wael','select public.end_league_evening($1)',[id]);
+  }
+  assert.equal((await as(null,'select * from public.matches')).length,0,'drawing does not record results');
+  const invoker=(await db.query("select bool_and(not prosecdef) as ok from pg_proc where proname in ('start_league_evening','end_league_evening','prepare_league_evening')")).rows[0].ok;
+  assert.equal(invoker,true);
  });
  await t.test('squads are editable only by owner/admin and cannot be reassigned',async()=>{
   await assert.rejects(as(null,'select * from public.squad_players'),/permission denied/);

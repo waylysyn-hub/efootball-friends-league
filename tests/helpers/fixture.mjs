@@ -8,7 +8,7 @@ export function fixtureClient({ profile = null, empty = false } = {}) {
     matches: empty ? [] : [{id:ids.match,player1:'Wael',player2:'Omar',goals1:2,goals2:1,date:'2026-09-08',season_id:ids.season,timestamp:1000}],
     match_goal_events: empty ? [] : [{id:'e1',match_id:ids.match,owner:'Wael',scorer:'Zlatan Ibrahimović',assist:'Ronaldinho',minute:12,sort_order:0},{id:'e2',match_id:ids.match,owner:'Omar',scorer:'Didier Drogba',assist:'',minute:38,sort_order:1},{id:'e3',match_id:ids.match,owner:'Wael',scorer:'Zlatan Ibrahimović',assist:'Del Piero',minute:78,sort_order:2}],
     squad_players: empty ? [] : [{id:'s1',owner:'Wael',name:'Zlatan Ibrahimović',position:'FW',active:true},{id:'s2',owner:'Wael',name:'Ronaldinho',position:'MF',active:true},{id:'s3',owner:'Wael',name:'Del Piero',position:'FW',active:true},{id:'s4',owner:'Omar',name:'Didier Drogba',position:'FW',active:true}],
-    match_stats:[],standings:[],achievements: empty ? [] : [{player:'Wael',achievement_id:'first_win'}],
+    league_evenings:[],match_stats:[],standings:[],achievements: empty ? [] : [{player:'Wael',achievement_id:'first_win'}],
     questions: empty ? [] : [{id:ids.question,author:'Wael',body:'Who is ready for the next match?',closed:false,timestamp:1000}],answers:[],
     chat_groups:[{id:ids.group,name:'Matchday room',description:'Fixtures, results and the next challenge.',emoji:'⚽',created_by:'Wael',created_at:'2026-09-08T12:00:00Z'}],
     chat_group_members: ['Wael','Omar'].map(player=>({group_id:ids.group,player})),chat_invitations:[],
@@ -50,6 +50,18 @@ export function fixtureClient({ profile = null, empty = false } = {}) {
       };return query;
     },
     async rpc(name,args){calls.push({rpc:name,args});if(client.hold)await client.hold({rpc:name});if(client.fail==='rpc')return {error:{status:503}};
+      if(name==='start_league_evening'){
+        const existing=db.league_evenings.find(row=>row.id===args.evening_id);
+        if(existing)return {data:{...existing},error:null};
+        if(db.league_evenings.some(row=>!row.ended_at))return {error:{message:'EFL_EVENING_ACTIVE'}};
+        const row={id:args.evening_id,title:args.evening_title,participants:[...args.attendees],drawn_order:[...args.attendees].reverse(),season_id:args.target_season,created_by:signedIn,created_at:new Date().toISOString(),ended_at:null};
+        db.league_evenings.push(row);return {data:{...row},error:null};
+      }
+      if(name==='end_league_evening'){
+        const row=db.league_evenings.find(row=>row.id===args.target);
+        if(!row)return {error:{message:'EFL_EVENING_MISSING'}};
+        row.ended_at ||= new Date().toISOString();return {data:{...row},error:null};
+      }
       if(name==='save_league_match'){const index=db.matches.findIndex(m=>m.id===args.match_data.id);if(index<0)db.matches.push(args.match_data);else db.matches[index]={...db.matches[index],...args.match_data};db.match_goal_events=db.match_goal_events.filter(e=>e.match_id!==args.match_data.id).concat(args.goal_events.map((e,i)=>({...e,id:crypto.randomUUID(),match_id:args.match_data.id,sort_order:i})));return {data:args.match_data.id,error:null};}
       if(name==='create_league_chat_group'){const group={id:args.group_id,name:args.group_name,description:args.group_description,emoji:args.group_emoji,created_by:signedIn};db.chat_groups.push(group);db.chat_group_members.push({group_id:group.id,player:signedIn});return {data:group,error:null};}
       return {data:null,error:null};

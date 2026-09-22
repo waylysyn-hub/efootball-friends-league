@@ -12,6 +12,7 @@
 <link href="css/main.css" rel="stylesheet"/>
 <link href="css/components.css" rel="stylesheet"/>
 <link href="css/responsive.css" rel="stylesheet"/>
+<link href="css/evenings.css" rel="stylesheet"/>
 <link href="css/login.css" rel="stylesheet"/>
 </head>
 <body>
@@ -96,6 +97,7 @@
 <a class="nav-item admin-only" data-page="recordMatch" href="#recordMatch">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 7h16v14H4V7Zm4 0V3m8 4V3m-8 9h8m-8 4h5"></path></svg></span><span class="nav-label">تسجيل مباراة</span>
 </a>
+<a class="nav-item admin-only hidden" data-page="evenings" href="#evenings"><span class="nav-icon" aria-hidden="true">🎲</span><span class="nav-label">سهرة اللعب</span></a>
 <a class="nav-item" data-page="matchHistory" href="#matchHistory">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 5h16v16H4V5Zm3-3v6m10-6v6M4 11h16"></path></svg></span><span class="nav-label">سجل المباريات</span>
 </a>
@@ -213,6 +215,10 @@
 </div>
 </div>
 </div>
+<section class="page hidden" id="page-evenings" aria-labelledby="eveningsTitle">
+<div class="page-header"><h2 class="page-title" id="eveningsTitle">سهرة اللعب</h2><div class="page-subtitle">جمّع الحاضرين، واعمل القرعة، وابدأ التحدي. إدارة السهرات متاحة لك كمدير فقط.</div></div>
+<div id="eveningContent"></div>
+</section>
 <!-- RECORD MATCH PAGE -->
 <div class="page hidden" id="page-recordMatch">
 <div class="page-header">

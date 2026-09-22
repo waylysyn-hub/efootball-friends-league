@@ -1,7 +1,7 @@
 import { test,expect } from '@playwright/test';
 import { players,ids } from '../helpers/fixture.mjs';
 const arabicPlayers=['وائل','عمر','عبد الرحيم','محمد','مصطفى','عبد القادر'];
-const leaguePages=['dashboard','leagueTable','matchHistory','matchDetails','recordMatch','squads','playerProfile','statistics','footballStats','headToHead','rivalries','seasons','awards','achievements','questions','settings'];
+const leaguePages=['dashboard','leagueTable','matchHistory','matchDetails','recordMatch','evenings','squads','playerProfile','statistics','footballStats','headToHead','rivalries','seasons','awards','achievements','questions','settings'];
 async function noOverflow(page){await page.evaluate(()=>document.fonts.ready);await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);}
 function watchErrors(page){const errors=[];page.on('pageerror',error=>errors.push(error.message));return errors;}
 for(const app of ['league','groups-chat'])test(app+' login exposes all six players',async({page})=>{
@@ -51,5 +51,22 @@ test('Squad goal cards select teammates, add a missing player and save without a
  await page.locator('#goalEventsList .ge-scorer').selectOption('Test striker');await expect(page.locator('#goalEventsList .ge-assist')).toHaveValue('');
  await noOverflow(page);await page.locator('#saveMatchButton').click();await expect(page.locator('#toast')).toContainText('تم تسجيل المباراة');
  await page.evaluate(()=>window.League.navigateTo('squads'));await expect(page.locator('#squadPlayers')).toContainText('Test striker');await noOverflow(page);
+ expect(errors).toEqual([]);
+});
+
+test('Admin starts an odd evening, prepares its match and archives the saved draw',async({page})=>{
+ const errors=watchErrors(page);await page.goto('/league/index.html?fixture=admin#evenings');await expect(page.locator('#eveningForm')).toBeVisible();
+ await expect(page.locator('#drawEveningButton')).toBeDisabled();
+ await page.locator('#eveningTitle').fill('سهرة الأصدقاء');
+ for(const name of ['Wael','Omar','Mustafa'])await page.locator(`input[name="eveningAttendee"][value="${name}"]`).check();
+ await expect(page.locator('#eveningCount')).toContainText('3 من الحاضرين');await noOverflow(page);
+ await page.locator('#drawEveningButton').click();await expect(page.locator('#activeEveningTitle')).toHaveText('سهرة الأصدقاء');
+ await expect(page.locator('.evening-bye')).toHaveCount(1);await expect(page.locator('[data-evening-match]')).toHaveCount(1);await noOverflow(page);
+ const order=await page.locator('.evening-pair:first-child bdi').allTextContents();
+ await page.locator('[data-evening-match]').click();await expect(page.locator('#page-recordMatch')).toBeVisible();
+ const names={'وائل':'Wael','عمر':'Omar','مصطفى':'Mustafa'};
+ await expect(page.locator('#matchPlayer1')).toHaveValue(names[order[0]]);await expect(page.locator('#matchPlayer2')).toHaveValue(names[order[1]]);
+ await page.evaluate(()=>window.League.navigateTo('evenings'));await page.locator('#endEveningButton').click();await page.locator('#confirmYes').click();
+ await expect(page.locator('#eveningForm')).toBeVisible();await page.locator('.evening-history summary').click();await expect(page.locator('.evening-history .evening-bye')).toBeVisible();await noOverflow(page);
  expect(errors).toEqual([]);
 });

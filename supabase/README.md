@@ -24,3 +24,7 @@ No migration was applied to production as part of this refactor. Test the upgrad
 ## Saved squads and goal selection
 
 Apply `migrations/20260920075946_squad_goal_selection.sql` **after** consistency and safeupdate, before deploying the squad-based goal editor. This additive migration creates an RLS-protected roster table and validates the scorer and optional assist against the goal owner's saved squad. Historical goal names and existing score-only results remain editable. Read [SQUADS.md](../docs/SQUADS.md) for behavior and validation details. Do not rerun the older consistency file after this migration unless you reapply this migration last.
+
+## Private game nights
+
+Apply `migrations/20260922115643_admin_evening_draw.sql` next. `league_evenings` has admin-only RLS and authenticated column grants; anonymous access and client deletion are revoked. An invoker trigger validates distinct registered attendees, generates the random order server-side and stamps the creator/time. Clients can only close an existing evening; a partial unique index permits one active evening. Invoker RPCs preserve a retry's exact order and reject competing active evenings. Reapplying the migration preserves records. No matches are inserted by the draw. See [EVENINGS.md](../docs/EVENINGS.md).

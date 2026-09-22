@@ -1,0 +1,38 @@
+#eveningContent { max-width: 960px; }
+.evening-form, .evening-active { padding: clamp(16px, 3vw, 28px); }
+.evening-form h3, .evening-heading h3 { margin: 0 0 8px; font-size: 22px; overflow-wrap: anywhere; }
+.evening-form .form-group { max-width: 480px; margin: 24px 0; }
+.evening-note, .evening-heading p { color: var(--muted); font-size: 14px; line-height: 1.9; margin: 12px 0; }
+.evening-attendees { border: 0; min-width: 0; padding: 0; margin: 24px 0 16px; }
+.evening-attendees legend { font-weight: 700; }
+.evening-selection-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.evening-roster { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.evening-player { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 18px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); cursor: pointer; }
+.evening-player:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+.evening-player:has(input:focus-visible) { outline: 2px solid var(--primary); outline-offset: 3px; }
+.evening-player input[type="checkbox"] { width: 20px; height: 20px; flex: 0 0 20px; margin: 0; accent-color: var(--primary); }
+.evening-player > span { overflow-wrap: anywhere; }
+.evening-present { display: none; margin-inline-start: auto; color: var(--primary); font-size: 12px; }
+.evening-player:has(input:checked) .evening-present { display: inline; }
+.evening-heading { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
+.evening-status { display: inline-block; color: var(--success); font-size: 13px; margin-bottom: 8px; }
+.evening-pairs { display: grid; gap: 12px; list-style: none; padding: 0; margin: 20px 0 0; }
+.evening-pair { display: grid; grid-template-columns: 100px minmax(0, 1fr) auto; align-items: center; gap: 16px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 18px; }
+.evening-pair-number { color: var(--muted); font-size: 13px; }
+.evening-pair-players { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; min-width: 0; font-weight: 700; }
+.evening-pair-players bdi { overflow-wrap: anywhere; }
+.evening-vs { color: var(--muted); font-size: 13px; font-weight: 400; }
+.evening-bye { border-style: dashed; }
+.evening-history { margin-top: 32px; }
+.evening-history > h3 { margin-bottom: 16px; }
+.evening-history details { padding: 16px; margin-bottom: 12px; }
+.evening-history summary { cursor: pointer; overflow-wrap: anywhere; }
+.evening-history summary span + span { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; }
+#eveningError { color: var(--danger); margin: 16px 0; }
+@media (max-width: 680px) {
+  .evening-roster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .evening-player { flex-wrap: wrap; padding: 14px 10px; }
+  .evening-pair { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 16px; }
+  .evening-pair .btn-ghost { justify-self: start; }
+  #drawEveningButton { width: 100%; white-space: normal; }
+}

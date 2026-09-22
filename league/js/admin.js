@@ -6,6 +6,7 @@ import { updateSidebarPlayer } from './auth-ui.js';
 import { getPlayers } from './profiles.js';
 import { validateGoalEvents } from './goal-events.js';
 import { fetchAllData } from './api.js';
+import { clearEvenings } from './evenings.js';
 
 export function applyAdminUI() {
   const admin = isAdmin();
@@ -16,6 +17,10 @@ export function applyAdminUI() {
   document.body.classList.toggle('is-viewer', !admin);
   const badge = document.getElementById('viewerBadge');
   if (badge) badge.classList.toggle('hidden', admin);
+  if (!admin) {
+    clearEvenings();
+    if (state.page === 'evenings') navigateTo('dashboard');
+  }
 }
 
 export function exportData() {

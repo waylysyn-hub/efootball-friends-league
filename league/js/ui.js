@@ -11,11 +11,12 @@ import { getPlayers, selectProfilePlayer } from './profiles.js';
 import { renderAwards, selectAchievementsPlayer } from './achievements.js';
 import { renderQuestions } from './questions.js';
 import { renderSquads } from './squads.js';
+import { renderEvenings } from './evenings.js';
 import { closeDialog, escapeHtml, isBusy, openDialog, showError as showInlineError, setupDrawer, toast, withBusy } from '../../shared/ui.js';
 
 export function navigateTo(page, el) {
-  if (!isAdmin() && page === 'recordMatch') {
-    showToast("تسجيل المباريات متاح لمدير الدوري فقط.", true);
+  if (!isAdmin() && ['recordMatch', 'evenings'].includes(page)) {
+    showToast("هذه الصفحة متاحة لمدير الدوري فقط.", true);
     page = 'dashboard';
     el = document.querySelector('.nav-item[data-page="dashboard"]');
   }
@@ -44,7 +45,7 @@ export function navigateTo(page, el) {
     playerProfile: "ملفات اللاعبين", headToHead: "المواجهات المباشرة",
     seasons: "المواسم", awards: "الجوائز", achievements: "الإنجازات",
     rivalries: "المنافسات", statistics: "الإحصائيات", questions: "أسئلة الدوري",
-    settings: "الإعدادات", squads: 'التشكيلات'
+    settings: "الإعدادات", squads: 'التشكيلات', evenings: 'سهرة اللعب'
   };
   const topTitle = document.getElementById('topbarTitle');
   if (topTitle) topTitle.textContent = titles[page] || page;
@@ -89,6 +90,7 @@ export function renderPage(page) {
     case 'headToHead': renderH2H(); break;
     case 'questions': renderQuestions(); break;
     case 'squads': renderSquads(); break;
+    case 'evenings': renderEvenings(); break;
   }
 }
 

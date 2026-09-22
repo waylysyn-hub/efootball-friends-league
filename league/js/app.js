@@ -16,11 +16,12 @@ import * as achievements from './achievements.js';
 import * as questions from './questions.js';
 import * as admin from './admin.js';
 import * as squads from './squads.js';
+import * as evenings from './evenings.js';
 
 // One explicit compatibility namespace for existing HTML actions. Data and
 // authenticated state stay module-local; RLS remains the authorization boundary.
 const actions = { ...ui, ...matches, ...details, ...goals, ...seasons, ...profiles,
-  ...standings, ...statistics, ...achievements, ...questions, ...admin, ...squads, handleLogin, handleLogout,
+  ...standings, ...statistics, ...achievements, ...questions, ...admin, ...squads, ...evenings, handleLogin, handleLogout,
   refresh: refreshFromRemote, retryLogin: loadRoster };
 for (const name of ['submitQuestion', 'submitAnswer']) {
   const action = actions[name];
@@ -87,7 +88,8 @@ async function init() {
   } else showLogin();
   const unsubscribe = window.EFLAuth.subscribe(sb, async (profile, event) => {
     if (!profile) { clearSession(); return; }
-    const changed = state.user !== profile.name;
+    const changed = state.user !== profile.name || state.profile?.role !== profile.role;
+    if (changed) { evenings.clearEvenings(); stopRealtime(); }
     state.profile = profile; state.user = profile.name; applyAdminUI();
     if (changed && !state.signingIn) {
       try { await fetchAllData(); enterApp(); }

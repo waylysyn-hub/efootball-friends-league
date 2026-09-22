@@ -13,7 +13,9 @@ let timer;
 export function subscribeRealtime() {
   if (!sb || channel) return;
   channel = sb.channel('efl-league');
-  for (const table of ['matches', 'seasons', 'players', 'questions', 'answers', 'match_stats', 'match_goal_events', 'squad_players', 'standings', 'achievements']) {
+  const tables = ['matches', 'seasons', 'players', 'questions', 'answers', 'match_stats', 'match_goal_events', 'squad_players', 'standings', 'achievements'];
+  if (state.profile?.role === 'admin') tables.push('league_evenings');
+  for (const table of tables) {
     channel.on('postgres_changes', { event: '*', schema: 'public', table }, scheduleRefresh);
   }
   channel.subscribe(status => {
