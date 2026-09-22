@@ -1,89 +1,85 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Majles Al-Kibbar · League Chat</title>
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-
-
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/><link href="../shared/tokens.css" rel="stylesheet"/><link href="../shared/components.css" rel="stylesheet"/><link href="style.css" rel="stylesheet"/></head>
-<body><a class="skip-link" href="#mainContent">Skip to content</a><div class="connection-status" hidden="" id="connectionStatus" role="status"></div>
+<title>مجلس الكبار · دردشة الدوري</title>
+<link href="../shared/tokens.css" rel="stylesheet"/><link href="../shared/components.css" rel="stylesheet"/><link href="style.css" rel="stylesheet"/></head>
+<body><a class="skip-link" href="#mainContent">انتقل إلى المحتوى</a><div class="connection-status" hidden="" id="connectionStatus" role="status"></div>
 <!-- LOGIN -->
 <div class="login-screen" id="loginScreen">
 <div class="login-box">
-<div class="login-brand"><p class="eyebrow">MAJLES AL-KIBBAR · LEAGUE CHAT</p>
-<div class="brand-logo lg">M</div>
-<h1>Keep the league talking.</h1>
-<p class="muted">Results, rivalries and the next big match. Sign in with your league account.</p>
+<div class="login-brand"><p class="eyebrow">مجلس الكبار · دردشة الدوري</p>
+<div class="brand-logo lg">م</div>
+<h1>حماس الدوري مستمر.</h1>
+<p class="muted">النتائج والمنافسات والمباراة القادمة. سجّل الدخول بحسابك في الدوري.</p>
 </div><form data-busy-region="" id="loginForm"><div class="form-group">
-<label for="loginUsername">Player</label>
+<label for="loginUsername">اللاعب</label>
 <select autocomplete="username" id="loginUsername" required="">
-<option value="">— SELECT PLAYER —</option>
+<option value="">— اختر اللاعب —</option>
 </select>
 </div><div class="form-group">
-<label for="loginPassword">Password</label>
-<input autocomplete="current-password" id="loginPassword" placeholder="Enter password" required="" type="password"/>
-</div><p class="login-error" hidden="" id="loginError"></p><button class="btn btn-primary" disabled="" id="loginButton" type="submit">Sign in</button><button class="btn btn-ghost" id="retryLogin" type="button">Refresh players</button></form>
+<label for="loginPassword">كلمة المرور</label>
+<input autocomplete="current-password" id="loginPassword" placeholder="أدخل كلمة المرور" required="" type="password"/>
+</div><p class="login-error" hidden="" id="loginError"></p><button class="btn btn-primary" disabled="" id="loginButton" type="submit">تسجيل الدخول</button><button class="btn btn-ghost" id="retryLogin" type="button">تحديث اللاعبين</button></form>
 
 
 
 
-<a class="login-back" href="../index.html">← Back to Tournament Hub</a>
+<a class="login-back" href="../index.html">→ العودة إلى مركز البطولات</a>
 </div>
 </div>
 <div class="app hidden" id="appRoot"><div class="sidebar-overlay" id="sidebarOverlay"></div>
 <aside class="sidebar" id="sidebar">
 <div class="brand">
-<div class="brand-logo">C</div>
+<div class="brand-logo">م</div>
 <div class="brand-text">
-<span class="brand-name">Majles Al-Kibbar</span>
-<span class="brand-sub">League Chat</span>
+<span class="brand-name">مجلس الكبار</span>
+<span class="brand-sub">دردشة الدوري</span>
 </div>
 </div>
 <nav class="nav">
 <a class="nav-item nav-external" href="../index.html">
 <span class="nav-icon">🏛</span>
-<span>Tournament Hub</span>
+<span>مركز البطولات</span>
 </a>
 <button class="nav-item active" data-view="groups" type="button">
 <span class="nav-icon">▦</span>
-<span>Groups</span>
+<span>المجموعات</span>
 </button>
 <button class="nav-item" data-view="invites" type="button">
 <span class="nav-icon">✦</span>
-<span>Invitations</span>
+<span>الدعوات</span>
 <span class="badge" id="inviteBadge">0</span>
 </button>
-<a class="nav-item nav-external" href="../league/index.html"><span aria-hidden="true" class="nav-icon">◈</span><span>League workspace</span></a></nav>
+<a class="nav-item nav-external" href="../league/index.html"><span aria-hidden="true" class="nav-icon">◈</span><span>إدارة الدوري</span></a></nav>
 <div class="sidebar-footer">
 <div class="me">
 <div class="avatar" id="meAvatar">?</div>
 <div class="me-text">
 <span class="me-name" id="meName">—</span>
-<span class="me-status">Signed in</span>
+<span class="me-status">متصل</span>
 </div>
 </div>
-<button class="theme-toggle" id="themeToggle" title="Toggle theme" type="button">
+<button class="theme-toggle" id="themeToggle" title="تغيير المظهر" type="button">
 <span class="theme-icon">🌙</span>
 </button>
-<button aria-label="Sign out" class="logout-btn" id="logoutBtn" title="Sign out" type="button">⏻</button>
+<button aria-label="تسجيل الخروج" class="logout-btn" id="logoutBtn" title="تسجيل الخروج" type="button">⏻</button>
 </div>
 </aside>
-<main class="main" id="mainContent"><div class="chat-topbar"><button aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation" class="menu-toggle btn btn-ghost" id="chatMenuToggle" type="button">☰</button><span class="eyebrow">THE CONVERSATION CONTINUES</span><button class="btn btn-ghost" id="refreshChats" type="button">Refresh</button></div><p class="error-msg" hidden="" id="chatDataError" role="alert"></p>
+<main class="main" id="mainContent"><div class="chat-topbar"><button aria-controls="sidebar" aria-expanded="false" aria-label="فتح القائمة" class="menu-toggle btn btn-ghost" id="chatMenuToggle" type="button">☰</button><span class="eyebrow">الحديث مستمر</span><button class="btn btn-ghost" id="refreshChats" type="button">تحديث</button></div><p class="error-msg" hidden="" id="chatDataError" role="alert"></p>
 <section class="view active" id="view-groups">
 <header class="view-header">
 <div>
-<h1>Your circles</h1>
-<p class="muted">Where the match carries on.</p><span class="group-count" id="groupCount">Loading groups…</span>
+<h1>مجموعاتك</h1>
+<p class="muted">هنا يستمر حماس المباراة.</p><span class="group-count" id="groupCount">جارٍ تحميل المجموعات…</span>
 </div>
 <div class="view-header-actions">
-<button class="btn-create" id="createGroupBtn" type="button">+ New Group</button>
+<button class="btn-create" id="createGroupBtn" type="button">+ مجموعة جديدة</button>
 <div class="search">
 <span>⌕</span>
-<input aria-label="Search groups…" id="groupSearch" placeholder="Search groups…" type="text"/>
+<input aria-label="ابحث عن مجموعة…" id="groupSearch" placeholder="ابحث عن مجموعة…" type="text"/>
 </div>
 </div>
 </header>
@@ -91,37 +87,37 @@
 </section>
 <section class="view" id="view-chat">
 <header class="chat-header">
-<button aria-label="Back to groups" class="back-btn" id="backToGroups" type="button">←</button>
+<button aria-label="العودة إلى المجموعات" class="back-btn" id="backToGroups" type="button">→</button>
 <div class="chat-title">
-<div class="avatar" id="chatAvatar">G</div>
+<div class="avatar" id="chatAvatar">م</div>
 <div>
-<h2 id="chatGroupName">Group</h2>
-<span class="muted" id="chatGroupMeta">0 members</span><p class="member-names" id="memberNames"></p>
+<h2 id="chatGroupName">المجموعة</h2>
+<span class="muted" id="chatGroupMeta">0 عضو</span><p class="member-names" id="memberNames"></p>
 </div>
 </div>
 </header>
 <div class="chat-invite-bar hidden" data-busy-region="" id="chatInviteBar">
-<select aria-label="Choose a player" id="invitePlayerSelect"></select>
-<button class="btn-create sm" id="sendInviteBtn" type="button">Invite</button>
+<select aria-label="اختر لاعبًا" id="invitePlayerSelect"></select>
+<button class="btn-create sm" id="sendInviteBtn" type="button">دعوة</button>
 </div>
-<button class="btn btn-ghost older-button" hidden="" id="loadOlder" type="button">Load earlier messages</button><p class="error-msg" hidden="" id="messageError" role="alert"></p><div aria-label="Conversation" aria-live="polite" aria-relevant="additions" class="messages" id="messages" role="log"></div>
+<button class="btn btn-ghost older-button" hidden="" id="loadOlder" type="button">تحميل الرسائل السابقة</button><p class="error-msg" hidden="" id="messageError" role="alert"></p><div aria-label="المحادثة" aria-live="polite" aria-relevant="additions" class="messages" id="messages" role="log"></div>
 <form class="composer" data-busy-region="" id="composer">
-<input aria-label="Message" autocomplete="off" id="messageInput" maxlength="4000" placeholder="Type a message…" required="" type="text"/>
-<button aria-label="Send message" class="send-btn" id="sendBtn" type="submit">➤</button>
+<input aria-label="الرسالة" autocomplete="off" id="messageInput" maxlength="4000" placeholder="اكتب رسالة…" required="" type="text"/>
+<button aria-label="إرسال الرسالة" class="send-btn" id="sendBtn" type="submit">◀</button>
 </form>
 </section>
 <section class="view" id="view-invites">
 <header class="view-header">
 <div>
-<h1>Invitations</h1>
-<p class="muted">Pending group invites.</p>
+<h1>الدعوات</h1>
+<p class="muted">دعوات المجموعات بانتظار ردّك.</p>
 </div>
 </header>
 <div class="invites-list" id="invitesList"></div>
 <div class="empty" hidden="" id="invitesEmpty">
 <div class="empty-emoji">📭</div>
-<h3>You're all caught up</h3>
-<p class="muted">No pending invitations right now.</p>
+<h3>لا توجد دعوات جديدة</h3>
+<p class="muted">ليس لديك دعوات معلّقة حاليًا.</p>
 </div>
 </section>
 </main>
@@ -129,23 +125,23 @@
 <!-- CREATE GROUP MODAL -->
 <div class="chat-modal hidden" id="createGroupModal">
 <div class="modal-box">
-<h3>New Group</h3>
+<h3>مجموعة جديدة</h3>
 <form data-busy-region="" id="createGroupForm"><p class="error-msg" hidden="" id="groupError" role="alert"></p>
 <div class="form-group">
-<label for="newGroupName">Name</label>
-<input id="newGroupName" maxlength="80" placeholder="e.g. Match Day Chat" required="" type="text"/>
+<label for="newGroupName">الاسم</label>
+<input id="newGroupName" maxlength="80" placeholder="مثال: دردشة يوم المباراة" required="" type="text"/>
 </div>
 <div class="form-group">
-<label for="newGroupEmoji">Emoji</label>
+<label for="newGroupEmoji">الرمز التعبيري</label>
 <input id="newGroupEmoji" maxlength="16" placeholder="⚽" type="text"/>
 </div>
 <div class="form-group">
-<label for="newGroupDesc">Description</label>
-<input id="newGroupDesc" maxlength="200" placeholder="What's this group for?" type="text"/>
+<label for="newGroupDesc">الوصف</label>
+<input id="newGroupDesc" maxlength="200" placeholder="ما موضوع هذه المجموعة؟" type="text"/>
 </div>
 <div class="modal-actions">
-<button class="btn-secondary" data-dialog-cancel="" id="cancelCreateGroup" type="button">Cancel</button>
-<button class="btn-primary" id="saveGroupButton" type="submit">Create</button>
+<button class="btn-secondary" data-dialog-cancel="" id="cancelCreateGroup" type="button">إلغاء</button>
+<button class="btn-primary" id="saveGroupButton" type="submit">إنشاء</button>
 </div>
 </form>
 </div>

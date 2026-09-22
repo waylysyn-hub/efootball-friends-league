@@ -1,3 +1,4 @@
+import { displayName, playerInitials } from '../../shared/locale.js';
 import { NICKNAMES, state } from './state.js';
 import { esc, formatDate } from './ui.js';
 import { selectAchievementsPlayer } from './achievements.js';
@@ -12,11 +13,11 @@ export function nick(name) { return NICKNAMES[name] ? NICKNAMES[name].nick : '';
 
 export function playerLegendLabel(name) {
   const n = NICKNAMES[name];
-  return n ? `${n.icon} ${n.nick}` : name;
+  return n ? `${n.icon} ${n.nick}` : displayName(name);
 }
 
 export function matchPlayerLabel(name) {
-  return esc(name);
+  return esc(displayName(name));
 }
 
 export function fillPlayerSelect(selectEl, emptyLabel) {
@@ -26,25 +27,25 @@ export function fillPlayerSelect(selectEl, emptyLabel) {
   getPlayers().forEach(p => {
     const opt = document.createElement('option');
     opt.value = p;
-    opt.textContent = p;
+    opt.textContent = displayName(p);
     selectEl.appendChild(opt);
   });
   if (prev && [...selectEl.options].some(o => o.value === prev)) selectEl.value = prev;
 }
 
 export function populateMatchPlayerDropdowns() {
-  fillPlayerSelect(document.getElementById('matchPlayer1'), 'Select Player');
-  fillPlayerSelect(document.getElementById('matchPlayer2'), 'Select Player');
+  fillPlayerSelect(document.getElementById('matchPlayer1'), "اختر اللاعب");
+  fillPlayerSelect(document.getElementById('matchPlayer2'), "اختر اللاعب");
   fillPlayerSelect(document.getElementById('editPlayer1'), null);
   fillPlayerSelect(document.getElementById('editPlayer2'), null);
 }
 
 export function populateAllPlayerDropdowns() {
-  fillPlayerSelect(document.getElementById('loginUsername'), '— SELECT PLAYER —');
+  fillPlayerSelect(document.getElementById('loginUsername'), "— اختر اللاعب —");
   populateMatchPlayerDropdowns();
-  fillPlayerSelect(document.getElementById('historyFilterPlayer'), 'All Players');
-  fillPlayerSelect(document.getElementById('h2hPlayer1'), 'Player 1');
-  fillPlayerSelect(document.getElementById('h2hPlayer2'), 'Player 2');
+  fillPlayerSelect(document.getElementById('historyFilterPlayer'), "كل اللاعبين");
+  fillPlayerSelect(document.getElementById('h2hPlayer1'), "اللاعب الأول");
+  fillPlayerSelect(document.getElementById('h2hPlayer2'), "اللاعب الثاني");
 
   const login = document.getElementById('loginUsername');
   if (!login.value) login.value = window.EFLAuth.lastPlayer();
@@ -60,7 +61,7 @@ export function renderPlayerTabBars() {
     profileTabs.innerHTML = players
       .map(
         (p, i) =>
-          `<button class="player-tab${i === 0 ? ' active' : ''}" type="button" data-player="${esc(p)}">${esc(p)}</button>`
+          `<button class="player-tab${i === 0 ? ' active' : ''}" type="button" data-player="${esc(p)}">${esc(displayName(p))}</button>`
       )
       .join('');
     profileTabs.querySelectorAll('.player-tab').forEach((btn) => {
@@ -72,7 +73,7 @@ export function renderPlayerTabBars() {
     achTabs.innerHTML = players
       .map(
         (p, i) =>
-          `<button class="player-tab${i === 0 ? ' active' : ''}" type="button" data-player="${esc(p)}">${esc(p)}</button>`
+          `<button class="player-tab${i === 0 ? ' active' : ''}" type="button" data-player="${esc(p)}">${esc(displayName(p))}</button>`
       )
       .join('');
     achTabs.querySelectorAll('.player-tab').forEach((btn) => {
@@ -101,40 +102,40 @@ export function selectProfilePlayer(name, btn) {
 
   const html = `
     <div class="profile-header">
-      <div class="profile-avatar">${name.charAt(0)}</div>
+      <div class="profile-avatar">${esc(playerInitials(name))}</div>
       <div class="profile-info">
-        <h3>${esc(name)}</h3>
+        <h3>${esc(displayName(name))}</h3>
         ${nickChip(name, true)}
-        <div class="profile-rank">${s.winRate}% win rate · ${s.points} points</div>
+        <div class="profile-rank">نسبة الفوز: ${s.winRate}% · النقاط: ${s.points}</div>
       </div>
     </div>
     <div class="profile-stats-grid">
-      ${statItem('PLAYED', s.played)}
-      ${statItem('WINS', s.wins, 'neon')}
-      ${statItem('DRAWS', s.draws)}
-      ${statItem('LOSSES', s.losses, 'red')}
-      ${statItem('GOALS SCORED', s.goalsFor, 'neon')}
-      ${statItem('GOALS CONCEDED', s.goalsAgainst, 'red')}
-      ${statItem('GOAL DIFF', (s.goalDiff >= 0 ? '+' : '') + s.goalDiff, s.goalDiff >= 0 ? 'neon' : 'red')}
-      ${statItem('WIN RATE', s.winRate + '%', 'gold')}
-      ${statItem('AVG GOALS/MATCH', s.avgGoals)}
-      ${statItem('WIN STREAK', s.currentStreak)}
-      ${statItem('BEST STREAK', s.bestStreak)}
-      ${statItem('CLEAN SHEETS', s.cleanSheets)}
-      ${statItem('POINTS', s.points, 'neon')}
-      ${statItem('SEASON TITLES', s.seasonWins, 'gold')}
-      ${s.biggestWin ? statItem('BIGGEST WIN', `${s.biggestWin.gf}–${s.biggestWin.ga} vs ${s.biggestWin.opp}`, 'neon') : statItem('BIGGEST WIN', '—')}
-      ${s.biggestLoss ? statItem('BIGGEST LOSS', `${s.biggestLoss.gf}–${s.biggestLoss.ga} vs ${s.biggestLoss.opp}`, 'red') : statItem('BIGGEST LOSS', '—')}
+      ${statItem("المباريات", s.played)}
+      ${statItem("الانتصارات", s.wins, 'neon')}
+      ${statItem("التعادلات", s.draws)}
+      ${statItem("الهزائم", s.losses, 'red')}
+      ${statItem("الأهداف المسجّلة", s.goalsFor, 'neon')}
+      ${statItem("الأهداف المستقبَلة", s.goalsAgainst, 'red')}
+      ${statItem("فارق الأهداف", (s.goalDiff >= 0 ? '+' : '') + s.goalDiff, s.goalDiff >= 0 ? 'neon' : 'red')}
+      ${statItem("نسبة الفوز", s.winRate + '%', 'gold')}
+      ${statItem("متوسط الأهداف للمباراة", s.avgGoals)}
+      ${statItem("الانتصارات المتتالية", s.currentStreak)}
+      ${statItem("أفضل سلسلة انتصارات", s.bestStreak)}
+      ${statItem("شباك نظيفة", s.cleanSheets)}
+      ${statItem("النقاط", s.points, 'neon')}
+      ${statItem("ألقاب المواسم", s.seasonWins, 'gold')}
+      ${s.biggestWin ? statItem("أكبر فوز", `${s.biggestWin.gf}–${s.biggestWin.ga} ضد ${displayName(s.biggestWin.opp)}`, 'neon') : statItem("أكبر فوز", '—')}
+      ${s.biggestLoss ? statItem("أكبر خسارة", `${s.biggestLoss.gf}–${s.biggestLoss.ga} ضد ${displayName(s.biggestLoss.opp)}`, 'red') : statItem("أكبر خسارة", '—')}
     </div>
     ${recentMatches.length > 0 ? `
     <div class="panel mt-16">
-      <div class="panel-header">⚽ RECENT MATCHES</div>
+      <div class="panel-header">⚽ أحدث المباريات</div>
       <div class="panel-body">
         ${recentMatches.map(m => `
           <div class="recent-match-mini">
-            <strong>${esc(m.player1)}</strong>
-            <span class="recent-match-score"> ${m.goals1}–${m.goals2} </span>
-            <strong>${esc(m.player2)}</strong>
+            <strong>${esc(displayName(m.player1))}</strong>
+            <span class="recent-match-score"> <bdi>${m.goals1}</bdi> — <bdi>${m.goals2}</bdi> </span>
+            <strong>${esc(displayName(m.player2))}</strong>
             <span class="text-dim profile-match-date">${formatDate(m.date)}</span>
           </div>`).join('')}
       </div>

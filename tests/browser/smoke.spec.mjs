@@ -1,18 +1,24 @@
 import { test,expect } from '@playwright/test';
 import { players,ids } from '../helpers/fixture.mjs';
+const arabicPlayers=['وائل','عمر','عبد الرحيم','محمد','مصطفى','عبد القادر'];
 const leaguePages=['dashboard','leagueTable','matchHistory','matchDetails','recordMatch','squads','playerProfile','statistics','footballStats','headToHead','rivalries','seasons','awards','achievements','questions','settings'];
-async function noOverflow(page){await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);}
+async function noOverflow(page){await page.evaluate(()=>document.fonts.ready);await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);}
 function watchErrors(page){const errors=[];page.on('pageerror',error=>errors.push(error.message));return errors;}
 for(const app of ['league','groups-chat'])test(app+' login exposes all six players',async({page})=>{
  const errors=watchErrors(page);await page.goto('/'+app+'/index.html?fixture=public');
  await expect(page.locator('#loginUsername option')).toHaveCount(7);
- expect(await page.locator('#loginUsername option').allTextContents()).toEqual(expect.arrayContaining(players));
+ expect(await page.locator('#loginUsername option').allTextContents()).toEqual(expect.arrayContaining(arabicPlayers));
+ expect(await page.locator('#loginUsername option').evaluateAll(options=>options.map(option=>option.value).filter(Boolean))).toEqual(expect.arrayContaining(players));
+ await expect(page.locator('html')).toHaveAttribute('lang','ar');await expect(page.locator('html')).toHaveAttribute('dir','rtl');
  await expect(page.locator('#loginButton')).toBeEnabled();await noOverflow(page);expect(errors).toEqual([]);
 });
 test('League major views, result editor and modal fit the viewport',async({page})=>{
  const errors=watchErrors(page);await page.goto('/league/index.html?fixture=admin');await expect(page.locator('#mainApp')).toBeVisible();
  for(const name of leaguePages){await page.evaluate(name=>window.League.navigateTo(name),name);await expect(page.locator('#page-'+name)).toBeVisible();await noOverflow(page);}
  await page.evaluate(id=>window.League.openMatchDetails(id),ids.match);await expect(page.locator('.match-details-score')).toBeVisible();
+ await expect(page.locator('.md-score bdi')).toHaveText(['2','1']);
+ expect(await page.locator('.md-score bdi').evaluateAll(scores=>scores[0].getBoundingClientRect().left>scores[1].getBoundingClientRect().left)).toBe(true);
+ await page.evaluate(()=>window.League.navigateTo('matchHistory'));await page.locator('#historySearch').fill('وائل');await expect(page.locator('.match-card')).toHaveCount(1);
  await page.evaluate(id=>window.League.openEditModal(id),ids.match);await expect(page.locator('#editMatchModal')).toBeVisible();await noOverflow(page);await page.keyboard.press('Escape');await expect(page.locator('#editMatchModal')).toBeHidden();expect(errors).toEqual([]);
 });
 test('Hub public views load and keep tables inside safe scroll areas',async({page})=>{

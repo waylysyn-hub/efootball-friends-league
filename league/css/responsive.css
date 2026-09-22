@@ -6,8 +6,8 @@
   .fb-lb-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 1024px) {
-  .sidebar { transform: translateX(-100%); }.sidebar.open { transform: translateX(0); box-shadow: var(--shadow); }
-  .sidebar-overlay.visible { display: block; }.main-content { margin-left: 0; width: 100%; }.mobile-menu-btn { display: grid; }
+  .sidebar { transform: translateX(100%); }.sidebar.open { transform: translateX(0); box-shadow: var(--shadow); }
+  .sidebar-overlay.visible { display: block; }.main-content { margin-inline-start: 0; width: 100%; }.mobile-menu-btn { display: grid; }
 }
 @media (max-width: 768px) {
   .dashboard-grid, .stats-grid { grid-template-columns: 1fr; }.stat-cards-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
@@ -18,7 +18,7 @@
   .topbar { padding: 0 16px; height: 68px; gap: 12px; }.topbar-right { gap: 8px; }.topbar-player, .viewer-badge, .season-badge { display: none; }
   .page { padding: 24px 16px 40px; }.page-header { margin-bottom: 24px; }.page-header-flex { align-items: flex-start; flex-direction: column; }
   .page-title { font-size: 1.8rem; }.page-subtitle { font-size: .9375rem; }
-  .stat-card { padding: 20px 16px; }.stat-card-label { font-size: .8125rem; }.stat-card-icon { right: 14px; top: 20px; }.stat-card-value { font-size: 1.375rem; margin-top: 24px; }
+  .stat-card { padding: 20px 16px; }.stat-card-label { font-size: .8125rem; }.stat-card-icon { inset-inline-end: 14px; top: 20px; }.stat-card-value { font-size: 1.375rem; margin-top: 24px; }
   .stat-cards-grid { gap: 12px; }.panel-header, .panel-body { padding: 18px; }
   .match-form-card { padding: 20px 16px; }.match-vs-header { grid-template-columns: 1fr; gap: 8px; }.match-vs-header .vs-badge { min-height: 24px; }
   .match-score-row { grid-template-columns: minmax(0,1fr) 20px minmax(0,1fr); gap: 8px; }.score-input-group input { height: 84px; font-size: 2.5rem; }

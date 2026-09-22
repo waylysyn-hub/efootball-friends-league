@@ -1,3 +1,4 @@
+import { displayName, displaySeason, playerInitials, AR_LOCALE } from './shared/locale.js';
 import { loadTournamentData } from './hub-api.js';
 import { escapeHtml as esc, errorMessage, debounce, setupDrawer, setupConnectivity } from './shared/ui.js';
 // ---------- Helpers ----------
@@ -18,19 +19,19 @@ function rankBadge(rank) {
 function formatDate(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(AR_LOCALE, { month: 'short', day: 'numeric' });
 }
 
 function formatTime(iso) {
-  if (!iso) return 'TBD';
+  if (!iso) return "لم يُحدّد بعد";
   const d = new Date(iso);
-  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return d.toLocaleTimeString(AR_LOCALE, { hour: 'numeric', minute: '2-digit' });
 }
 
 function teamLogo(team, size) {
   const cls = team.color_class ? ` ${team.color_class}` : '';
   const style = size ? ' data-size="small"' : '';
-  return `<div class="hub-team-logo${cls}"${style}>${esc(team.abbreviation)}</div>`;
+  return `<div class="hub-team-logo${cls}"${style}>${esc(playerInitials(team.name))}</div>`;
 }
 
 // ---------- Compute standings from fixtures ----------
@@ -118,7 +119,7 @@ function computeTopScorers(scorers, teams, limit = 5) {
   scorers.forEach((s) => {
     const key = `${s.player_name}::${s.team_id}`;
     if (!map[key]) {
-      map[key] = { name: s.player_name || 'Unknown', team: teamById(teams, s.team_id), goals: 0 };
+      map[key] = { name: s.player_name || "غير معروف", team: teamById(teams, s.team_id), goals: 0 };
     }
     map[key].goals += s.goals ?? 1;
   });
@@ -176,7 +177,7 @@ function renderTabs(seasons, currentId) {
       (s) => `
     <button class="hub-tab${s.id === currentId ? ' active' : ''}" type="button" data-season-id="${s.id}">
       <div class="hub-tab-icon ${s.active ? 'gold' : 'blue'}">${s.active ? '🏆' : '📅'}</div>
-      <div class="hub-tab-label">${esc(s.name)}</div>
+      <div class="hub-tab-label">${esc(displaySeason(s.name))}</div>
       <span class="hub-tab-label-ar">${s.active ? 'الموسم النشط' : 'موسم'}</span>
     </button>`
     )
@@ -194,13 +195,13 @@ function renderTabs(seasons, currentId) {
 function renderStandings(tournament, standings) {
   const subtitle =
     tournament.total_matches > 0
-      ? `${esc(tournament.season_name || 'Season')} &nbsp;|&nbsp; ${tournament.total_matches} ${tournament.total_matches === 1 ? 'match' : 'matches'} played`
+      ? `${esc(tournament.season_name || "الموسم")} &nbsp;|&nbsp; المباريات المكتملة: ${tournament.total_matches}`
       : esc(tournament.season_name || '');
 
   if (!standings.length) {
     $('#standingsCard').innerHTML = `
       <div class="hub-card-header">
-        <div><h2 class="hub-card-title">${esc(tournament.name)} Standings</h2>
+        <div><h2 class="hub-card-title">ترتيب ${esc(tournament.name)}</h2>
         <div class="hub-card-subtitle">${subtitle}</div></div>
       </div>
       <div class="hub-empty-inline"><p>لا توجد فرق أو نتائج بعد.</p></div>`;
@@ -212,7 +213,7 @@ function renderStandings(tournament, standings) {
       (r) => `
     <tr class="rank-${r.rank}">
       <td><span class="hub-rank-badge ${rankBadge(r.rank)}">${r.rank}</span></td>
-      <td><div class="hub-team-cell">${teamLogo(r.team)}<span class="hub-team-name">${esc(r.team.name)}</span></div></td>
+      <td><div class="hub-team-cell">${teamLogo(r.team)}<span class="hub-team-name">${esc(displayName(r.team.name))}</span></div></td>
       <td>${r.pld}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td>
       <td>${r.gf}</td><td>${r.ga}</td><td>${r.gd > 0 ? '+' : ''}${r.gd}</td>
       <td class="pts">${r.pts}</td>
@@ -222,45 +223,45 @@ function renderStandings(tournament, standings) {
 
   $('#standingsCard').innerHTML = `
     <div class="hub-card-header">
-      <div><h2 class="hub-card-title">${esc(tournament.name)} Standings</h2>
+      <div><h2 class="hub-card-title">ترتيب ${esc(tournament.name)}</h2>
       <div class="hub-card-subtitle">${subtitle}</div></div>
     </div>
-    <div class="table-scroll" tabindex="0" role="region" aria-label="League standings"><table class="hub-standings">
+    <div class="table-scroll" tabindex="0" role="region" aria-label="ترتيب الدوري"><table class="hub-standings">
       <thead><tr>
-        <th>#</th><th>Team</th><th>PLD</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>PTS</th>
+        <th>#</th><th>الفريق</th><th>لعب</th><th>فوز</th><th>تعادل</th><th>خسارة</th><th>له</th><th>عليه</th><th>الفارق</th><th>النقاط</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
-    <div class="hub-card-footer"><a href="league/index.html#leagueTable" class="hub-link">View Full Standings →</a></div>`;
+    <div class="hub-card-footer"><a href="league/index.html#leagueTable" class="hub-link">عرض الترتيب الكامل ←</a></div>`;
 }
 
 function renderAside(tournament, teams, stats) {
-  const pts = `${tournament.points_win ?? 3}-${tournament.points_draw ?? 1}-${tournament.points_loss ?? 0}`;
+  const pts = `فوز ${tournament.points_win ?? 3} · تعادل ${tournament.points_draw ?? 1} · خسارة ${tournament.points_loss ?? 0}`;
 
   $('#asidePanel').innerHTML = `
     <div class="hub-card">
-      <div class="hub-card-header"><h2 class="hub-card-title">Tournament Information</h2></div>
+      <div class="hub-card-header"><h2 class="hub-card-title">معلومات البطولة</h2></div>
       <div class="hub-info-list">
-        <div class="hub-info-item"><span>Format</span><span>${esc(tournament.format || '—')}</span></div>
-        <div class="hub-info-item"><span>Teams</span><span>${teams.length}</span></div>
-        <div class="hub-info-item"><span>Matches</span><span>${tournament.total_matches || 0}</span></div>
-        <div class="hub-info-item"><span>Points System</span><span>${pts}</span></div>
+        <div class="hub-info-item"><span>النظام</span><span>${esc(tournament.format || '—')}</span></div>
+        <div class="hub-info-item"><span>الفرق</span><span>${teams.length}</span></div>
+        <div class="hub-info-item"><span>المباريات</span><span>${tournament.total_matches || 0}</span></div>
+        <div class="hub-info-item"><span>نظام النقاط</span><span>${pts}</span></div>
       </div>
     </div>
     <div class="hub-card hub-section" id="section-statistics">
-      <div class="hub-card-header"><h2 class="hub-card-title">Quick Stats</h2></div>
+      <div class="hub-card-header"><h2 class="hub-card-title">إحصائيات سريعة</h2></div>
       <div class="hub-stats-grid">
-        <div class="hub-stat"><div class="hub-stat-icon">⚽</div><div class="hub-stat-value">${stats.total_matches}</div><div class="hub-stat-label">Total Matches</div></div>
-        <div class="hub-stat"><div class="hub-stat-icon">🥅</div><div class="hub-stat-value">${stats.total_goals}</div><div class="hub-stat-label">Total Goals</div></div>
-        <div class="hub-stat"><div class="hub-stat-icon">📊</div><div class="hub-stat-value">${stats.goals_per_match}</div><div class="hub-stat-label">Goals / Match</div></div>
-        <div class="hub-stat"><div class="hub-stat-icon">🏠</div><div class="hub-stat-value">${stats.home_wins}</div><div class="hub-stat-label">Home Wins</div></div>
-        <div class="hub-stat"><div class="hub-stat-icon">🤝</div><div class="hub-stat-value">${stats.draws}</div><div class="hub-stat-label">Draws</div></div>
-        <div class="hub-stat"><div class="hub-stat-icon">✈️</div><div class="hub-stat-value">${stats.away_wins}</div><div class="hub-stat-label">Away Wins</div></div>
+        <div class="hub-stat"><div class="hub-stat-icon">⚽</div><div class="hub-stat-value">${stats.total_matches}</div><div class="hub-stat-label">إجمالي المباريات</div></div>
+        <div class="hub-stat"><div class="hub-stat-icon">🥅</div><div class="hub-stat-value">${stats.total_goals}</div><div class="hub-stat-label">إجمالي الأهداف</div></div>
+        <div class="hub-stat"><div class="hub-stat-icon">📊</div><div class="hub-stat-value">${stats.goals_per_match}</div><div class="hub-stat-label">أهداف لكل مباراة</div></div>
+        <div class="hub-stat"><div class="hub-stat-icon">🏠</div><div class="hub-stat-value">${stats.home_wins}</div><div class="hub-stat-label">فوز صاحب الأرض</div></div>
+        <div class="hub-stat"><div class="hub-stat-icon">🤝</div><div class="hub-stat-value">${stats.draws}</div><div class="hub-stat-label">التعادلات</div></div>
+        <div class="hub-stat"><div class="hub-stat-icon">✈️</div><div class="hub-stat-value">${stats.away_wins}</div><div class="hub-stat-label">فوز الضيف</div></div>
       </div>
     </div>
     ${hubProfile?.role === 'admin' ? `<a href="league/index.html#recordMatch" class="hub-btn-gold" id="addResultBtn">
-      <span>+ ADD MATCH RESULT</span>
-      <span class="hub-btn-gold-sub">Record a new match result</span>
+      <span>+ إضافة نتيجة مباراة</span>
+      <span class="hub-btn-gold-sub">سجّل نتيجة مباراة جديدة</span>
     </a>` : ''}`;
 }
 
@@ -285,9 +286,9 @@ function renderBottom(teams, fixtures, scorers) {
           return `<li class="hub-match-item">
           <span class="hub-match-date">${formatDate(f.played_at)}</span>
           <div class="hub-match-teams">
-            ${teamLogo(home, 24)}<span>${esc(home.name.toUpperCase())}</span>
-            <span class="hub-match-score">${f.home_score} - ${f.away_score}</span>
-            <span>${esc(away.name.toUpperCase())}</span>${teamLogo(away, 24)}
+            ${teamLogo(home, 24)}<span>${esc(displayName(home.name))}</span>
+            <span class="hub-match-score"><bdi>${f.home_score}</bdi> — <bdi>${f.away_score}</bdi></span>
+            <span>${esc(displayName(away.name))}</span>${teamLogo(away, 24)}
           </div></li>`;
         })
         .join('')
@@ -299,7 +300,7 @@ function renderBottom(teams, fixtures, scorers) {
           (s) => `<div class="hub-scorer-item">
         <span class="hub-scorer-rank${s.rank <= 3 ? ' top' : ''}">${s.rank}</span>
         ${teamLogo(s.team, 28)}
-        <div class="hub-scorer-info"><div class="hub-scorer-name">${esc(s.name)}</div><div class="hub-scorer-team">${esc(s.team.name)}</div></div>
+        <div class="hub-scorer-info"><div class="hub-scorer-name">${esc(s.name)}</div><div class="hub-scorer-team">${esc(displayName(s.team.name))}</div></div>
         <span class="hub-scorer-goals">${s.goals}</span></div>`
         )
         .join('')
@@ -313,9 +314,9 @@ function renderBottom(teams, fixtures, scorers) {
           return `<li class="hub-match-item">
           <span class="hub-match-date">${formatDate(f.scheduled_at)}</span>
           <div class="hub-match-teams">
-            ${teamLogo(home, 24)}<span>${esc(home.name.toUpperCase())}</span>
-            <span class="match-versus">vs</span>
-            <span>${esc(away.name.toUpperCase())}</span>${teamLogo(away, 24)}
+            ${teamLogo(home, 24)}<span>${esc(displayName(home.name))}</span>
+            <span class="match-versus">ضد</span>
+            <span>${esc(displayName(away.name))}</span>${teamLogo(away, 24)}
           </div>
           <span class="hub-match-time">${formatTime(f.scheduled_at)}</span></li>`;
         })
@@ -323,11 +324,11 @@ function renderBottom(teams, fixtures, scorers) {
     : '<div class="hub-empty-inline"><p>لا توجد مباريات قادمة.</p></div>';
 
   $('#bottomGrid').innerHTML = `
-    <div class="hub-card hub-section" id="section-matches"><div class="hub-card-header"><h2 class="hub-card-title">Recent Matches</h2></div>
+    <div class="hub-card hub-section" id="section-matches"><div class="hub-card-header"><h2 class="hub-card-title">أحدث المباريات</h2></div>
       <ul class="hub-match-list">${recentHtml}</ul></div>
-    <div class="hub-card hub-section" id="section-players"><div class="hub-card-header"><h2 class="hub-card-title">Top Scorers</h2></div>
+    <div class="hub-card hub-section" id="section-players"><div class="hub-card-header"><h2 class="hub-card-title">الهدافون</h2></div>
       <div>${scorersHtml}</div></div>
-    <div class="hub-card hub-section" id="section-upcoming"><div class="hub-card-header"><h2 class="hub-card-title">Upcoming Matches</h2></div>
+    <div class="hub-card hub-section" id="section-upcoming"><div class="hub-card-header"><h2 class="hub-card-title">المباريات القادمة</h2></div>
       <ul class="hub-match-list">${upcomingHtml}</ul></div>`;
 }
 
@@ -338,8 +339,8 @@ function renderHub(data) {
     $('#loading').classList.add('hidden');
     $('#emptyState').classList.remove('hidden');
     $('#hubContent').classList.add('hidden');
-    $('#emptyState h2').textContent = 'Your league starts here';
-    $('#emptyState p').textContent = 'Players and results will appear when your league is ready.';
+    $('#emptyState h2').textContent = "دوريك يبدأ من هنا";
+    $('#emptyState p').textContent = "سيظهر اللاعبون والنتائج عندما يصبح الدوري جاهزًا.";
     return;
   }
 
@@ -349,7 +350,7 @@ function renderHub(data) {
   const stats = computeQuickStats(fixtures);
 
   hasContent = true;
-  $('#hubSeasonSummary').textContent = `${tournament.season_name} · ${teams.length} players · ${stats.total_matches} ${stats.total_matches === 1 ? 'match' : 'matches'}`;
+  $('#hubSeasonSummary').textContent = `${tournament.season_name} · عدد اللاعبين: ${teams.length} · المباريات: ${stats.total_matches}`;
   renderTabs(seasons, activeSeasonId);
   renderStandings(tournament, standings);
   renderAside(tournament, teams, stats);
@@ -405,7 +406,7 @@ async function loadHub(seasonId = activeSeasonId) {
     if (ticket !== requestVersion) return;
     $('#loading').classList.add('hidden');
     $('#hubError').hidden = false;
-    $('#hubErrorText').textContent = errorMessage(error, 'Could not load the competition. Please try again.');
+    $('#hubErrorText').textContent = errorMessage(error, "تعذّر تحميل البطولة. حاول مجددًا.");
   }
 }
 async function init() {

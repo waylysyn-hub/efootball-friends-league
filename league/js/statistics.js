@@ -1,3 +1,4 @@
+import { displayName } from '../../shared/locale.js';
 import { populateSeasonDropdowns } from './seasons.js';
 import { state } from './state.js';
 import { computeFootballPlayerStats, fbPlayerKey, getMatchIdsForSeason, getSeasonStatTotals } from './goal-events.js';
@@ -17,8 +18,8 @@ export function renderFootballStats() {
   if (!state.goalsReady) {
     contLb.innerHTML = '';
     contTbl.innerHTML = `<div class="qa-setup-banner">
-      <h3>⚠️ Goal events table required</h3>
-      <p>Run <code>supabase-match-goal-events-migration.sql</code> in Supabase SQL Editor.</p>
+      <h3>تفاصيل الأهداف غير متاحة</h3>
+      <p>تواصل مع مدير الدوري لإكمال الإعداد، ثم حدّث الصفحة.</p>
     </div>`;
     if (detail) detail.classList.add('hidden');
     return;
@@ -35,7 +36,7 @@ export function renderFootballStats() {
 
   const lbCard = (title, icon, rows, valKey) => {
     if (!rows.length || rows[0][valKey] === 0) {
-      return `<div class="fb-lb-card"><div class="fb-lb-title">${icon} ${title}</div><p class="text-dim">No data yet</p></div>`;
+      return `<div class="fb-lb-card"><div class="fb-lb-title">${icon} ${title}</div><p class="text-dim">لا توجد بيانات بعد</p></div>`;
     }
     return `<div class="fb-lb-card">
       <div class="fb-lb-title">${icon} ${title}</div>
@@ -47,13 +48,13 @@ export function renderFootballStats() {
 
   contLb.innerHTML = `
     <div class="fb-lb-grid">
-      ${lbCard('Top Scorers', '⚽', topG, 'goals')}
-      ${lbCard('Top Assists', '🎯', topA, 'assists')}
-      ${lbCard('Goal Contributions', '⭐', topC, 'contributions')}
+      ${lbCard("الهدافون", '⚽', topG, 'goals')}
+      ${lbCard("صنّاع الأهداف", '🎯', topA, 'assists')}
+      ${lbCard("المساهمات التهديفية", '⭐', topC, 'contributions')}
     </div>`;
 
   if (!players.length) {
-    contTbl.innerHTML = '<div class="empty-state">No football player stats yet. Record matches with goal events.</div>';
+    contTbl.innerHTML = "<div class=\"empty-state\">لا توجد إحصائيات بعد. سجّل المباريات مع تفاصيل أهدافها.</div>";
     if (detail) detail.classList.add('hidden');
     return;
   }
@@ -62,7 +63,7 @@ export function renderFootballStats() {
     <table class="league-table fb-stats-table">
       <thead>
         <tr>
-          <th>Player</th><th>G</th><th>A</th><th>G+A</th><th>Matches</th><th>G/M</th>
+          <th>اللاعب</th><th>الأهداف</th><th>الأسيست</th><th>المساهمات</th><th>المباريات</th><th>أهداف/مباراة</th>
         </tr>
       </thead>
       <tbody>
@@ -103,20 +104,20 @@ export function showFootballPlayerDetail(name) {
       <div class="panel-header">👤 ${esc(name)}</div>
       <div class="panel-body">
         <div class="fb-detail-stats">
-          <span>⚽ ${goals.length} goals</span>
-          <span>🎯 ${assists.length} assists</span>
-          <span>📋 ${matchSet.size} matches</span>
-          <span>📈 ${gpg} goals/match</span>
+          <span>⚽ الأهداف: ${goals.length}</span>
+          <span>🎯 التمريرات الحاسمة: ${assists.length}</span>
+          <span>📋 المباريات: ${matchSet.size}</span>
+          <span>📈 أهداف لكل مباراة: ${gpg}</span>
         </div>
-        ${goals.length ? `<h4 class="fb-detail-h4">Goals</h4>
+        ${goals.length ? `<h4 class="fb-detail-h4">الأهداف</h4>
           <ul class="fb-detail-list">${goals.sort((a,b)=>a.e.minute-b.e.minute).map(({e,m}) =>
-            `<li>${e.minute ? e.minute + "'" : '—'} vs ${esc(m.player1 === e.owner ? m.player2 : m.player1)} (${esc(e.owner)})${e.assist ? ' · A: ' + esc(e.assist) : ''}</li>`
+            `<li>${e.minute ? e.minute + "'" : '—'} ضد ${esc(displayName(m.player1 === e.owner ? m.player2 : m.player1))} (${esc(displayName(e.owner))})${e.assist ? ' · الأسيست: ' + esc(e.assist) : ''}</li>`
           ).join('')}</ul>` : ''}
-        ${assists.length ? `<h4 class="fb-detail-h4">Assists</h4>
+        ${assists.length ? `<h4 class="fb-detail-h4">التمريرات الحاسمة</h4>
           <ul class="fb-detail-list">${assists.map(({e,m}) =>
-            `<li>${e.minute ? e.minute + "'" : '—'} ${esc(e.scorer)} (${esc(e.owner)})</li>`
+            `<li>${e.minute ? e.minute + "'" : '—'} ${esc(e.scorer)} (${esc(displayName(e.owner))})</li>`
           ).join('')}</ul>` : ''}
-        <button type="button" class="btn-sm mt-8" onclick="document.getElementById('fbPlayerDetail').classList.add('hidden')">Close</button>
+        <button type="button" class="btn-sm mt-8" onclick="document.getElementById('fbPlayerDetail').classList.add('hidden')">إغلاق</button>
       </div>
     </div>`;
   detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -129,11 +130,11 @@ export function renderH2H() {
   if (!cont) return;
 
   if (!p1 || !p2) {
-    cont.innerHTML = '<div class="empty-state">Select two players to compare</div>';
+    cont.innerHTML = "<div class=\"empty-state\">اختر لاعبين للمقارنة</div>";
     return;
   }
   if (p1 === p2) {
-    cont.innerHTML = '<div class="empty-state">Please select two different players</div>';
+    cont.innerHTML = "<div class=\"empty-state\">اختر لاعبين مختلفين</div>";
     return;
   }
 
@@ -157,63 +158,63 @@ export function renderH2H() {
 
   cont.innerHTML = `
     <div class="h2h-panel">
-      <div class="panel-header">⚔️ OVERALL RECORD</div>
+      <div class="panel-header">⚔️ سجل المواجهات</div>
       <div class="panel-body">
         <div class="h2h-stat-grid">
           <div class="h2h-player-col">
-            <h3>${esc(p1)}</h3>
+            <h3>${esc(displayName(p1))}</h3>
             <div class="h2h-big-stat">${p1wins}</div>
-            <div class="text-dim">Wins</div>
+            <div class="text-dim">الانتصارات</div>
           </div>
           <div class="h2h-vs-col">
-            <div class="h2h-total">TOTAL<br><span class="h2h-total-value">${total}</span></div>
-            <div>DRAWS<br><span class="h2h-draws-value">${draws}</span></div>
+            <div class="h2h-total">الإجمالي<br><span class="h2h-total-value">${total}</span></div>
+            <div>التعادلات<br><span class="h2h-draws-value">${draws}</span></div>
           </div>
           <div class="h2h-player-col">
-            <h3>${esc(p2)}</h3>
+            <h3>${esc(displayName(p2))}</h3>
             <div class="h2h-big-stat">${p2wins}</div>
-            <div class="text-dim">Wins</div>
+            <div class="text-dim">الانتصارات</div>
           </div>
         </div>
         <div class="h2h-row">
           <div>${p1goals}</div>
-          <div class="label">GOALS</div>
+          <div class="label">الأهداف</div>
           <div>${p2goals}</div>
         </div>
         <div class="h2h-row">
           <div>${total > 0 ? (p1goals / total).toFixed(1) : '0'}</div>
-          <div class="label">AVG GOALS/M</div>
+          <div class="label">متوسط الأهداف للمباراة</div>
           <div>${total > 0 ? (p2goals / total).toFixed(1) : '0'}</div>
         </div>
         <div class="h2h-row">
           <div>${total > 0 ? ((p1wins / total) * 100).toFixed(0) : '0'}%</div>
-          <div class="label">WIN RATE</div>
+          <div class="label">نسبة الفوز</div>
           <div>${total > 0 ? ((p2wins / total) * 100).toFixed(0) : '0'}%</div>
         </div>
       </div>
     </div>
     ${matches.length > 0 ? `
     <div class="h2h-panel">
-      <div class="panel-header">📋 LAST MATCHES</div>
+      <div class="panel-header">📋 آخر المباريات</div>
       <div class="panel-body">
         ${matches.slice(0, 8).map(m => {
           const isP1first = m.player1 === p1;
           const g1 = isP1first ? m.goals1 : m.goals2;
           const g2 = isP1first ? m.goals2 : m.goals1;
-          let badge = `<span class="win-badge draw">DRAW</span>`;
-          if (g1 > g2) badge = `<span class="win-badge win">${esc(p1)} W</span>`;
-          else if (g2 > g1) badge = `<span class="win-badge win">${esc(p2)} W</span>`;
+          let badge = `<span class="win-badge draw">تعادل</span>`;
+          if (g1 > g2) badge = `<span class="win-badge win">${esc(displayName(p1))} فاز</span>`;
+          else if (g2 > g1) badge = `<span class="win-badge win">${esc(displayName(p2))} فاز</span>`;
           return `<div class="match-card compact-match">
             <div class="match-card-header"><span>${formatDate(m.date)}</span> | ${badge}</div>
             <div class="match-card-result">
-              <div class="match-player">${esc(p1)}</div>
-              <div class="match-score">${g1} — ${g2}</div>
-              <div class="match-player right">${esc(p2)}</div>
+              <div class="match-player">${esc(displayName(p1))}</div>
+              <div class="match-score"><bdi>${g1}</bdi> — <bdi>${g2}</bdi></div>
+              <div class="match-player right">${esc(displayName(p2))}</div>
             </div>
           </div>`;
         }).join('')}
       </div>
-    </div>` : '<div class="empty-state">No matches between these players yet</div>'}`;
+    </div>` : "<div class=\"empty-state\">لا توجد مواجهات بين هذين اللاعبين بعد</div>"}`;
 }
 
 export function renderRivalries() {
@@ -250,7 +251,7 @@ export function renderRivalries() {
 
   const pairArr = Object.values(pairs).filter(p => p.count > 0);
   if (pairArr.length === 0) {
-    cont.innerHTML = '<div class="empty-state">No matches recorded yet. Rivalries will appear automatically.</div>';
+    cont.innerHTML = "<div class=\"empty-state\">لم تُسجّل مباريات بعد. ستظهر المنافسات تلقائيًا.</div>";
     return;
   }
 
@@ -261,27 +262,27 @@ export function renderRivalries() {
   const rivalryCard = (icon, title, pair, desc) => `
     <div class="rivalry-card">
       <div class="rivalry-title">${icon} ${title}</div>
-      <div class="rivalry-matchup">${esc(pair.p1)} vs ${esc(pair.p2)}</div>
+      <div class="rivalry-matchup">${esc(displayName(pair.p1))} ضد ${esc(displayName(pair.p2))}</div>
       <div class="rivalry-stats">
-        <span>${esc(pair.p1)} wins: <span>${pair.wins1}</span></span>
-        <span>${esc(pair.p2)} wins: <span>${pair.wins2}</span></span>
-        <span>Draws: <span>${pair.draws}</span></span>
-        <span>Total Matches: <span>${pair.count}</span></span>
+        <span>${esc(displayName(pair.p1))} — انتصارات: <span>${pair.wins1}</span></span>
+        <span>${esc(displayName(pair.p2))} — انتصارات: <span>${pair.wins2}</span></span>
+        <span>التعادلات: <span>${pair.draws}</span></span>
+        <span>إجمالي المباريات: <span>${pair.count}</span></span>
         <span>${desc}</span>
       </div>
     </div>`;
 
   cont.innerHTML = `
-    ${rivalryCard('⚡', 'MOST PLAYED RIVALRY', mostPlayed, `${mostPlayed.count} matches total`)}
-    ${rivalryCard('⚔️', 'CLOSEST RIVALRY', closest, `Win difference: ${closest.winDiff}`)}
-    ${rivalryCard('🎯', 'HIGHEST SCORING RIVALRY', highestScoring, `Avg ${highestScoring.avgGoals.toFixed(1)} goals/match`)}
+    ${rivalryCard('⚡', "المواجهة الأكثر تكرارًا", mostPlayed, `إجمالي المباريات: ${mostPlayed.count}`)}
+    ${rivalryCard('⚔️', "المنافسة الأكثر تقاربًا", closest, `فارق الانتصارات: ${closest.winDiff}`)}
+    ${rivalryCard('🎯', "المواجهة الأكثر تهديفًا", highestScoring, `متوسط الأهداف للمباراة: ${highestScoring.avgGoals.toFixed(1)}`)}
     ${pairArr.length > 3 ? `<div class="panel mt-16">
-      <div class="panel-header">📊 ALL RIVALRIES</div>
+      <div class="panel-header">📊 كل المنافسات</div>
       <div class="panel-body">
         ${pairArr.sort((a,b)=>b.count-a.count).map(pair=>`
           <div class="mini-standings-row">
-            <span class="mini-name">${esc(pair.p1)} vs ${esc(pair.p2)}</span>
-            <span class="rivalry-count">${pair.count} matches</span>
+            <span class="mini-name">${esc(displayName(pair.p1))} ضد ${esc(displayName(pair.p2))}</span>
+            <span class="rivalry-count">المباريات: ${pair.count}</span>
           </div>`).join('')}
       </div>
     </div>` : ''}`;
@@ -314,7 +315,7 @@ export function renderStatistics() {
       ${data.sort((a, b) => b[valueKey] - a[valueKey]).map(d => {
         const pct = maxVal > 0 ? (Math.abs(d[valueKey]) / maxVal) * 100 : 0;
         return `<div class="chart-bar-row">
-          <div class="chart-bar-label">${esc(d.player)}</div>
+          <div class="chart-bar-label">${esc(displayName(d.player))}</div>
           <div class="chart-bar-track">
             <div class="chart-bar-fill ${color}${d[valueKey] < 0 ? ' negative' : ''}" style="width:${pct}%"></div>
           </div>
@@ -326,28 +327,28 @@ export function renderStatistics() {
   cont.innerHTML = `
     <div class="stats-grid">
       <div class="chart-section">
-        <div class="chart-title">⚽ GOALS SCORED</div>
+        <div class="chart-title">⚽ الأهداف المسجّلة</div>
         ${barChart(stats, maxGoals, 'goals', '')}
       </div>
       <div class="chart-section">
-        <div class="chart-title">🏆 WINS</div>
+        <div class="chart-title">🏆 الانتصارات</div>
         ${barChart(stats, maxWins, 'wins', 'blue')}
       </div>
       <div class="chart-section">
-        <div class="chart-title">📊 POINTS</div>
+        <div class="chart-title">📊 النقاط</div>
         ${barChart(stats, maxPts, 'points', 'orange')}
       </div>
       <div class="chart-section">
-        <div class="chart-title">📈 GOAL DIFFERENCE</div>
+        <div class="chart-title">📈 فارق الأهداف</div>
         ${barChart(stats, maxGD, 'goalDiff', 'purple')}
       </div>
       ${(state.goalsReady || state.statsReady) ? `
       <div class="chart-section">
-        <div class="chart-title">🎯 ASSISTS (goal events)</div>
+        <div class="chart-title">🎯 التمريرات الحاسمة</div>
         ${barChart(stats, maxAssists, 'assists', 'blue')}
       </div>
       <div class="chart-section">
-        <div class="chart-title">⚽ SESSION GOALS (goal events)</div>
+        <div class="chart-title">⚽ الأهداف المسجّلة في التفاصيل</div>
         ${barChart(stats, maxSessionG, 'sessionGoals', '')}
       </div>` : ''}
     </div>`;

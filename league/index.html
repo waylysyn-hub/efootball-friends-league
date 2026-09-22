@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Friends League · Majles Al-Kibbar</title>
-<meta content="Results, standings and player milestones for the Majles Al-Kibbar eFootball Friends League." name="description"/>
+<title>دوري الأصدقاء · مجلس الكبار</title>
+<meta content="نتائج دوري الأصدقاء في مجلس الكبار وترتيب اللاعبين وإنجازاتهم." name="description"/>
 <link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E" rel="icon"/>
 <link href="../shared/tokens.css" rel="stylesheet"/>
 <link href="../shared/components.css" rel="stylesheet"/>
@@ -13,57 +13,56 @@
 <link href="css/components.css" rel="stylesheet"/>
 <link href="css/responsive.css" rel="stylesheet"/>
 <link href="css/login.css" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
 </head>
 <body>
-<a class="skip-link" href="#loginForm">Skip to content</a>
+<a class="skip-link" href="#loginForm">انتقل إلى المحتوى</a>
 <div class="connection-status" hidden="" id="connectionStatus" role="status"></div>
 <!-- LOGIN SCREEN -->
 <div class="login-screen" id="loginScreen">
 <div aria-hidden="true" class="login-stadium"><img alt="" decoding="async" fetchpriority="high" height="1024" src="assets/login-stadium.webp" width="1536"/></div>
 <header class="login-topbar login-wrap">
-<a aria-label="Majles Al-Kibbar — Tournament Hub" class="login-brand" href="../index.html">
+<a aria-label="مجلس الكبار — مركز البطولات" class="login-brand" href="../index.html">
 <svg aria-hidden="true" class="login-crest" fill="none" viewBox="0 0 48 56"><path d="M24 2 44 9v19c0 12-9 21-20 26C13 49 4 40 4 28V9L24 2Z"/><path d="M24 7 39 12v16c0 9-6 16-15 21-9-5-15-12-15-21V12L24 7Z"/><path d="m15 21 5 5 4-9 4 9 5-5-3 13H18l-3-13Zm3 17h12"/><circle cx="24" cy="15" r="1"/></svg>
-<span><span class="login-brand-name" dir="rtl" lang="ar">مجلس الكبار</span><span class="login-brand-caption">MAJLES AL-KIBBAR</span></span>
+<span><span class="login-brand-name" dir="rtl" lang="ar">مجلس الكبار</span><span class="login-brand-caption">دوري الأصدقاء</span></span>
 </a>
-<span class="login-topbar-note">THE BEAUTIFUL GAME. OUR WAY.</span>
-<a aria-label="Tournament Hub" class="login-hub-link" href="../index.html"><span>Tournament Hub</span><svg aria-hidden="true" fill="none" viewBox="0 0 24 24"><path d="M7 17 17 7M7 7h10v10"/></svg></a>
+<span class="login-topbar-note">اللعبة الجميلة… على طريقتنا.</span>
+<a aria-label="مركز البطولات" class="login-hub-link" href="../index.html"><span>مركز البطولات</span><svg aria-hidden="true" fill="none" viewBox="0 0 24 24"><path d="M7 17 17 7M7 7h10v10"/></svg></a>
 </header>
 <div class="login-layout login-wrap">
 <section aria-labelledby="loginHeadline" class="login-story">
-<div class="login-eyebrow"><span aria-hidden="true"></span>THE FRIENDS LEAGUE</div>
-<h1 id="loginHeadline">Your game.<br/><span>Your legacy.</span></h1>
-<p class="login-story-copy">Great rivals. Better friends.<br/>Make every match part of your story.</p>
+<div class="login-eyebrow"><span aria-hidden="true"></span>دوري الأصدقاء</div>
+<h1 id="loginHeadline">لعبتك.<br/><span>بصمتك.</span></h1>
+<p class="login-story-copy">منافسون أقوياء. وأصدقاء أوفياء.<br/>اجعل كل مباراة جزءًا من حكايتك.</p>
 <div class="login-story-signature"><span aria-hidden="true" class="login-signature-line"></span><p dir="rtl" lang="ar">المنافسة تجمعنا.<br/><strong>والملعب يحكي قصتنا.</strong></p></div>
 </section>
 <div class="login-entry">
 <form aria-labelledby="loginTitle" class="login-form-box" data-busy-region="" id="loginForm" tabindex="-1">
-<div class="login-card-label"><svg aria-hidden="true" fill="none" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-4 8-8 10-4-2-8-5-8-10V6l8-3Z"/><path d="m8 12 3 3 5-6"/></svg>PLAYER ACCESS<span aria-hidden="true" class="login-card-rule"></span></div>
-<h2 id="loginTitle">Welcome back.</h2>
-<p class="login-form-description">Your next match starts here.</p>
+<div class="login-card-label"><svg aria-hidden="true" fill="none" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-4 8-8 10-4-2-8-5-8-10V6l8-3Z"/><path d="m8 12 3 3 5-6"/></svg>دخول اللاعبين<span aria-hidden="true" class="login-card-rule"></span></div>
+<h2 id="loginTitle">أهلًا بعودتك.</h2>
+<p class="login-form-description">مباراتك القادمة تبدأ من هنا.</p>
 <div class="form-group">
-<div class="login-label-row"><label for="loginUsername">Player</label><button aria-label="Reload players" class="login-reload" onclick="League.retryLogin()" type="button">Refresh list <span aria-hidden="true">↻</span></button></div>
+<div class="login-label-row"><label for="loginUsername">اللاعب</label><button aria-label="إعادة تحميل اللاعبين" class="login-reload" onclick="League.retryLogin()" type="button">تحديث القائمة <span aria-hidden="true">↻</span></button></div>
 <div class="login-field">
 <svg aria-hidden="true" class="login-field-icon" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg>
-<select autocomplete="username" disabled="" id="loginUsername" name="username" required=""><option value="">Loading players…</option></select>
+<select autocomplete="username" disabled="" id="loginUsername" name="username" required=""><option value="">جارٍ تحميل اللاعبين…</option></select>
 </div>
 </div>
 <div class="form-group">
-<label for="loginPassword">Password</label>
+<label for="loginPassword">كلمة المرور</label>
 <div class="login-field password-field">
 <svg aria-hidden="true" class="login-field-icon" fill="none" viewBox="0 0 24 24"><rect height="11" rx="2" width="16" x="4" y="10"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg>
-<input aria-describedby="loginError" autocomplete="current-password" id="loginPassword" name="password" placeholder="Enter your password" required="" type="password"/>
-<button aria-label="Show or hide password" aria-pressed="false" class="password-toggle" id="loginPasswordToggle" type="button">Show</button>
+<input aria-describedby="loginError" autocomplete="current-password" id="loginPassword" name="password" placeholder="أدخل كلمة المرور" required="" type="password"/>
+<button aria-label="إظهار كلمة المرور أو إخفاؤها" aria-pressed="false" class="password-toggle" id="loginPasswordToggle" type="button">إظهار</button>
 </div>
 </div>
 <div class="login-error hidden" id="loginError" role="alert"></div>
-<button class="btn-primary login-submit" disabled="" id="loginButton" type="submit">Enter the league</button>
-<p class="login-hint">Need a place in the league?<br/><span>Contact your league administrator.</span></p>
+<button class="btn-primary login-submit" disabled="" id="loginButton" type="submit">دخول الدوري</button>
+<p class="login-hint">تريد الانضمام إلى الدوري؟<br/><span>تواصل مع مدير الدوري.</span></p>
 </form>
-<p class="login-entry-caption"><span aria-hidden="true"></span>YOUR LEAGUE. YOUR PEOPLE.</p>
+<p class="login-entry-caption"><span aria-hidden="true"></span>دوريك. وأصحابك.</p>
 </div>
 </div>
-<footer class="login-footer login-wrap"><span>© Majles Al-Kibbar</span><span>Respect the game. Respect your rivals.</span></footer>
+<footer class="login-footer login-wrap"><span>© مجلس الكبار</span><span>احترم اللعبة. واحترم منافسيك.</span></footer>
 </div>
 <!-- MAIN APP -->
 <div class="main-app hidden" id="mainApp">
@@ -73,11 +72,11 @@
 <div class="sidebar-logo">
 <span class="brand-mark">♛</span>
 <div>
-<div class="sidebar-title">Majles Al-Kibbar</div>
-<div class="sidebar-subtitle">FRIENDS LEAGUE</div>
+<div class="sidebar-title">مجلس الكبار</div>
+<div class="sidebar-subtitle">دوري الأصدقاء</div>
 </div>
 </div>
-<button aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation" class="sidebar-toggle" id="sidebarToggle" onclick="League.toggleSidebar()" type="button">☰</button>
+<button aria-controls="sidebar" aria-expanded="false" aria-label="فتح القائمة" class="sidebar-toggle" id="sidebarToggle" onclick="League.toggleSidebar()" type="button">☰</button>
 </div>
 <div class="sidebar-player">
 <div class="player-avatar" id="sidebarAvatar">—</div>
@@ -89,54 +88,54 @@
 </div>
 <nav class="sidebar-nav">
 <a class="nav-item nav-external" href="../index.html">
-<span class="nav-icon">🏛️</span><span class="nav-label">Tournament Hub</span>
+<span class="nav-icon">🏛️</span><span class="nav-label">مركز البطولات</span>
 </a>
 <a class="nav-item active" data-page="dashboard" href="#dashboard">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M3 10 12 3l9 7M5 9v12h5v-6h4v6h5V9"></path></svg></span><span class="nav-label">Dashboard</span>
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M3 10 12 3l9 7M5 9v12h5v-6h4v6h5V9"></path></svg></span><span class="nav-label">الرئيسية</span>
 </a>
 <a class="nav-item admin-only" data-page="recordMatch" href="#recordMatch">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 7h16v14H4V7Zm4 0V3m8 4V3m-8 9h8m-8 4h5"></path></svg></span><span class="nav-label">Record Match</span>
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 7h16v14H4V7Zm4 0V3m8 4V3m-8 9h8m-8 4h5"></path></svg></span><span class="nav-label">تسجيل مباراة</span>
 </a>
 <a class="nav-item" data-page="matchHistory" href="#matchHistory">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 5h16v16H4V5Zm3-3v6m10-6v6M4 11h16"></path></svg></span><span class="nav-label">Match History</span>
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 5h16v16H4V5Zm3-3v6m10-6v6M4 11h16"></path></svg></span><span class="nav-label">سجل المباريات</span>
 </a>
 <a class="nav-item" data-page="squads" href="#squads"><span class="nav-icon" aria-hidden="true">♟</span><span class="nav-label">التشكيلات</span></a>
 <a class="nav-item" data-page="footballStats" href="#footballStats">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"></path></svg></span><span class="nav-label">Player Performance</span>
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"></path></svg></span><span class="nav-label">أداء لاعبي كرة القدم</span>
 </a>
 <a class="nav-item" data-page="leagueTable" href="#leagueTable">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></span><span class="nav-label">League Table</span>
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></span><span class="nav-label">جدول الدوري</span>
 </a>
 <a class="nav-item" data-page="playerProfile" href="#playerProfile">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m16-13a4 4 0 0 1 0 8m4 5v-2a4 4 0 0 0-3-3.9M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"></path></svg></span><span class="nav-label">Player Profiles</span>
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m16-13a4 4 0 0 1 0 8m4 5v-2a4 4 0 0 0-3-3.9M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"></path></svg></span><span class="nav-label">ملفات اللاعبين</span>
 </a>
 <a class="nav-item" data-page="headToHead" href="#headToHead">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m16-13a4 4 0 0 1 0 8m4 5v-2a4 4 0 0 0-3-3.9M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"></path></svg></span><span class="nav-label">Head to Head</span>
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m16-13a4 4 0 0 1 0 8m4 5v-2a4 4 0 0 0-3-3.9M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"></path></svg></span><span class="nav-label">المواجهات المباشرة</span>
 </a>
 <a class="nav-item" data-page="seasons" href="#seasons">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 5h16v16H4V5Zm3-3v6m10-6v6M4 11h16"></path></svg></span><span class="nav-label">Seasons</span>
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 5h16v16H4V5Zm3-3v6m10-6v6M4 11h16"></path></svg></span><span class="nav-label">المواسم</span>
 </a>
 <a class="nav-item" data-page="awards" href="#awards">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 2v6m-4 2h8"></path></svg></span><span class="nav-label">Awards</span>
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 2v6m-4 2h8"></path></svg></span><span class="nav-label">الجوائز</span>
 </a>
 <a class="nav-item" data-page="achievements" href="#achievements">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 2v6m-4 2h8"></path></svg></span><span class="nav-label">Achievements</span>
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 2v6m-4 2h8"></path></svg></span><span class="nav-label">الإنجازات</span>
 </a>
 <a class="nav-item" data-page="rivalries" href="#rivalries">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"></path></svg></span><span class="nav-label">Rivalries</span>
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"></path></svg></span><span class="nav-label">المنافسات</span>
 </a>
 <a class="nav-item" data-page="statistics" href="#statistics">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></span><span class="nav-label">Statistics</span>
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></span><span class="nav-label">الإحصائيات</span>
 </a>
 <a class="nav-item" data-page="questions" href="#questions">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 4h16v12H9l-5 4V4Zm4 5h8m-8 3h5"></path></svg></span><span class="nav-label">League Q&amp;A</span>
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 4h16v12H9l-5 4V4Zm4 5h8m-8 3h5"></path></svg></span><span class="nav-label">أسئلة الدوري</span>
 </a>
 <a class="nav-item" data-page="settings" href="#settings">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1M5.6 18.4l2.1-2.1m8.6-8.6 2.1-2.1M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"></path></svg></span><span class="nav-label">Settings</span>
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1M5.6 18.4l2.1-2.1m8.6-8.6 2.1-2.1M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"></path></svg></span><span class="nav-label">الإعدادات</span>
 </a>
-<a class="nav-item nav-external" href="../groups-chat/index.html"><span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 4h16v12H9l-5 4V4Zm4 5h8m-8 3h5"></path></svg></span><span>League Chat</span></a></nav>
+<a class="nav-item nav-external" href="../groups-chat/index.html"><span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 4h16v12H9l-5 4V4Zm4 5h8m-8 3h5"></path></svg></span><span>دردشة الدوري</span></a></nav>
 <div class="sidebar-footer">
-<button class="btn-logout btn-ghost" id="logoutButton" onclick="League.handleLogout()" type="button">Sign out</button>
+<button class="btn-logout btn-ghost" id="logoutButton" onclick="League.handleLogout()" type="button">تسجيل الخروج</button>
 </div>
 </aside>
 <!-- OVERLAY -->
@@ -145,11 +144,11 @@
 <main class="main-content" id="mainContent">
 <!-- TOPBAR -->
 <div class="topbar">
-<button aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation" class="mobile-menu-btn" onclick="League.toggleSidebar()" type="button">☰</button>
-<div class="topbar-title" id="topbarTitle">Dashboard</div>
-<div class="topbar-right"><button aria-label="Refresh results" class="btn-ghost" onclick="League.refresh()" type="button">↻</button>
-<div class="viewer-badge hidden" id="viewerBadge">Player</div>
-<div class="season-badge" id="topbarSeason">Season 1</div>
+<button aria-controls="sidebar" aria-expanded="false" aria-label="فتح القائمة" class="mobile-menu-btn" onclick="League.toggleSidebar()" type="button">☰</button>
+<div class="topbar-title" id="topbarTitle">الرئيسية</div>
+<div class="topbar-right"><button aria-label="تحديث النتائج" class="btn-ghost" onclick="League.refresh()" type="button">↻</button>
+<div class="viewer-badge hidden" id="viewerBadge">اللاعب</div>
+<div class="season-badge" id="topbarSeason">الموسم الأول</div>
 <div class="topbar-player" id="topbarPlayer">—</div>
 </div>
 </div>
@@ -158,58 +157,58 @@
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
 <div class="page-header">
-<h2 class="page-title">Dashboard</h2>
-<div class="page-subtitle" id="dashCurrentSeason">Season 1 — Active</div>
+<h2 class="page-title">الرئيسية</h2>
+<div class="page-subtitle" id="dashCurrentSeason">الموسم الأول — نشط</div>
 </div>
 <div class="stat-cards-grid" id="dashStatCards">
 <div class="stat-card" id="sc-leader">
 <div class="stat-card-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 2v6m-4 2h8"></path></svg></div>
-<div class="stat-card-label">LEAGUE LEADER</div>
+<div class="stat-card-label">متصدر الدوري</div>
 <div class="stat-card-value" id="sc-leader-val">—</div>
-<div class="stat-card-sub" id="sc-leader-sub">0 pts</div>
+<div class="stat-card-sub" id="sc-leader-sub">0 نقطة</div>
 </div>
 <div class="stat-card" id="sc-scorer">
 <div class="stat-card-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></div>
-<div class="stat-card-label">TOP SCORER</div>
+<div class="stat-card-label">الهداف</div>
 <div class="stat-card-value" id="sc-scorer-val">—</div>
-<div class="stat-card-sub" id="sc-scorer-sub">0 goals</div>
+<div class="stat-card-sub" id="sc-scorer-sub">0 هدف</div>
 </div>
 <div class="stat-card" id="sc-defense">
 <div class="stat-card-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></div>
-<div class="stat-card-label">BEST DEFENSE</div>
+<div class="stat-card-label">أفضل دفاع</div>
 <div class="stat-card-value" id="sc-defense-val">—</div>
-<div class="stat-card-sub" id="sc-defense-sub">0 conceded</div>
+<div class="stat-card-sub" id="sc-defense-sub">0 هدف مستقبَل</div>
 </div>
 <div class="stat-card" id="sc-attack">
 <div class="stat-card-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></div>
-<div class="stat-card-label">BEST ATTACK</div>
+<div class="stat-card-label">أفضل هجوم</div>
 <div class="stat-card-value" id="sc-attack-val">—</div>
-<div class="stat-card-sub" id="sc-attack-sub">0 scored</div>
+<div class="stat-card-sub" id="sc-attack-sub">0 هدف مسجّل</div>
 </div>
 <div class="stat-card" id="sc-wins">
 <div class="stat-card-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 2v6m-4 2h8"></path></svg></div>
-<div class="stat-card-label">MOST WINS</div>
+<div class="stat-card-label">الأكثر فوزًا</div>
 <div class="stat-card-value" id="sc-wins-val">—</div>
-<div class="stat-card-sub" id="sc-wins-sub">0 wins</div>
+<div class="stat-card-sub" id="sc-wins-sub">0 فوز</div>
 </div>
 <div class="stat-card" id="sc-matches">
 <div class="stat-card-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></div>
-<div class="stat-card-label">TOTAL MATCHES</div>
+<div class="stat-card-label">إجمالي المباريات</div>
 <div class="stat-card-value" id="sc-matches-val">0</div>
-<div class="stat-card-sub" id="sc-matches-sub">this season</div>
+<div class="stat-card-sub" id="sc-matches-sub">هذا الموسم</div>
 </div>
 </div>
 <div class="dashboard-grid">
 <div class="panel">
-<div class="panel-header">⚡ RECENT MATCHES</div>
+<div class="panel-header">⚡ أحدث المباريات</div>
 <div class="panel-body" id="dashRecentMatches">
-<div class="empty-state">No matches recorded yet</div>
+<div class="empty-state">لم تُسجّل مباريات بعد</div>
 </div>
 </div>
 <div class="panel">
-<div class="panel-header">📊 MINI STANDINGS</div>
+<div class="panel-header">📊 الترتيب المختصر</div>
 <div class="panel-body" id="dashMiniStandings">
-<div class="empty-state">No data yet</div>
+<div class="empty-state">لا توجد بيانات بعد</div>
 </div>
 </div>
 </div>
@@ -217,47 +216,47 @@
 <!-- RECORD MATCH PAGE -->
 <div class="page hidden" id="page-recordMatch">
 <div class="page-header">
-<h2 class="page-title">Record Match</h2>
-<div class="page-subtitle">Result + goal-by-goal events (scorer, assist, minute)</div>
+<h2 class="page-title">تسجيل مباراة</h2>
+<div class="page-subtitle">النتيجة وتفاصيل كل هدف: المسجّل والأسيست والدقيقة</div>
 </div>
 <div class="form-container">
 <div class="match-form-card" data-busy-region="">
 <div class="match-vs-header">
 <div class="match-player-select">
-<label for="matchPlayer1">PLAYER 1</label>
+<label for="matchPlayer1">اللاعب الأول</label>
 <select id="matchPlayer1" onchange="League.updateMatchPreview()">
-<option value="">Select Player</option>
+<option value="">اختر اللاعب</option>
 </select>
 </div>
-<div class="vs-badge">VS</div>
+<div class="vs-badge">ضد</div>
 <div class="match-player-select">
-<label for="matchPlayer2">PLAYER 2</label>
+<label for="matchPlayer2">اللاعب الثاني</label>
 <select id="matchPlayer2" onchange="League.updateMatchPreview()">
-<option value="">Select Player</option>
+<option value="">اختر اللاعب</option>
 </select>
 </div>
 </div>
 <div class="match-score-row">
 <div class="score-input-group">
-<label for="matchGoals1" id="scoreLabel1">Goals</label>
+<label for="matchGoals1" id="scoreLabel1">الأهداف</label>
 <input id="matchGoals1" max="99" min="0" oninput="League.updateMatchPreview()" step="1" type="number" value="0"/>
 </div>
 <div class="score-colon">:</div>
 <div class="score-input-group">
-<label for="matchGoals2" id="scoreLabel2">Goals</label>
+<label for="matchGoals2" id="scoreLabel2">الأهداف</label>
 <input id="matchGoals2" max="99" min="0" oninput="League.updateMatchPreview()" step="1" type="number" value="0"/>
 </div>
 </div>
 <div class="match-preview" id="matchPreview">
-<div class="preview-result" id="previewResult">— vs —</div>
+<div class="preview-result" id="previewResult">— ضد —</div>
 </div>
 <div class="form-row-two">
 <div class="form-group">
-<label for="matchDate">MATCH DATE</label>
+<label for="matchDate">تاريخ المباراة</label>
 <input id="matchDate" type="date"/>
 </div>
 <div class="form-group">
-<label for="matchSeason">SEASON</label>
+<label for="matchSeason">الموسم</label>
 <select id="matchSeason">
 </select>
 </div>
@@ -281,8 +280,8 @@
 </div>
 <div class="form-error hidden" id="matchFormError"></div>
 <div class="form-actions">
-<button class="btn-primary" id="saveMatchButton" onclick="League.saveMatch()" type="button">💾 SAVE MATCH</button>
-<button class="btn-secondary" onclick="League.clearMatchForm()" type="button">✕ CLEAR</button>
+<button class="btn-primary" id="saveMatchButton" onclick="League.saveMatch()" type="button">💾 حفظ المباراة</button>
+<button class="btn-secondary" onclick="League.clearMatchForm()" type="button">✕ مسح الحقول</button>
 </div>
 </div>
 </div>
@@ -290,57 +289,57 @@
 <!-- MATCH HISTORY PAGE -->
 <div class="page hidden" id="page-matchHistory">
 <div class="page-header">
-<h2 class="page-title">Match History</h2>
-<div class="page-subtitle" id="historyCount">0 matches recorded</div>
+<h2 class="page-title">سجل المباريات</h2>
+<div class="page-subtitle" id="historyCount">لم تُسجّل مباريات بعد</div>
 </div>
 <div class="filter-bar">
-<input aria-label="history Search" id="historySearch" oninput="League.renderHistory()" placeholder="🔍 Search player..." type="text"/>
-<select aria-label="history Filter Player" id="historyFilterPlayer" onchange="League.renderHistory()">
-<option value="">All Players</option>
+<input aria-label="البحث في سجل المباريات" id="historySearch" oninput="League.renderHistory()" placeholder="🔍 ابحث عن لاعب…" type="text"/>
+<select aria-label="تصفية حسب اللاعب" id="historyFilterPlayer" onchange="League.renderHistory()">
+<option value="">كل اللاعبين</option>
 </select>
-<select aria-label="history Filter Season" id="historyFilterSeason" onchange="League.renderHistory()">
-<option value="">All Seasons</option>
+<select aria-label="تصفية حسب الموسم" id="historyFilterSeason" onchange="League.renderHistory()">
+<option value="">كل المواسم</option>
 </select>
-<select aria-label="history Sort" id="historySort" onchange="League.renderHistory()">
-<option value="newest">Newest First</option>
-<option value="oldest">Oldest First</option>
+<select aria-label="ترتيب المباريات" id="historySort" onchange="League.renderHistory()">
+<option value="newest">الأحدث أولًا</option>
+<option value="oldest">الأقدم أولًا</option>
 </select>
 </div>
 <div class="match-list" id="matchList">
-<div class="empty-state">No matches yet. Record your first match!</div>
+<div class="empty-state">لم تُسجّل مباريات بعد. سجّل مباراتك الأولى!</div>
 </div>
 </div>
 <!-- MATCH DETAILS PAGE -->
 <div class="page hidden" id="page-matchDetails">
 <div class="page-header match-details-header">
-<button class="btn-sm back-btn" onclick="League.backFromMatchDetails()" type="button">← Back</button>
+<button class="btn-sm back-btn" onclick="League.backFromMatchDetails()" type="button">→ رجوع</button>
 <div>
-<h2 class="page-title">Match Details</h2>
+<h2 class="page-title">تفاصيل المباراة</h2>
 <div class="page-subtitle" id="matchDetailsSubtitle">—</div>
 </div>
 </div>
 <div class="match-details-content" id="matchDetailsContent">
-<div class="empty-state">Select a match from history.</div>
+<div class="empty-state">اختر مباراة من السجل.</div>
 </div>
 </div>
 <!-- FOOTBALL PLAYER PERFORMANCE PAGE -->
 <div class="page hidden" id="page-footballStats">
 <div class="page-header">
-<h2 class="page-title">Player Performance</h2>
-<div class="page-subtitle">Football player stats from goal events</div>
+<h2 class="page-title">أداء لاعبي كرة القدم</h2>
+<div class="page-subtitle">إحصائيات لاعبي كرة القدم من الأهداف المسجّلة</div>
 </div>
 <div class="season-filter-row">
-<label for="fbStatsSeasonFilter">Season:</label>
+<label for="fbStatsSeasonFilter">الموسم:</label>
 <select id="fbStatsSeasonFilter" onchange="League.renderFootballStats()">
-<option value="all">All Seasons</option>
+<option value="all">كل المواسم</option>
 </select>
 </div>
 <div class="fb-search-row">
-<input aria-label="fb Player Search" id="fbPlayerSearch" oninput="League.renderFootballStats()" placeholder="🔍 Search football player..." type="text"/>
+<input aria-label="البحث عن لاعب كرة قدم" id="fbPlayerSearch" oninput="League.renderFootballStats()" placeholder="🔍 ابحث عن لاعب كرة قدم…" type="text"/>
 </div>
 <div class="fb-leaderboards" id="fbLeaderboards"></div>
 <div class="panel mt-16">
-<div class="panel-header">📋 ALL PLAYERS</div>
+<div class="panel-header">📋 كل اللاعبين</div>
 <div class="panel-body" id="fbStatsTable"></div>
 </div>
 <div class="fb-player-detail hidden" id="fbPlayerDetail"></div>
@@ -348,13 +347,13 @@
 <!-- LEAGUE TABLE PAGE -->
 <div class="page hidden" id="page-leagueTable">
 <div class="page-header">
-<h2 class="page-title">League Table</h2>
-<div class="page-subtitle">Current standings</div>
+<h2 class="page-title">جدول الدوري</h2>
+<div class="page-subtitle">الترتيب الحالي</div>
 </div>
 <div class="season-filter-row">
-<label for="tableSeasonFilter">Season:</label>
+<label for="tableSeasonFilter">الموسم:</label>
 <select id="tableSeasonFilter" onchange="League.renderLeagueTable()">
-<option value="all">All Seasons</option>
+<option value="all">كل المواسم</option>
 </select>
 </div>
 <div class="table-container">
@@ -362,31 +361,31 @@
 <thead>
 <tr>
 <th>#</th>
-<th>Player</th>
-<th>P</th>
-<th>W</th>
-<th>D</th>
-<th>L</th>
-<th>GF</th>
-<th>GA</th>
-<th>GD</th>
-<th>PTS</th>
+<th>اللاعب</th>
+<th>لعب</th>
+<th>فوز</th>
+<th>تعادل</th>
+<th>خسارة</th>
+<th>له</th>
+<th>عليه</th>
+<th>الفارق</th>
+<th>النقاط</th>
 </tr>
 </thead>
 <tbody id="leagueTableBody"></tbody>
 </table>
 </div>
 <div class="table-legend">
-<span class="legend-item"><span class="legend-dot gold"></span> Champion</span>
-<span class="legend-item"><span class="legend-dot silver"></span> Top 2</span>
-<span class="legend-item"><span class="legend-dot bronze"></span> Top 3</span>
+<span class="legend-item"><span class="legend-dot gold"></span> البطل</span>
+<span class="legend-item"><span class="legend-dot silver"></span> المركز الثاني</span>
+<span class="legend-item"><span class="legend-dot bronze"></span> المركز الثالث</span>
 </div>
 </div>
 <!-- PLAYER PROFILES PAGE -->
 <div class="page hidden" id="page-playerProfile">
 <div class="page-header">
-<h2 class="page-title">Player Profiles</h2>
-<div class="page-subtitle">Select a player to view stats</div>
+<h2 class="page-title">ملفات اللاعبين</h2>
+<div class="page-subtitle">اختر لاعبًا لعرض إحصائياته</div>
 </div>
 <div class="player-tabs" id="profilePlayerTabs"></div>
 <div id="profileContent"></div>
@@ -394,32 +393,32 @@
 <!-- HEAD TO HEAD PAGE -->
 <div class="page hidden" id="page-headToHead">
 <div class="page-header">
-<h2 class="page-title">Head To Head</h2>
-<div class="page-subtitle">Compare two players directly</div>
+<h2 class="page-title">المواجهات المباشرة</h2>
+<div class="page-subtitle">قارن بين لاعبين</div>
 </div>
 <div class="h2h-select-row">
-<select aria-label="h2h Player1" id="h2hPlayer1" onchange="League.renderH2H()">
-<option value="">Player 1</option>
+<select aria-label="اللاعب الأول للمقارنة" id="h2hPlayer1" onchange="League.renderH2H()">
+<option value="">اللاعب الأول</option>
 </select>
-<div class="vs-badge big">VS</div>
-<select aria-label="h2h Player2" id="h2hPlayer2" onchange="League.renderH2H()">
-<option value="">Player 2</option>
+<div class="vs-badge big">ضد</div>
+<select aria-label="اللاعب الثاني للمقارنة" id="h2hPlayer2" onchange="League.renderH2H()">
+<option value="">اللاعب الثاني</option>
 </select>
 </div>
 <div id="h2hContent">
-<div class="empty-state">Select two players to compare</div>
+<div class="empty-state">اختر لاعبين للمقارنة</div>
 </div>
 </div>
 <!-- SEASONS PAGE -->
 <div class="page hidden" id="page-seasons">
 <div class="page-header">
-<h2 class="page-title">Seasons</h2>
-<div class="page-subtitle">Manage league seasons</div>
+<h2 class="page-title">المواسم</h2>
+<div class="page-subtitle">إدارة مواسم الدوري</div>
 </div>
 <div class="seasons-actions admin-only">
 <div class="form-group inline">
-<input aria-label="new Season Name" id="newSeasonName" placeholder="Season name (e.g. Season 3)" type="text"/>
-<button class="btn-primary" id="createSeasonButton" onclick="League.createSeason()" type="button">+ CREATE SEASON</button>
+<input aria-label="اسم الموسم الجديد" id="newSeasonName" placeholder="اسم الموسم (مثال: الموسم الثالث)" type="text"/>
+<button class="btn-primary" id="createSeasonButton" onclick="League.createSeason()" type="button">+ إنشاء موسم</button>
 </div>
 </div>
 <div id="seasonsList"></div>
@@ -427,13 +426,13 @@
 <!-- AWARDS PAGE -->
 <div class="page hidden" id="page-awards">
 <div class="page-header">
-<h2 class="page-title">Awards</h2>
-<div class="page-subtitle">Season honours</div>
+<h2 class="page-title">الجوائز</h2>
+<div class="page-subtitle">جوائز الموسم</div>
 </div>
 <div class="season-filter-row">
-<label for="awardsSeasonFilter">Season:</label>
+<label for="awardsSeasonFilter">الموسم:</label>
 <select id="awardsSeasonFilter" onchange="League.renderAwards()">
-<option value="all">All Seasons (Overall)</option>
+<option value="all">كل المواسم (الإجمالي)</option>
 </select>
 </div>
 <div id="awardsContent"></div>
@@ -441,8 +440,8 @@
 <!-- ACHIEVEMENTS PAGE -->
 <div class="page hidden" id="page-achievements">
 <div class="page-header">
-<h2 class="page-title">Achievements</h2>
-<div class="page-subtitle">Milestones unlocked</div>
+<h2 class="page-title">الإنجازات</h2>
+<div class="page-subtitle">إنجازات اللاعبين</div>
 </div>
 <div class="player-tabs" id="achievementsPlayerTabs"></div>
 <div id="achievementsContent"></div>
@@ -450,21 +449,21 @@
 <!-- RIVALRIES PAGE -->
 <div class="page hidden" id="page-rivalries">
 <div class="page-header">
-<h2 class="page-title">Rivalries</h2>
-<div class="page-subtitle">Epic matchups detected</div>
+<h2 class="page-title">المنافسات</h2>
+<div class="page-subtitle">أبرز المنافسات بين اللاعبين</div>
 </div>
 <div id="rivalriesContent"></div>
 </div>
 <!-- STATISTICS PAGE -->
 <div class="page hidden" id="page-statistics">
 <div class="page-header">
-<h2 class="page-title">Statistics</h2>
-<div class="page-subtitle">League analytics</div>
+<h2 class="page-title">الإحصائيات</h2>
+<div class="page-subtitle">تحليل أرقام الدوري</div>
 </div>
 <div class="season-filter-row">
-<label for="statsSeasonFilter">Season:</label>
+<label for="statsSeasonFilter">الموسم:</label>
 <select id="statsSeasonFilter" onchange="League.renderStatistics()">
-<option value="all">All Seasons</option>
+<option value="all">كل المواسم</option>
 </select>
 </div>
 <div id="statsContent"></div>
@@ -472,8 +471,8 @@
 <!-- LEAGUE Q&A PAGE -->
 <div class="page hidden" id="page-questions">
 <div class="page-header">
-<h2 class="page-title">League Q&amp;A</h2>
-<div class="page-subtitle">Ask questions — everyone answers — asker picks the winner</div>
+<h2 class="page-title">أسئلة الدوري</h2>
+<div class="page-subtitle">اطرح سؤالًا، والجميع يجيب، وصاحب السؤال يختار الإجابة الصحيحة</div>
 </div>
 <div id="qaContent"></div>
 </div>
@@ -486,35 +485,35 @@
 </section>
 <div class="page hidden" id="page-settings">
 <div class="page-header">
-<h2 class="page-title">Settings</h2>
-<div class="page-subtitle">Manage your league data</div>
+<h2 class="page-title">الإعدادات</h2>
+<div class="page-subtitle">إدارة بيانات الدوري</div>
 </div>
 <div class="settings-grid">
 <div class="settings-card">
 <div class="settings-icon">📤</div>
-<h3>Export Data</h3>
-<p>Download seasons, results, goals and match statistics as a competition backup.</p>
-<button class="btn-primary" onclick="League.exportData()" type="button">Export JSON</button>
+<h3>تصدير البيانات</h3>
+<p>نزّل نسخة احتياطية للمواسم والنتائج والأهداف وإحصائيات المباريات.</p>
+<button class="btn-primary" onclick="League.exportData()" type="button">تنزيل نسخة احتياطية</button>
 </div>
-<div class="settings-card admin-only"><div class="settings-icon">♙</div><h3>Account access</h3><p>Create accounts and manage sign-in securely in Supabase Authentication.</p><a class="btn-secondary" href="https://supabase.com/dashboard/project/hyqedsydyqbcgusjthcj/auth/users" rel="noopener noreferrer" target="_blank">Manage accounts ↗</a></div>
+<div class="settings-card admin-only"><div class="settings-icon">♙</div><h3>حسابات اللاعبين</h3><p>إنشاء حسابات اللاعبين وإدارة بيانات الدخول بأمان.</p><a class="btn-secondary" href="https://supabase.com/dashboard/project/hyqedsydyqbcgusjthcj/auth/users" rel="noopener noreferrer" target="_blank">إدارة الحسابات ↖</a></div>
 <div class="settings-card admin-only">
 <div class="settings-icon">📥</div>
-<h3>Import Data</h3>
-<p>Restore competition records from JSON. Player accounts, Q&amp;A and chat are preserved.</p>
-<input accept=".json" aria-label="import File" hidden="" id="importFile" onchange="League.importData(event)" type="file"/>
-<button class="btn-primary" onclick="document.getElementById('importFile').click()" type="button">Import JSON</button>
+<h3>استيراد البيانات</h3>
+<p>استعد سجلات البطولة من نسخة احتياطية. تبقى حسابات اللاعبين والأسئلة والدردشة محفوظة.</p>
+<input accept=".json" aria-label="ملف النسخة الاحتياطية" hidden="" id="importFile" onchange="League.importData(event)" type="file"/>
+<button class="btn-primary" onclick="document.getElementById('importFile').click()" type="button">استيراد نسخة احتياطية</button>
 </div>
 <div class="settings-card danger admin-only">
 <div class="settings-icon">🔄</div>
-<h3>Reset Season</h3>
-<p>Delete all matches from the current active season. Player accounts remain.</p>
-<button class="btn-danger" onclick="League.confirmResetSeason()" type="button">Reset Season</button>
+<h3>تصفير الموسم</h3>
+<p>حذف كل مباريات الموسم النشط مع الاحتفاظ بحسابات اللاعبين.</p>
+<button class="btn-danger" onclick="League.confirmResetSeason()" type="button">تصفير الموسم</button>
 </div>
 <div class="settings-card danger admin-only">
 <div class="settings-icon">⚠️</div>
-<h3>Reset Competition</h3>
-<p>Delete all seasons, matches and goal events. Player accounts and conversations are preserved.</p>
-<button class="btn-danger" onclick="League.confirmResetAll()" type="button">Reset competition</button>
+<h3>تصفير البطولة</h3>
+<p>حذف كل المواسم والمباريات والأهداف، مع الاحتفاظ بحسابات اللاعبين والمحادثات.</p>
+<button class="btn-danger" onclick="League.confirmResetAll()" type="button">تصفير البطولة</button>
 </div>
 </div>
 </div>
@@ -524,30 +523,30 @@
 <div class="modal-overlay hidden" data-busy-region="" id="editMatchModal">
 <div class="modal">
 <div class="modal-header">
-<h3>EDIT MATCH</h3>
-<button aria-label="Close dialog" class="modal-close" onclick="League.closeEditModal()" type="button">✕</button>
+<h3>تعديل المباراة</h3>
+<button aria-label="إغلاق النافذة" class="modal-close" onclick="League.closeEditModal()" type="button">✕</button>
 </div>
 <div class="modal-body">
 <input id="editMatchId" type="hidden"/>
 <div class="match-vs-header">
 <div class="match-player-select">
-<label for="editPlayer1">PLAYER 1</label>
+<label for="editPlayer1">اللاعب الأول</label>
 <select id="editPlayer1" onchange="League.onEditMatchPlayersChange()"></select>
 </div>
-<div class="vs-badge">VS</div>
+<div class="vs-badge">ضد</div>
 <div class="match-player-select">
-<label for="editPlayer2">PLAYER 2</label>
+<label for="editPlayer2">اللاعب الثاني</label>
 <select id="editPlayer2" onchange="League.onEditMatchPlayersChange()"></select>
 </div>
 </div>
 <div class="match-score-row">
 <div class="score-input-group">
-<label for="editGoals1">Goals P1</label>
+<label for="editGoals1">أهداف اللاعب الأول</label>
 <input id="editGoals1" max="99" min="0" oninput="League.updateGoalEventsUI('editGoalEventsList')" step="1" type="number" value="0"/>
 </div>
 <div class="score-colon">:</div>
 <div class="score-input-group">
-<label for="editGoals2">Goals P2</label>
+<label for="editGoals2">أهداف اللاعب الثاني</label>
 <input id="editGoals2" max="99" min="0" oninput="League.updateGoalEventsUI('editGoalEventsList')" step="1" type="number" value="0"/>
 </div>
 </div>
@@ -565,19 +564,19 @@
 </div>
 <div class="form-row-two">
 <div class="form-group">
-<label for="editDate">DATE</label>
+<label for="editDate">التاريخ</label>
 <input id="editDate" type="date"/>
 </div>
 <div class="form-group">
-<label for="editSeason">SEASON</label>
+<label for="editSeason">الموسم</label>
 <select id="editSeason"></select>
 </div>
 </div>
 <div class="form-error hidden" id="editError"></div>
 </div>
 <div class="modal-footer">
-<button class="btn-primary" id="saveEditButton" onclick="League.saveEditMatch()" type="button">SAVE CHANGES</button>
-<button class="btn-secondary" onclick="League.closeEditModal()" type="button">CANCEL</button>
+<button class="btn-primary" id="saveEditButton" onclick="League.saveEditMatch()" type="button">حفظ التغييرات</button>
+<button class="btn-secondary" onclick="League.closeEditModal()" type="button">إلغاء</button>
 </div>
 </div>
 </div>
@@ -585,14 +584,14 @@
 <div class="modal-overlay hidden" id="confirmModal">
 <div class="modal small">
 <div class="modal-header">
-<h3 id="confirmTitle">Confirm</h3>
+<h3 id="confirmTitle">تأكيد</h3>
 </div>
 <div class="modal-body">
-<p id="confirmMessage">Are you sure?</p>
+<p id="confirmMessage">هل أنت متأكد؟</p>
 </div>
 <div class="modal-footer">
-<button class="btn-danger" id="confirmYes" type="button">CONFIRM</button>
-<button class="btn-secondary" data-dialog-cancel="" onclick="League.closeConfirmModal()" type="button">CANCEL</button>
+<button class="btn-danger" id="confirmYes" type="button">تأكيد</button>
+<button class="btn-secondary" data-dialog-cancel="" onclick="League.closeConfirmModal()" type="button">إلغاء</button>
 </div>
 </div>
 </div>
@@ -600,7 +599,7 @@
 <div class="modal-overlay hidden" id="squadPlayerModal" dir="rtl" lang="ar" data-busy-region>
 <div class="modal"><div class="modal-header"><h3 id="squadPlayerTitle">إضافة لاعب</h3><button class="modal-close" type="button" aria-label="إغلاق" onclick="League.closeSquadPlayer()">✕</button></div>
 <form class="modal-body" id="squadPlayerForm">
-<div class="form-group"><label for="squadPlayerName">اسم لاعب كرة القدم</label><input id="squadPlayerName" maxlength="100" required placeholder="مثال: Lionel Messi" autocomplete="off" dir="auto"/></div>
+<div class="form-group"><label for="squadPlayerName">اسم لاعب كرة القدم</label><input id="squadPlayerName" maxlength="100" required placeholder="مثال: ليونيل ميسي" autocomplete="off" dir="auto"/></div>
 <div class="form-group"><label for="squadPlayerPosition">المركز</label><select id="squadPlayerPosition"><option value="GK">حارس</option><option value="DF">دفاع</option><option value="MF">وسط</option><option value="FW">هجوم</option></select></div>
 <p class="match-stats-hint">سيظهر اللاعب ضمن خيارات المسجّل والأسيست لهذا الفريق.</p><div id="squadPlayerError" class="form-error hidden"></div>
 <div class="form-actions"><button type="submit" class="btn-primary" id="saveSquadPlayer">حفظ اللاعب</button><button type="button" class="btn-secondary" onclick="League.closeSquadPlayer()">إلغاء</button></div>

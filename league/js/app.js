@@ -34,7 +34,7 @@ document.getElementById('loginPasswordToggle').addEventListener('click', event =
   const input = document.getElementById('loginPassword');
   const visible = input.type === 'password';
   input.type = visible ? 'text' : 'password';
-  event.currentTarget.textContent = visible ? 'Hide' : 'Show';
+  event.currentTarget.textContent = visible ? "إخفاء" : "إظهار";
   event.currentTarget.setAttribute('aria-pressed', String(visible));
 });
 document.addEventListener('click', event => {
@@ -64,10 +64,10 @@ async function loadRoster() {
   error.classList.add('hidden');
   try {
     const players = await fetchPlayers();
-    if (!players.length) showError(error, 'No players are registered yet. Please contact your league administrator.');
+    if (!players.length) showError(error, "لم يُسجّل لاعبون بعد. تواصل مع مدير الدوري.");
     button.disabled = !players.length;
   } catch {
-    showError(error, 'Could not load players. Check your connection and use Try again.');
+    showError(error, "تعذّر تحميل اللاعبين. تحقق من اتصالك ثم اضغط تحديث القائمة.");
   } finally { select.disabled = false; }
 }
 
@@ -75,7 +75,7 @@ async function init() {
   applyAdminUI();
   if (!sb) {
     showLogin();
-    showError(document.getElementById('loginError'), 'The league is temporarily unavailable. Please try again shortly.');
+    showError(document.getElementById('loginError'), "الدوري غير متاح مؤقتًا. حاول بعد قليل.");
     document.getElementById('loginButton').disabled = true;
     return;
   }
@@ -83,7 +83,7 @@ async function init() {
   if (restored.status === 'fulfilled' && restored.value) {
     state.profile = restored.value; state.user = restored.value.name;
     try { await fetchAllData(); enterApp(); }
-    catch { showLogin(); showError(document.getElementById('loginError'), 'Could not load your league. Please sign in to retry.'); }
+    catch { showLogin(); showError(document.getElementById('loginError'), "تعذّر تحميل الدوري. سجّل الدخول للمحاولة مجددًا."); }
   } else showLogin();
   const unsubscribe = window.EFLAuth.subscribe(sb, async (profile, event) => {
     if (!profile) { clearSession(); return; }
@@ -96,4 +96,4 @@ async function init() {
   });
   window.addEventListener('pagehide', unsubscribe, { once: true });
 }
-init().catch(() => { showLogin(); showError(document.getElementById('loginError'), 'Could not open the league. Please refresh.'); });
+init().catch(() => { showLogin(); showError(document.getElementById('loginError'), "تعذّر فتح الدوري. حدّث الصفحة."); });

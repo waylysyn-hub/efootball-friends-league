@@ -58,7 +58,7 @@ export function toast(message, kind = 'success') {
 }
 
 const pending = new Set();
-export async function withBusy(key, button, action, label = 'Saving…') {
+export async function withBusy(key, button, action, label = "جارٍ الحفظ…") {
   if (pending.has(key)) return;
   if (!button?.matches?.('button, input[type="submit"]')) button = null;
   pending.add(key);
@@ -121,7 +121,7 @@ export function closeDialog(id) {
 export function setupConnectivity(onReconnect) {
   const banner = document.getElementById('connectionStatus');
   function update() {
-    if (banner) { banner.hidden = navigator.onLine; banner.textContent = 'You are offline. Your changes will be available to send when you reconnect.'; }
+    if (banner) { banner.hidden = navigator.onLine; banner.textContent = "أنت غير متصل بالإنترنت. أبقِ الصفحة مفتوحة وأعد المحاولة بعد عودة الاتصال."; }
     if (navigator.onLine) onReconnect?.();
   }
   window.addEventListener('offline', update);

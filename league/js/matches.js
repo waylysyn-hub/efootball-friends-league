@@ -1,3 +1,4 @@
+import { displayName, displaySeason, matchesPlayerSearch, AR_LOCALE } from '../../shared/locale.js';
 import { sb, state } from './state.js';
 import { getActiveSeason, populateSeasonDropdowns } from './seasons.js';
 import { getPlayers, matchPlayerLabel, populateMatchPlayerDropdowns } from './profiles.js';
@@ -12,7 +13,7 @@ import { setSyncStatus } from './realtime.js';
 export function updateGoalEventsSetupBanner() {
   const banner = document.getElementById('goalEventsSetupBanner');
   banner.classList.toggle('hidden', state.goalsReady);
-  banner.textContent = 'Goal tracking is unavailable. Please ask the league administrator to finish setup.';
+  banner.textContent = "تفاصيل الأهداف غير متاحة. تواصل مع مدير الدوري لإكمال الإعداد.";
  }
 
 export function initRecordForm() {
@@ -45,21 +46,21 @@ export function updateMatchPreview() {
   const g1 = parseInt(document.getElementById('matchGoals1').value) || 0;
   const g2 = parseInt(document.getElementById('matchGoals2').value) || 0;
 
-  document.getElementById('scoreLabel1').textContent = p1 ? p1 + ' Goals' : 'Goals';
-  document.getElementById('scoreLabel2').textContent = p2 ? p2 + ' Goals' : 'Goals';
+  document.getElementById('scoreLabel1').textContent = p1 ? 'أهداف ' + displayName(p1) : "الأهداف";
+  document.getElementById('scoreLabel2').textContent = p2 ? 'أهداف ' + displayName(p2) : "الأهداف";
 
   if (!p1 || !p2) {
-    document.getElementById('previewResult').textContent = '— vs —';
+    document.getElementById('previewResult').textContent = '— ضد —';
     if (state.goalsReady) refreshGoalOwnerOptions('goalEventsList');
     return;
   }
 
   let result = '';
-  if (g1 > g2) result = `🏆 ${p1} WINS`;
-  else if (g2 > g1) result = `🏆 ${p2} WINS`;
-  else result = `🤝 DRAW`;
+  if (g1 > g2) result = `🏆 فوز ${displayName(p1)}`;
+  else if (g2 > g1) result = `🏆 فوز ${displayName(p2)}`;
+  else result = `🤝 تعادل`;
 
-  document.getElementById('previewResult').textContent = `${p1} ${g1} — ${g2} ${p2}  |  ${result}`;
+  document.getElementById('previewResult').textContent = `${displayName(p1)} (${g1}) — ${displayName(p2)} (${g2})  |  ${result}`;
   if (state.goalsReady) {
     refreshGoalOwnerOptions('goalEventsList');
     updateGoalEventsUI('goalEventsList');
@@ -77,19 +78,19 @@ export function renderHistory() {
   let matches = [...state.db.matches];
 
   if (search) matches = matches.filter(m =>
-    m.player1.toLowerCase().includes(search) || m.player2.toLowerCase().includes(search));
+    matchesPlayerSearch(m.player1, search) || matchesPlayerSearch(m.player2, search));
   if (filterPlayer) matches = matches.filter(m => m.player1 === filterPlayer || m.player2 === filterPlayer);
   if (filterSeason && filterSeason !== 'all') matches = matches.filter(m => m.season === filterSeason);
 
   matches.sort((a, b) => sort === 'newest' ? b.timestamp - a.timestamp : a.timestamp - b.timestamp);
 
-  document.getElementById('historyCount').textContent = `${matches.length} match${matches.length !== 1 ? 'es' : ''} found`;
+  document.getElementById('historyCount').textContent = `عدد المباريات: ${matches.length}`;
 
   const container = document.getElementById('matchList');
   if (matches.length === 0) {
     container.innerHTML = `<div class="match-list-empty">
       <span class="empty-icon">⚽</span>
-      <p>No matches found. Record your first match!</p>
+      <p>لا توجد مباريات مطابقة. جرّب تغيير البحث أو سجّل مباراة جديدة.</p>
     </div>`;
     return;
   }
@@ -99,12 +100,12 @@ export function renderHistory() {
 
 export function matchCardHTML(m) {
   const season = state.db.seasons.find(s => s.id === m.season);
-  const seasonName = season ? season.name : 'Unknown Season';
-  const date = m.date ? new Date(m.date).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : '—';
+  const seasonName = season ? displaySeason(season.name) : "موسم غير معروف";
+  const date = m.date ? new Date(m.date).toLocaleDateString(AR_LOCALE, { day:'numeric', month:'short', year:'numeric' }) : '—';
 
-  let resultBadge = `<span class="win-badge draw">DRAW</span>`;
-  if (m.goals1 > m.goals2) resultBadge = `<span class="win-badge win">${esc(m.player1)} W</span>`;
-  else if (m.goals2 > m.goals1) resultBadge = `<span class="win-badge win">${esc(m.player2)} W</span>`;
+  let resultBadge = `<span class="win-badge draw">تعادل</span>`;
+  if (m.goals1 > m.goals2) resultBadge = `<span class="win-badge win">${esc(displayName(m.player1))} فاز</span>`;
+  else if (m.goals2 > m.goals1) resultBadge = `<span class="win-badge win">${esc(displayName(m.player2))} فاز</span>`;
 
   return `
     <div class="match-card" id="match-card-${m.id}">
@@ -117,26 +118,26 @@ export function matchCardHTML(m) {
       </div>
       <div class="match-card-result">
         <div class="match-player">${matchPlayerLabel(m.player1)}</div>
-        <div class="match-score">${m.goals1} — ${m.goals2}</div>
+        <div class="match-score"><bdi>${m.goals1}</bdi> — <bdi>${m.goals2}</bdi></div>
         <div class="match-player right">${matchPlayerLabel(m.player2)}</div>
       </div>
       ${matchGoalSummaryHTML(m.id)}
       ${matchAwardsHTML(m.id)}
       <div class="match-card-actions">
-        <button class="btn-sm" onclick="League.openMatchDetails('${m.id}')">📄 Details</button>
+        <button class="btn-sm" onclick="League.openMatchDetails('${m.id}')">📄 التفاصيل</button>
         ${isAdmin() ? `
-        <button class="btn-sm edit" onclick="League.openEditModal('${m.id}')">✏️ Edit</button>
-        <button class="btn-sm delete" onclick="League.deleteMatch('${m.id}')">🗑️ Delete</button>` : ''}
+        <button class="btn-sm edit" onclick="League.openEditModal('${m.id}')">✏️ تعديل</button>
+        <button class="btn-sm delete" onclick="League.deleteMatch('${m.id}')">🗑️ حذف</button>` : ''}
       </div>
     </div>`;
 }
 
 export function deleteMatch(id) {
   if (!requireAdmin()) return;
-  showConfirm('Delete Match', 'Are you sure you want to delete this match? This cannot be undone.', async () => {
-    if (!sb) return showToast('Supabase is not configured.', true);
+  showConfirm("حذف المباراة", "هل تريد حذف هذه المباراة؟ لا يمكن التراجع عن الحذف.", async () => {
+    if (!sb) return showToast("الاتصال بالخادم غير جاهز. تواصل مع مدير الدوري.", true);
     const { error } = await sb.from('matches').delete().eq('id', id);
-    if (error) return showToast('Could not delete match.', true);
+    if (error) return showToast("تعذّر حذف المباراة.", true);
 
     state.db.matches = state.db.matches.filter(m => m.id !== id);
     state.db.matchStats = state.db.matchStats.filter(s => s.matchId !== id);
@@ -145,7 +146,7 @@ export function deleteMatch(id) {
 
     renderHistory();
     updateSidebarPlayer();
-    showToast('Match deleted.');
+    showToast("تم حذف المباراة.");
   });
 }
 
@@ -215,7 +216,7 @@ export async function saveMatchForm(editing) {
       // The committed result and all goal events are one database transaction.
       state.pendingMatchId = null;
       try { await fetchAllData(); }
-      catch { setSyncStatus('Result saved. Refresh to load the latest standings.'); }
+      catch { setSyncStatus("تم حفظ النتيجة. حدّث الصفحة لعرض الترتيب الجديد."); }
       if (editing) { closeDialog('editMatchModal'); renderPage(state.page); }
       else clearMatchForm(true);
       updateSidebarPlayer();

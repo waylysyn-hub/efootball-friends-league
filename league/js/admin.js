@@ -1,3 +1,4 @@
+import { displaySeason } from '../../shared/locale.js';
 import { sb, state } from './state.js';
 import { navigateTo, renderPage, showConfirm, showToast } from './ui.js';
 import { getActiveSeason, populateSeasonDropdowns } from './seasons.js';
@@ -24,16 +25,16 @@ export function exportData() {
   const link = document.createElement('a');
   link.href = url; link.download = 'efootball-competition-' + new Date().toISOString().slice(0, 10) + '.json';
   link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-  showToast('Competition backup downloaded.');
+  showToast("تم تنزيل النسخة الاحتياطية للبطولة.");
  }
 
 export function confirmResetSeason() {
   if (!requireAdmin()) return;
   const active = getActiveSeason();
-  if (!active) return showToast('No active season to reset.', true);
+  if (!active) return showToast("لا يوجد موسم نشط لتصفيره.", true);
   const count = state.db.matches.filter(m => m.season === active.id).length;
-  showConfirm('Reset Season', `Delete all ${count} match(es) from "${active.name}"? This cannot be undone.`, async () => {
-    if (!sb) return showToast('Supabase is not configured.', true);
+  showConfirm("تصفير الموسم", `هل تريد حذف كل مباريات «${displaySeason(active.name)}» (${count})؟ لا يمكن التراجع عن الحذف.`, async () => {
+    if (!sb) return showToast("الاتصال بالخادم غير جاهز. تواصل مع مدير الدوري.", true);
     const { error } = await sb.from('matches').delete().eq('season_id', active.id);
     if (error) throw error;
     // Standings and achievements are recalculated by database triggers.
@@ -41,48 +42,48 @@ export function confirmResetSeason() {
     populateSeasonDropdowns();
     updateSidebarPlayer();
     renderPage(state.page);
-    showToast('Season reset.');
+    showToast("تم تصفير الموسم.");
   });
 }
 
 export function isAdmin() { return state.profile?.role === 'admin'; }
 
-export function requireAdmin() { if (isAdmin()) return true; showToast('Administrator permission is required.', true); return false; }
+export function requireAdmin() { if (isAdmin()) return true; showToast("هذه العملية تتطلب صلاحية مدير الدوري.", true); return false; }
 
 export function normalizeBackup(data, players = getPlayers()) {
-  if (!data || !Array.isArray(data.seasons) || !Array.isArray(data.matches)) throw new Error('Invalid backup format.');
+  if (!data || !Array.isArray(data.seasons) || !Array.isArray(data.matches)) throw new Error("صيغة النسخة الاحتياطية غير صحيحة.");
   const mapIds = rows => {
     const result = new Map();
     for (const row of rows) {
-      if (!row || row.id == null || result.has(String(row.id))) throw new Error('Backup has missing or duplicate IDs.');
+      if (!row || row.id == null || result.has(String(row.id))) throw new Error("تحتوي النسخة الاحتياطية على معرّفات ناقصة أو مكررة.");
       result.set(String(row.id), crypto.randomUUID());
     }
     return result;
   };
   const seasonIds = mapIds(data.seasons), matchIds = mapIds(data.matches);
   const requireNumber = (value, min, max) => {
-    if (!Number.isInteger(value) || value < min || value > max) throw new Error('Backup contains an invalid number.');
+    if (!Number.isInteger(value) || value < min || value > max) throw new Error("تحتوي النسخة الاحتياطية على رقم غير صالح.");
     return value;
   };
-  const requirePlayer = name => { if (!players.includes(name)) throw new Error('Backup references a player outside this league.'); return name; };
+  const requirePlayer = name => { if (!players.includes(name)) throw new Error("تحتوي النسخة الاحتياطية على لاعب غير مسجّل في هذا الدوري."); return name; };
   const seasons = data.seasons.map(row => {
-    if (typeof row.name !== 'string' || !row.name.trim() || row.name.length > 80) throw new Error('Invalid season name.');
+    if (typeof row.name !== 'string' || !row.name.trim() || row.name.length > 80) throw new Error("اسم الموسم غير صالح.");
     return { id: seasonIds.get(String(row.id)), name: row.name.trim(), active: !!row.active, created: Number(row.created) || 0 };
   });
-  if (seasons.filter(s => s.active).length > 1) throw new Error('Backup contains more than one active season.');
+  if (seasons.filter(s => s.active).length > 1) throw new Error("تحتوي النسخة الاحتياطية على أكثر من موسم نشط.");
   const matches = data.matches.map(row => {
     const seasonKey = row.season ?? row.season_id;
     const season = seasonKey == null ? null : seasonIds.get(String(seasonKey));
-    if (seasonKey != null && !season) throw new Error('A match references a missing season.');
-    if (row.player1 === row.player2 || typeof row.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(row.date) || Number.isNaN(Date.parse(row.date))) throw new Error('Invalid match data.');
+    if (seasonKey != null && !season) throw new Error("إحدى المباريات مرتبطة بموسم غير موجود.");
+    if (row.player1 === row.player2 || typeof row.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(row.date) || Number.isNaN(Date.parse(row.date))) throw new Error("بيانات المباراة غير صحيحة.");
     return { id: matchIds.get(String(row.id)), player1: requirePlayer(row.player1), player2: requirePlayer(row.player2),
       goals1: requireNumber(row.goals1, 0, 99), goals2: requireNumber(row.goals2, 0, 99), date: row.date, season, timestamp: Number(row.timestamp) || 0 };
   });
-  const list = key => { if (data[key] != null && !Array.isArray(data[key])) throw new Error('Invalid backup list.'); return data[key] || []; };
+  const list = key => { if (data[key] != null && !Array.isArray(data[key])) throw new Error("إحدى قوائم النسخة الاحتياطية غير صالحة."); return data[key] || []; };
   const goalEvents = list('goalEvents').map(row => {
     const matchId = matchIds.get(String(row.matchId ?? row.match_id));
     const match = matches.find(m => m.id === matchId);
-    if (!match || ![match.player1, match.player2].includes(row.owner) || typeof row.scorer !== 'string' || !row.scorer.trim()) throw new Error('Invalid goal event.');
+    if (!match || ![match.player1, match.player2].includes(row.owner) || typeof row.scorer !== 'string' || !row.scorer.trim()) throw new Error("تفاصيل أحد الأهداف غير صحيحة.");
     return { matchId, owner: row.owner, scorer: row.scorer.trim(), assist: String(row.assist || ''),
       minute: requireNumber(row.minute ?? 0, 0, 120), sortOrder: requireNumber(row.sortOrder ?? row.sort_order ?? 0, 0, 1000) };
   });
@@ -93,7 +94,7 @@ export function normalizeBackup(data, players = getPlayers()) {
   const matchStats = list('matchStats').map(row => {
     const matchId = matchIds.get(String(row.matchId ?? row.match_id));
     const match = matches.find(m => m.id === matchId);
-    if (!match || ![match.player1, match.player2].includes(row.player)) throw new Error('Invalid match statistics.');
+    if (!match || ![match.player1, match.player2].includes(row.player)) throw new Error("إحصائيات المباراة غير صحيحة.");
     return { matchId, player: requirePlayer(row.player), characterName: String(row.characterName ?? row.character_name ?? ''),
       goals: requireNumber(row.goals, 0, 99), assists: requireNumber(row.assists, 0, 99) };
   });
@@ -105,29 +106,29 @@ export async function importData(event) {
   if (!requireAdmin()) { input.value = ''; return; }
   const file = input.files[0]; input.value = '';
   if (!file) return;
-  if (file.size > 5 * 1024 * 1024) return showToast('Choose a backup smaller than 5 MB.', true);
+  if (file.size > 5 * 1024 * 1024) return showToast("اختر نسخة احتياطية أصغر من 5 ميغابايت.", true);
   let backup;
   try { backup = normalizeBackup(JSON.parse(await file.text())); }
-  catch (error) { return showToast(error.message || 'Invalid competition backup.', true); }
-  showConfirm('Restore competition',
-    'Replace the current competition with ' + backup.seasons.length + ' seasons and ' + backup.matches.length + ' matches? Player accounts and conversations are preserved.',
+  catch (error) { return showToast(error instanceof SyntaxError ? 'تعذّر قراءة الملف. اختر نسخة احتياطية صالحة.' : error.message || 'النسخة الاحتياطية للبطولة غير صالحة.', true); }
+  showConfirm("استعادة البطولة",
+    `هل تريد استبدال البطولة الحالية بنسخة تحتوي على ${backup.seasons.length} من المواسم و${backup.matches.length} من المباريات؟ ستبقى حسابات اللاعبين والمحادثات محفوظة.`,
     async () => {
       if (!requireAdmin()) return;
       const { error } = await sb.rpc('restore_league_competition', { backup });
       if (error) throw error;
       await fetchAllData(); populateSeasonDropdowns(); updateSidebarPlayer();
-      navigateTo('dashboard'); showToast('Competition restored.');
+      navigateTo('dashboard'); showToast("تمت استعادة البطولة.");
     });
  }
 
 export function confirmResetAll() {
   if (!requireAdmin()) return;
-  showConfirm('Reset competition', 'Permanently delete all seasons, matches and goal events? Player accounts and conversations are preserved.', async () => {
+  showConfirm("تصفير البطولة", "هل تريد حذف كل المواسم والمباريات والأهداف نهائيًا؟ ستبقى حسابات اللاعبين والمحادثات محفوظة.", async () => {
     if (!requireAdmin()) return;
-    const backup = { seasons: [{ id: crypto.randomUUID(), name: 'Season 1', active: true, created: Date.now() }], matches: [], goalEvents: [], matchStats: [] };
+    const backup = { seasons: [{ id: crypto.randomUUID(), name: "الموسم الأول", active: true, created: Date.now() }], matches: [], goalEvents: [], matchStats: [] };
     const { error } = await sb.rpc('restore_league_competition', { backup });
     if (error) throw error;
     await fetchAllData(); populateSeasonDropdowns(); updateSidebarPlayer();
-    showToast('Competition reset.');
+    showToast("تم تصفير البطولة.");
   });
  }

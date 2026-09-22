@@ -1,3 +1,4 @@
+import { displaySeason, AR_LOCALE } from '../../shared/locale.js';
 import { isAdmin } from './admin.js';
 import { getActiveSeason, renderSeasons } from './seasons.js';
 import { state } from './state.js';
@@ -14,7 +15,7 @@ import { closeDialog, escapeHtml, isBusy, openDialog, showError as showInlineErr
 
 export function navigateTo(page, el) {
   if (!isAdmin() && page === 'recordMatch') {
-    showToast('Only an administrator can record matches.', true);
+    showToast("تسجيل المباريات متاح لمدير الدوري فقط.", true);
     page = 'dashboard';
     el = document.querySelector('.nav-item[data-page="dashboard"]');
   }
@@ -37,20 +38,20 @@ export function navigateTo(page, el) {
   document.querySelectorAll('.nav-item[data-page]').forEach(link => link.setAttribute('aria-current', link === el ? 'page' : 'false'));
 
   const titles = {
-    dashboard: 'Dashboard', recordMatch: 'Record Match',
-    matchHistory: 'Match History', matchDetails: 'Match Details',
-    footballStats: 'Player Performance', leagueTable: 'League Table',
-    playerProfile: 'Player Profiles', headToHead: 'Head to Head',
-    seasons: 'Seasons', awards: 'Awards', achievements: 'Achievements',
-    rivalries: 'Rivalries', statistics: 'Statistics', questions: 'League Q&A',
-    settings: 'Settings', squads: 'التشكيلات'
+    dashboard: "الرئيسية", recordMatch: "تسجيل مباراة",
+    matchHistory: "سجل المباريات", matchDetails: "تفاصيل المباراة",
+    footballStats: "أداء لاعبي كرة القدم", leagueTable: "جدول الدوري",
+    playerProfile: "ملفات اللاعبين", headToHead: "المواجهات المباشرة",
+    seasons: "المواسم", awards: "الجوائز", achievements: "الإنجازات",
+    rivalries: "المنافسات", statistics: "الإحصائيات", questions: "أسئلة الدوري",
+    settings: "الإعدادات", squads: 'التشكيلات'
   };
   const topTitle = document.getElementById('topbarTitle');
   if (topTitle) topTitle.textContent = titles[page] || page;
 
   const activeSeason = getActiveSeason();
   const topSeason = document.getElementById('topbarSeason');
-  if (topSeason) topSeason.textContent = activeSeason ? activeSeason.name : 'No Season';
+  if (topSeason) topSeason.textContent = activeSeason ? displaySeason(activeSeason.name) : "لا يوجد موسم";
 
   closeSidebar();
   if (page !== 'questions') state.questionId = null;
@@ -59,7 +60,7 @@ export function navigateTo(page, el) {
     renderPage(page);
   } catch (e) {
     console.error('renderPage failed:', page, e);
-    showToast('Could not load this page.', true);
+    showToast("تعذّر تحميل هذه الصفحة.", true);
   }
 }
 
@@ -115,7 +116,7 @@ export function esc(value) { return escapeHtml(value); }
 export function formatDate(dateStr) {
   if (!dateStr) return '—';
   try {
-    return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    return new Date(dateStr).toLocaleDateString(AR_LOCALE, { day: 'numeric', month: 'short', year: 'numeric' });
   } catch { return dateStr; }
 }
 

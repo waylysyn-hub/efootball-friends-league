@@ -1,3 +1,4 @@
+import { displayName } from '../../shared/locale.js';
 import { populateSeasonDropdowns } from './seasons.js';
 import { computeLeagueTable, computePlayerStats } from './standings.js';
 import { getPlayers } from './profiles.js';
@@ -28,11 +29,11 @@ export function renderAwards() {
   }).filter(p => p.played > 0).sort((a, b) => b.score - a.score);
 
   const awards = [
-    { icon: '🏆', title: 'CHAMPION', winner: hasData && table[0].played > 0 ? table[0].player : null, desc: hasData ? `${table[0].points} points` : 'No matches yet' },
-    { icon: '⚽', title: 'TOP SCORER', winner: (scorers[0]?.goals || 0) > 0 ? scorers[0].player : null, desc: `${(scorers[0]?.goals || 0)} goals` },
-    { icon: '🧱', title: 'BEST DEFENSE', winner: defenders[0] ? defenders[0].player : null, desc: defenders[0] ? `${defenders[0].ga} goals conceded` : 'No matches yet' },
-    { icon: '🔥', title: 'MOST WINS', winner: (winners[0]?.wins || 0) > 0 ? winners[0].player : null, desc: `${(winners[0]?.wins || 0)} wins` },
-    { icon: '👑', title: 'MVP', winner: mvpScores[0] ? mvpScores[0].player : null, desc: mvpScores[0] ? `Score: ${mvpScores[0].score.toFixed(1)}` : 'No matches yet' },
+    { icon: '🏆', title: "البطل", winner: hasData && table[0].played > 0 ? table[0].player : null, desc: hasData ? `${table[0].points} نقطة` : "لا توجد مباريات بعد" },
+    { icon: '⚽', title: "الهداف", winner: (scorers[0]?.goals || 0) > 0 ? scorers[0].player : null, desc: `${(scorers[0]?.goals || 0)} هدف` },
+    { icon: '🧱', title: "أفضل دفاع", winner: defenders[0] ? defenders[0].player : null, desc: defenders[0] ? `${defenders[0].ga} هدف مستقبَل` : "لا توجد مباريات بعد" },
+    { icon: '🔥', title: "الأكثر فوزًا", winner: (winners[0]?.wins || 0) > 0 ? winners[0].player : null, desc: `${(winners[0]?.wins || 0)} فوز` },
+    { icon: '👑', title: "أفضل لاعب", winner: mvpScores[0] ? mvpScores[0].player : null, desc: mvpScores[0] ? `التقييم: ${mvpScores[0].score.toFixed(1)}` : "لا توجد مباريات بعد" },
   ];
 
   cont.innerHTML = `<div class="awards-grid">
@@ -40,7 +41,7 @@ export function renderAwards() {
       <div class="award-card">
         <span class="award-icon">${a.icon}</span>
         <div class="award-title">${a.title}</div>
-        <div class="award-winner">${a.winner ? esc(a.winner) : '—'}</div>
+        <div class="award-winner">${a.winner ? esc(displayName(a.winner)) : '—'}</div>
         <div class="award-desc">${a.desc}</div>
       </div>`).join('')}
   </div>`;

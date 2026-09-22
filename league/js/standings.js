@@ -1,3 +1,4 @@
+import { displayName } from '../../shared/locale.js';
 import { state } from './state.js';
 import { getPlayers, nickChip } from './profiles.js';
 import { populateSeasonDropdowns } from './seasons.js';
@@ -106,7 +107,7 @@ export function renderLeagueTable() {
     return `
       <tr class="${rankClass}">
         <td><span class="rank-badge ${badge}">${i + 1}</span></td>
-        <td><div class="lt-player">${esc(r.player)}${nickChip(r.player) ? `<div class="lt-nick">${nickChip(r.player)}</div>` : ''}</div></td>
+        <td><div class="lt-player">${esc(displayName(r.player))}${nickChip(r.player) ? `<div class="lt-nick">${nickChip(r.player)}</div>` : ''}</div></td>
         <td>${r.played}</td>
         <td>${r.wins}</td>
         <td>${r.draws}</td>
