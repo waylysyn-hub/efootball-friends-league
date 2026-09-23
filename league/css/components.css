@@ -80,7 +80,7 @@
 .ms-total-line.ok { color: var(--success); }
 .match-awards { display: flex; flex-wrap: wrap; gap: 8px; }
 .match-award-chip { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: .8125rem; border: 1px solid var(--border); background: var(--surface-2); border-radius: 6px; padding: 6px 8px; }
-.match-award-chip strong { color: var(--primary); }
+.match-award-chip strong { color: var(--primary); min-width: 0; overflow-wrap: anywhere; }
 .match-award-title, .match-goal-count { color: var(--muted); font-size: .8125rem; }
 .match-goal-count { display: block; margin-bottom: 12px; }
 .match-details-header { display: flex; gap: 16px; align-items: center; }
@@ -158,6 +158,12 @@
 .chart-value { text-align: end; color: var(--muted); font-size: .9375rem; font-variant-numeric: tabular-nums; }
 .fb-lb-card { padding: 24px; }.fb-lb-list, .fb-detail-list { margin: 0; padding: 0; list-style: none; }
 .fb-lb-list li { display: flex; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }.fb-lb-rank { color: var(--subtle); }.fb-lb-val { margin-inline-start: auto; color: var(--primary); }
+.fb-player-identity { min-width: 0; overflow-wrap: anywhere; }
+.fb-owner { display: block; color: var(--muted); font-size: .8rem; font-weight: 400; margin-top: 4px; }
+.fb-player-detail .panel-header { flex-wrap: wrap; justify-content: flex-start; gap: 6px; overflow-wrap: anywhere; }
+.fb-lb-rank, .fb-lb-val { flex-shrink: 0; }
+.award-winner { overflow-wrap: anywhere; }
+.award-winner + .award-winner { padding-top: 12px; border-top: 1px solid var(--border); }
 .fb-search-row { max-width: 480px; margin-bottom: 24px; }.fb-stats-table { min-width: 500px; }.fb-row-click { cursor: pointer; }#fbStatsTable { overflow-x: auto; }
 .fb-detail-stats { display: flex; flex-wrap: wrap; gap: 16px; color: var(--primary); }.fb-detail-h4 { margin-top: 24px; }.fb-detail-list li { padding: 12px 0; border-bottom: 1px solid var(--border); color: var(--muted); }
 .qa-list-view, .qa-detail-view { max-width: 940px; }.qa-section-title { margin: 32px 0 16px; font-size: 1.125rem; }

@@ -70,3 +70,21 @@ test('Admin starts an odd evening, prepares its match and archives the saved dra
  await expect(page.locator('#eveningForm')).toBeVisible();await page.locator('.evening-history summary').click();await expect(page.locator('.evening-history .evening-bye')).toBeVisible();await noOverflow(page);
  expect(errors).toEqual([]);
 });
+
+test('Same-name footballers stay separate in rankings, details and awards',async({page})=>{
+ const errors=watchErrors(page);await page.goto('/league/index.html?fixture=owner-stats#footballStats');await expect(page.locator('#fbStatsTable tbody tr')).toHaveCount(4);
+ const goals=page.locator('[data-football-ranking="goals"] li');await expect(goals).toHaveCount(2);
+ await expect(goals.nth(0)).toContainText('فريق مصطفى');await expect(goals.nth(0).locator('.fb-lb-val')).toHaveText('3');
+ await expect(goals.nth(1)).toContainText('فريق وائل');await expect(goals.nth(1).locator('.fb-lb-val')).toHaveText('1');
+ await noOverflow(page);
+ await page.locator('[data-football-player="Zlatan Ibrahimović"][data-football-owner="Mustafa"]').click();
+ await expect(page.locator('#fbPlayerDetail .panel-header')).toContainText('فريق مصطفى');await expect(page.locator('.fb-detail-stats')).toContainText('الأهداف: 3');
+ await page.locator('[data-football-player="Zlatan Ibrahimović"][data-football-owner="Wael"]').press('Enter');
+ await expect(page.locator('#fbPlayerDetail .panel-header')).toContainText('فريق وائل');await expect(page.locator('.fb-detail-stats')).toContainText('الأهداف: 1');
+ await page.locator('#fbPlayerSearch').fill('مصطفى');await expect(page.locator('#fbStatsTable tbody tr')).toHaveCount(2);await expect(page.locator('#fbPlayerDetail')).toBeHidden();await noOverflow(page);
+ await page.evaluate(()=>window.League.navigateTo('awards'));
+ await expect(page.locator('[data-football-award="goals"]')).toContainText('Zlatan Ibrahimović');await expect(page.locator('[data-football-award="goals"]')).toContainText('فريق مصطفى');await expect(page.locator('[data-football-award="goals"] .award-desc')).toHaveText('3 هدف');
+ await expect(page.locator('[data-football-award="assists"]')).toContainText('Ronaldinho');await expect(page.locator('[data-football-award="assists"] .award-desc')).toHaveText('2 أسيست');await noOverflow(page);
+ await page.evaluate(id=>window.League.openMatchDetails(id),ids.match);await expect(page.locator('.match-awards')).toContainText('Zlatan Ibrahimović');await expect(page.locator('.match-awards')).toContainText('مصطفى');await noOverflow(page);
+ expect(errors).toEqual([]);
+});

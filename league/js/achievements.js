@@ -4,6 +4,7 @@ import { computeLeagueTable, computePlayerStats } from './standings.js';
 import { getPlayers } from './profiles.js';
 import { esc } from './ui.js';
 import { ACHIEVEMENT_DEFS, state } from './state.js';
+import { computeFootballPlayerStats } from './goal-events.js';
 
 export function renderAwards() {
   populateSeasonDropdowns();
@@ -28,9 +29,18 @@ export function renderAwards() {
     return { player: p, score, played: s.played };
   }).filter(p => p.played > 0).sort((a, b) => b.score - a.score);
 
+  const footballPlayers = state.goalsReady ? computeFootballPlayerStats(filter) : [];
+  const footballAward = (metric, icon, title, unit) => {
+    const best = Math.max(0, ...footballPlayers.map(p => p[metric]));
+    return { metric, icon, title, footballWinners: footballPlayers.filter(p => best > 0 && p[metric] === best),
+      desc: best ? `${best} ${unit}` : 'لا توجد مساهمات مسجّلة في تفاصيل الأهداف' };
+  };
+
   const awards = [
     { icon: '🏆', title: "البطل", winner: hasData && table[0].played > 0 ? table[0].player : null, desc: hasData ? `${table[0].points} نقطة` : "لا توجد مباريات بعد" },
-    { icon: '⚽', title: "الهداف", winner: (scorers[0]?.goals || 0) > 0 ? scorers[0].player : null, desc: `${(scorers[0]?.goals || 0)} هدف` },
+    footballAward('goals', '⚽', 'الهداف', 'هدف'),
+    footballAward('assists', '🎯', 'أفضل صانع أهداف', 'أسيست'),
+    { icon: '🥅', title: "أقوى هجوم", winner: (scorers[0]?.goals || 0) > 0 ? scorers[0].player : null, desc: `${(scorers[0]?.goals || 0)} هدف` },
     { icon: '🧱', title: "أفضل دفاع", winner: defenders[0] ? defenders[0].player : null, desc: defenders[0] ? `${defenders[0].ga} هدف مستقبَل` : "لا توجد مباريات بعد" },
     { icon: '🔥', title: "الأكثر فوزًا", winner: (winners[0]?.wins || 0) > 0 ? winners[0].player : null, desc: `${(winners[0]?.wins || 0)} فوز` },
     { icon: '👑', title: "أفضل لاعب", winner: mvpScores[0] ? mvpScores[0].player : null, desc: mvpScores[0] ? `التقييم: ${mvpScores[0].score.toFixed(1)}` : "لا توجد مباريات بعد" },
@@ -38,10 +48,12 @@ export function renderAwards() {
 
   cont.innerHTML = `<div class="awards-grid">
     ${awards.map(a => `
-      <div class="award-card">
+      <div class="award-card"${a.metric ? ` data-football-award="${a.metric}"` : ''}>
         <span class="award-icon">${a.icon}</span>
         <div class="award-title">${a.title}</div>
-        <div class="award-winner">${a.winner ? esc(displayName(a.winner)) : '—'}</div>
+        ${a.footballWinners
+          ? a.footballWinners.map(p => `<div class="award-winner"><bdi>${esc(p.name)}</bdi><span class="fb-owner">فريق ${esc(displayName(p.owner))}</span></div>`).join('') || '<div class="award-winner">—</div>'
+          : `<div class="award-winner">${a.winner ? esc(displayName(a.winner)) : '—'}</div>`}
         <div class="award-desc">${a.desc}</div>
       </div>`).join('')}
   </div>`;
