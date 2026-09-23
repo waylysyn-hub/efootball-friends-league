@@ -55,9 +55,9 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: browser-failures
+          name: browser-checks
           path: |
             playwright-report/
             test-results/

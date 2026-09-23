@@ -1,7 +1,7 @@
 import { displayName } from '../../shared/locale.js';
 import { state } from './state.js';
-import { esc, showToast } from './ui.js';
-import { updateMatchPreview } from './matches.js';
+import { esc, showToast, showConfirm } from './ui.js';
+import { onGoalRowsChange } from './match-entry.js';
 import { canManageSquad, getSquad, openSquadPlayer, POSITIONS } from './squads.js';
 
 export function getMatchGoalEvents(matchId) {
@@ -45,10 +45,10 @@ export function goalEventRowHTML(e, idx, containerId, p1, p2) {
   return `<article class="ge-row" data-idx="${idx}">
     <div class="ge-card-header"><span class="ge-number">هدف ${idx + 1}</span><button type="button" class="btn-sm delete ge-remove" onclick="League.removeGoalEventRow('${containerId}', ${idx})" aria-label="حذف الهدف ${idx + 1}">✕</button></div>
     <div class="ge-fields">
-      <div class="ge-field"><label for="${key}-owner">صاحب الفريق</label><select id="${key}-owner" class="ge-owner" onchange="League.onGoalOwnerChange('${containerId}', ${idx})">${ownerOptionsHTML(p1, p2, owner)}</select></div>
-      <div class="ge-field"><label for="${key}-scorer">⚽ المسجّل</label><select id="${key}-scorer" class="ge-scorer" onchange="League.onGoalScorerChange('${containerId}', ${idx})">${squadOptionsHTML(containerId, owner, 'scorer', scorer)}</select></div>
-      <div class="ge-field"><label for="${key}-assist">🎯 الأسيست</label><select id="${key}-assist" class="ge-assist" onchange="League.updateGoalEventsUI('${containerId}')">${squadOptionsHTML(containerId, owner, 'assist', assist, scorer)}</select></div>
-      <div class="ge-field"><label for="${key}-minute">الدقيقة <span>(اختياري)</span></label><input id="${key}-minute" type="number" class="ge-minute" inputmode="numeric" step="1" min="0" max="120" placeholder="0–120" value="${Number.isFinite(e.minute) && e.minute !== 0 ? e.minute : ''}" oninput="League.updateGoalEventsUI('${containerId}')"></div>
+      <div class="ge-field"><label for="${key}-owner">صاحب الفريق</label><select id="${key}-owner" class="ge-owner" aria-describedby="${key}-ownerError" onchange="League.onGoalOwnerChange('${containerId}', ${idx})">${ownerOptionsHTML(p1, p2, owner)}</select><span class="entry-field-error" id="${key}-ownerError"></span></div>
+      <div class="ge-field"><label for="${key}-scorer">⚽ المسجّل</label><select id="${key}-scorer" class="ge-scorer" aria-describedby="${key}-scorerError" onchange="League.onGoalScorerChange('${containerId}', ${idx})">${squadOptionsHTML(containerId, owner, 'scorer', scorer)}</select><span class="entry-field-error" id="${key}-scorerError"></span></div>
+      <div class="ge-field"><label for="${key}-assist">🎯 الأسيست</label><select id="${key}-assist" class="ge-assist" aria-describedby="${key}-assistError" onchange="League.updateGoalEventsUI('${containerId}')">${squadOptionsHTML(containerId, owner, 'assist', assist, scorer)}</select><span class="entry-field-error" id="${key}-assistError"></span></div>
+      <div class="ge-field"><label for="${key}-minute">الدقيقة <span>(اختياري)</span></label><input id="${key}-minute" type="number" class="ge-minute" aria-describedby="${key}-minuteError" inputmode="numeric" step="1" min="1" max="120" placeholder="1–120" value="${esc(e.minuteInput ?? (Number.isFinite(e.minute) && e.minute !== 0 ? e.minute : ''))}" oninput="League.updateGoalEventsUI('${containerId}')"><span class="entry-field-error" id="${key}-minuteError"></span></div>
     </div>
     <div class="ge-squad-note"></div>
     <button class="btn-sm ge-manage" type="button" onclick="League.openGoalSquad('${containerId}', ${idx})">+ إضافة لاعب للتشكيلة</button>
@@ -57,7 +57,7 @@ export function goalEventRowHTML(e, idx, containerId, p1, p2) {
 export function collectGoalEventsFromForm(containerId) {
   return [...(document.getElementById(containerId)?.querySelectorAll('.ge-row') || [])].map((row, i) => ({
     owner: row.querySelector('.ge-owner')?.value || '', scorer: row.querySelector('.ge-scorer')?.value || '',
-    assist: row.querySelector('.ge-assist')?.value || '', minute: Number(row.querySelector('.ge-minute')?.value), sortOrder: i,
+    assist: row.querySelector('.ge-assist')?.value || '', minute: Number(row.querySelector('.ge-minute')?.value), minuteInput: row.querySelector('.ge-minute')?.value || '', sortOrder: i,
   }));
 }
 export function renderGoalEventsForm(containerId, events = []) {
@@ -65,16 +65,17 @@ export function renderGoalEventsForm(containerId, events = []) {
   if (!el) return;
   const { p1, p2 } = getMainMatchPlayers(containerId);
   el.innerHTML = events.length ? events.map((e, i) => goalEventRowHTML(e, i, containerId, p1, p2)).join('')
-    : '<div class="empty-state ge-empty">كل هدف له قصة. اضغط «إضافة هدف» واختر لاعبيه من التشكيلة.</div>';
+    : '<div class="empty-state ge-empty">لا توجد أهداف مسجلة في هذه المباراة.</div>';
   updateGoalEventsUI(containerId);
 }
-export function onGoalOwnerChange(containerId, idx) {
+export function onGoalOwnerChange(containerId, idx, syncScore = true) {
   const row = document.getElementById(containerId)?.querySelectorAll('.ge-row')[idx];
   if (!row) return;
   const owner = row.querySelector('.ge-owner').value;
   row.querySelector('.ge-scorer').innerHTML = squadOptionsHTML(containerId, owner, 'scorer');
   row.querySelector('.ge-assist').innerHTML = squadOptionsHTML(containerId, owner, 'assist');
   updateGoalEventsUI(containerId);
+  if (syncScore) onGoalRowsChange(containerId);
 }
 export function onGoalScorerChange(containerId, idx) {
   const row = document.getElementById(containerId)?.querySelectorAll('.ge-row')[idx];
@@ -92,7 +93,7 @@ export function refreshGoalOwnerOptions(containerId) {
   document.querySelectorAll(`#${containerId} .ge-owner`).forEach((select, idx) => {
     const previous = select.value;
     select.innerHTML = ownerOptionsHTML(p1, p2, previous);
-    if (!previous || ![p1, p2].includes(previous)) onGoalOwnerChange(containerId, idx);
+    if (!previous || ![p1, p2].includes(previous)) onGoalOwnerChange(containerId, idx, false);
   });
   updateGoalEventsUI(containerId);
 }
@@ -114,13 +115,18 @@ export function addGoalEventRow(containerId) {
   const events = collectGoalEventsFromForm(containerId), { g1, g2 } = getMatchScoreFromForm(containerId);
   const { c1, c2 } = countGoalsByOwner(events, p1, p2);
   const owner = c1 < g1 ? p1 : c2 < g2 ? p2 : p1;
+  if (events.filter(e => e.owner === owner).length >= 99) return showToast('الحد الأقصى 99 هدفًا لكل فريق.', true);
   events.push({ owner, scorer: '', assist: '', minute: 0 });
   renderGoalEventsForm(containerId, events);
+  onGoalRowsChange(containerId);
   document.getElementById(containerId).querySelector('.ge-row:last-child .ge-scorer')?.focus();
 }
 export function removeGoalEventRow(containerId, idx) {
-  const events = collectGoalEventsFromForm(containerId); events.splice(idx, 1);
-  renderGoalEventsForm(containerId, events);
+  const events = collectGoalEventsFromForm(containerId);
+  if (!events[idx]) return;
+  showConfirm('حذف الهدف', 'سيُحذف هذا الهدف وتفاصيله وتُحدّث النتيجة تلقائيًا. هل تريد المتابعة؟', () => {
+    events.splice(idx, 1); renderGoalEventsForm(containerId, events); onGoalRowsChange(containerId);
+  });
 }
 export function countGoalsByOwner(events, p1, p2) {
   return { c1: events.filter(e => e.owner === p1).length, c2: events.filter(e => e.owner === p2).length };
@@ -146,7 +152,7 @@ export function validateGoalEvents(events, p1, p2, g1, g2, { requireSquad = fals
     }
   }
   const { c1, c2 } = countGoalsByOwner(events, p1, p2);
-  if (c1 !== g1 || c2 !== g2) return `تفاصيل الأهداف لا تطابق النتيجة: ${displayName(p1)} (${c1} من ${g1})، ${displayName(p2)} (${c2} من ${g2}). أكمل الأهداف أو اضغط «احتساب النتيجة من الأهداف».`;
+  if (c1 !== g1 || c2 !== g2) return `تفاصيل الأهداف لا تطابق النتيجة: ${displayName(p1)} (${c1} من ${g1})، ${displayName(p2)} (${c2} من ${g2}). أكمل الأهداف أو اختر حفظ النتيجة فقط.`;
   return null;
 }
 export function goalEventsSummaryHTML(containerId, events) {
@@ -172,14 +178,13 @@ export function updateGoalEventsUI(containerId) {
   if (preview) preview.innerHTML = matchAwardsHTML(null, events.filter(e => e.scorer && e.owner)) || '<span class="text-dim">تظهر الجوائز بعد اختيار المسجّلين.</span>';
 }
 export function syncScoreFromGoalEvents(containerId) {
-  const { p1, p2 } = getMainMatchPlayers(containerId);
-  if (!p1 || !p2 || p1 === p2) return showToast('اختر لاعبين مختلفين للمباراة أولًا.', true);
-  const events = collectGoalEventsFromForm(containerId), { c1, c2 } = countGoalsByOwner(events, p1, p2);
-  if (events.some(e => ![p1, p2].includes(e.owner))) return showToast('اختر صاحب الفريق لكل هدف قبل احتساب النتيجة.', true);
-  const prefix = containerId === 'editGoalEventsList' ? 'edit' : 'match';
-  document.getElementById(prefix + 'Goals1').value = c1; document.getElementById(prefix + 'Goals2').value = c2;
-  if (prefix === 'match') updateMatchPreview(); else updateGoalEventsUI(containerId);
-  showToast('تم احتساب النتيجة من الأهداف.');
+  onGoalRowsChange(containerId);
+}
+
+export function hasMissingGoalDetails(match) {
+  const events = getMatchGoalEvents(match.id);
+  const { c1, c2 } = countGoalsByOwner(events, match.player1, match.player2);
+  return c1 !== match.goals1 || c2 !== match.goals2;
 }
 
 export function aggregateOwnerStatsFromEvents(matchId, events = getMatchGoalEvents(matchId)) {

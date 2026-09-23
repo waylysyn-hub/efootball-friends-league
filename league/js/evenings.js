@@ -2,8 +2,8 @@ import { sb, state } from './state.js';
 import { isAdmin, requireAdmin } from './admin.js';
 import { getPlayers } from './profiles.js';
 import { getActiveSeason } from './seasons.js';
-import { navigateTo, showConfirm, formatDate } from './ui.js';
-import { updateMatchPreview } from './matches.js';
+import { showConfirm, formatDate } from './ui.js';
+import { beginMatchWithPlayers } from './match-entry.js';
 import { displayName, displaySeason, AR_LOCALE } from '../../shared/locale.js';
 import { escapeHtml as esc, errorMessage, showError, toast, withBusy, isBusy } from '../../shared/ui.js';
 
@@ -146,10 +146,5 @@ export function prepareEveningMatch(id, index) {
   const evening = state.db.evenings.find(row => row.id === id && !row.ended_at);
   const pair = evening && Number.isInteger(index) && eveningPairs(evening.drawn_order)[index];
   if (!pair?.[1]) return;
-  navigateTo('recordMatch');
-  document.getElementById('matchPlayer1').value = pair[0];
-  document.getElementById('matchPlayer2').value = pair[1];
-  if (evening.season_id && state.db.seasons.some(row => row.id === evening.season_id)) document.getElementById('matchSeason').value = evening.season_id;
-  updateMatchPreview();
-  toast('المواجهة جاهزة. أدخل النتيجة بعد اللعب ثم احفظ المباراة.');
+  beginMatchWithPlayers(pair[0], pair[1], evening.season_id);
 }

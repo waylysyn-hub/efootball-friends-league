@@ -41,9 +41,10 @@ test('Failed match save preserves form, duplicate click coalesces and retry reus
  const app=await mount('league/index.html',{profile:'Wael'});t.after(()=>app.close());const {window:w,document:d,client}=app;
  w.League.navigateTo('recordMatch');
  d.getElementById('matchPlayer1').value='Wael';d.getElementById('matchPlayer2').value='Omar';d.getElementById('matchGoals1').value='0';d.getElementById('matchGoals2').value='0';d.getElementById('matchDate').value='2026-09-09';
- client.fail='rpc';const first=w.League.saveMatch();const duplicate=w.League.saveMatch();await Promise.all([first,duplicate]);
+ w.League.saveMatch();assert.equal(client.calls.filter(call=>call.rpc==='save_league_match').length,0);
+ client.fail='rpc';const first=w.League.confirmMatchSave();const duplicate=w.League.confirmMatchSave();await Promise.all([first,duplicate]);
  const failed=client.calls.filter(call=>call.rpc==='save_league_match');assert.equal(failed.length,1);assert.equal(d.getElementById('matchPlayer1').value,'Wael');
- client.fail=null;await w.League.saveMatch();const saved=client.calls.filter(call=>call.rpc==='save_league_match');assert.equal(saved.length,2);assert.equal(saved[0].args.match_data.id,saved[1].args.match_data.id);assert.equal(client.db.matches.length,2);
+ client.fail=null;await w.League.confirmMatchSave();const saved=client.calls.filter(call=>call.rpc==='save_league_match');assert.equal(saved.length,2);assert.equal(saved[0].args.match_data.id,saved[1].args.match_data.id);assert.equal(client.db.matches.length,2);
 });
 
 test('Realtime refresh preserves match drafts and selected profile',async t=>{
