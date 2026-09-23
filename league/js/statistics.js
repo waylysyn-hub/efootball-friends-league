@@ -1,4 +1,4 @@
-import { displayName } from '../../shared/locale.js';
+import { displayName, matchesPlayerSearch } from '../../shared/locale.js';
 import { populateSeasonDropdowns } from './seasons.js';
 import { state } from './state.js';
 import { computeFootballPlayerStats, fbPlayerKey, getMatchIdsForSeason, getSeasonStatTotals } from './goal-events.js';
@@ -6,13 +6,14 @@ import { esc, formatDate } from './ui.js';
 import { getPlayers } from './profiles.js';
 import { computePlayerStats } from './standings.js';
 
+let selectedFootballPlayer = null;
+
 export function renderFootballStats() {
   populateSeasonDropdowns();
   const seasonSel = document.getElementById('fbStatsSeasonFilter');
 
   const contLb = document.getElementById('fbLeaderboards');
   const contTbl = document.getElementById('fbStatsTable');
-  const detail = document.getElementById('fbPlayerDetail');
   if (!contLb || !contTbl) return;
 
   if (!state.goalsReady) {
@@ -21,14 +22,14 @@ export function renderFootballStats() {
       <h3>تفاصيل الأهداف غير متاحة</h3>
       <p>تواصل مع مدير الدوري لإكمال الإعداد، ثم حدّث الصفحة.</p>
     </div>`;
-    if (detail) detail.classList.add('hidden');
+    closeFootballPlayerDetail();
     return;
   }
 
   const filter = seasonSel?.value || 'all';
   const search = (document.getElementById('fbPlayerSearch')?.value || '').trim().toLowerCase();
   let players = computeFootballPlayerStats(filter);
-  if (search) players = players.filter(p => p.name.toLowerCase().includes(search));
+  if (search) players = players.filter(p => p.name.toLowerCase().includes(search) || matchesPlayerSearch(p.owner, search));
 
   const topG = [...players].sort((a, b) => b.goals - a.goals).slice(0, 5);
   const topA = [...players].sort((a, b) => b.assists - a.assists).slice(0, 5);
@@ -38,10 +39,10 @@ export function renderFootballStats() {
     if (!rows.length || rows[0][valKey] === 0) {
       return `<div class="fb-lb-card"><div class="fb-lb-title">${icon} ${title}</div><p class="text-dim">لا توجد بيانات بعد</p></div>`;
     }
-    return `<div class="fb-lb-card">
+    return `<div class="fb-lb-card" data-football-ranking="${valKey}">
       <div class="fb-lb-title">${icon} ${title}</div>
-      <ol class="fb-lb-list">${rows.map((r, i) =>
-        `<li><span class="fb-lb-rank">${i + 1}</span> <strong>${esc(r.name)}</strong> <span class="fb-lb-val">${r[valKey]}</span></li>`
+      <ol class="fb-lb-list">${rows.filter(r => r[valKey] > 0).map((r, i) =>
+        `<li><span class="fb-lb-rank">${i + 1}</span><span class="fb-player-identity"><strong><bdi>${esc(r.name)}</bdi></strong><span class="fb-owner">فريق ${esc(displayName(r.owner))}</span></span><span class="fb-lb-val">${r[valKey]}</span></li>`
       ).join('')}</ol>
     </div>`;
   };
@@ -55,7 +56,7 @@ export function renderFootballStats() {
 
   if (!players.length) {
     contTbl.innerHTML = "<div class=\"empty-state\">لا توجد إحصائيات بعد. سجّل المباريات مع تفاصيل أهدافها.</div>";
-    if (detail) detail.classList.add('hidden');
+    closeFootballPlayerDetail();
     return;
   }
 
@@ -67,8 +68,8 @@ export function renderFootballStats() {
         </tr>
       </thead>
       <tbody>
-        ${players.map(p => `<tr class="fb-row-click" data-football-player="${esc(p.name)}" tabindex="0">
-          <td><strong>${esc(p.name)}</strong></td>
+        ${players.map(p => `<tr class="fb-row-click" data-football-player="${esc(p.name)}" data-football-owner="${esc(p.owner)}" tabindex="0" aria-label="تفاصيل ${esc(p.name)} · فريق ${esc(displayName(p.owner))}">
+          <td><strong><bdi>${esc(p.name)}</bdi></strong><span class="fb-owner">فريق ${esc(displayName(p.owner))}</span></td>
           <td>${p.goals}</td>
           <td>${p.assists}</td>
           <td>${p.contributions}</td>
@@ -77,23 +78,34 @@ export function renderFootballStats() {
         </tr>`).join('')}
       </tbody>
     </table>`;
+  if (selectedFootballPlayer && players.some(p => p.key === fbPlayerKey(selectedFootballPlayer.name, selectedFootballPlayer.owner))) {
+    showFootballPlayerDetail(selectedFootballPlayer.name, selectedFootballPlayer.owner, false);
+  } else closeFootballPlayerDetail();
 }
 
-export function showFootballPlayerDetail(name) {
+export function closeFootballPlayerDetail() {
+  selectedFootballPlayer = null;
+  document.getElementById('fbPlayerDetail')?.classList.add('hidden');
+}
+
+export function showFootballPlayerDetail(name, owner, scroll = true) {
   const detail = document.getElementById('fbPlayerDetail');
   if (!detail) return;
   const filter = document.getElementById('fbStatsSeasonFilter')?.value || 'all';
   const matchIds = getMatchIdsForSeason(filter);
-  const key = fbPlayerKey(name);
+  const key = fbPlayerKey(name, owner);
+  if (!key) return closeFootballPlayerDetail();
 
   const goals = [];
   const assists = [];
   state.db.goalEvents.filter(e => matchIds.has(e.matchId)).forEach(e => {
     const m = state.db.matches.find(x => x.id === e.matchId);
     if (!m) return;
-    if (fbPlayerKey(e.scorer) === key) goals.push({ e, m });
-    if (e.assist && fbPlayerKey(e.assist) === key) assists.push({ e, m });
+    if (fbPlayerKey(e.scorer, e.owner) === key) goals.push({ e, m });
+    if (e.assist && fbPlayerKey(e.assist, e.owner) === key) assists.push({ e, m });
   });
+  if (!goals.length && !assists.length) return closeFootballPlayerDetail();
+  selectedFootballPlayer = { name, owner };
 
   const matchSet = new Set([...goals, ...assists].map(x => x.m.id));
   const gpg = matchSet.size ? (goals.length / matchSet.size).toFixed(2) : '0.00';
@@ -101,7 +113,7 @@ export function showFootballPlayerDetail(name) {
   detail.classList.remove('hidden');
   detail.innerHTML = `
     <div class="panel">
-      <div class="panel-header">👤 ${esc(name)}</div>
+      <div class="panel-header">👤 <bdi>${esc(name)}</bdi> · فريق ${esc(displayName(owner))}</div>
       <div class="panel-body">
         <div class="fb-detail-stats">
           <span>⚽ الأهداف: ${goals.length}</span>
@@ -117,10 +129,10 @@ export function showFootballPlayerDetail(name) {
           <ul class="fb-detail-list">${assists.map(({e,m}) =>
             `<li>${e.minute ? e.minute + "'" : '—'} ${esc(e.scorer)} (${esc(displayName(e.owner))})</li>`
           ).join('')}</ul>` : ''}
-        <button type="button" class="btn-sm mt-8" onclick="document.getElementById('fbPlayerDetail').classList.add('hidden')">إغلاق</button>
+        <button type="button" class="btn-sm mt-8" onclick="League.closeFootballPlayerDetail()">إغلاق</button>
       </div>
     </div>`;
-  detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (scroll) detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 export function renderH2H() {

@@ -192,32 +192,31 @@ export function aggregateOwnerStatsFromEvents(matchId, events = getMatchGoalEven
   return byOwner;
 }
 
-export function computeMatchAwards(matchId, events) {
-  const byOwner = aggregateOwnerStatsFromEvents(matchId, events);
-  const owners = Object.keys(byOwner);
-  if (!owners.length) return [];
+export function computeMatchAwards(matchId, events = getMatchGoalEvents(matchId)) {
+  const players = aggregateFootballPlayerStats(events);
+  if (!players.length) return [];
   const awards = [];
-  const maxGoals = Math.max(...owners.map(o => byOwner[o].goals));
-  const maxAssists = Math.max(...owners.map(o => byOwner[o].assists));
-  const maxMvp = Math.max(...owners.map(o => byOwner[o].goals * 2 + byOwner[o].assists));
+  const maxGoals = Math.max(...players.map(p => p.goals));
+  const maxAssists = Math.max(...players.map(p => p.assists));
+  const maxMvp = Math.max(...players.map(p => p.goals * 2 + p.assists));
 
   if (maxGoals > 0) {
-    owners.filter(o => byOwner[o].goals === maxGoals).forEach(o => {
-      awards.push({ icon: '⚽', title: 'هداف المباراة', player: o, detail: `الأهداف: ${byOwner[o].goals}` });
+    players.filter(p => p.goals === maxGoals).forEach(p => {
+      awards.push({ icon: '⚽', title: 'هداف المباراة', player: p.name, owner: p.owner, detail: `الأهداف: ${p.goals}` });
     });
   }
   if (maxAssists > 0) {
-    owners.filter(o => byOwner[o].assists === maxAssists).forEach(o => {
-      awards.push({ icon: '🎯', title: 'أفضل صانع أهداف', player: o, detail: `التمريرات الحاسمة: ${byOwner[o].assists}` });
+    players.filter(p => p.assists === maxAssists).forEach(p => {
+      awards.push({ icon: '🎯', title: 'أفضل صانع أهداف', player: p.name, owner: p.owner, detail: `التمريرات الحاسمة: ${p.assists}` });
     });
   }
   if (maxMvp > 0) {
-    owners.filter(o => byOwner[o].goals * 2 + byOwner[o].assists === maxMvp).forEach(o => {
-      awards.push({ icon: '👑', title: "أفضل لاعب", player: o, detail: `الأهداف: ${byOwner[o].goals} · التمريرات الحاسمة: ${byOwner[o].assists}` });
+    players.filter(p => p.goals * 2 + p.assists === maxMvp).forEach(p => {
+      awards.push({ icon: '👑', title: "أفضل لاعب", player: p.name, owner: p.owner, detail: `الأهداف: ${p.goals} · التمريرات الحاسمة: ${p.assists}` });
     });
   }
-  owners.filter(o => byOwner[o].goals >= 3).forEach(o => {
-    awards.push({ icon: '🎩', title: 'ثلاثية', player: o, detail: `الأهداف: ${byOwner[o].goals}` });
+  players.filter(p => p.goals >= 3).forEach(p => {
+    awards.push({ icon: '🎩', title: 'ثلاثية', player: p.name, owner: p.owner, detail: `الأهداف: ${p.goals}` });
   });
   return awards;
 }
@@ -227,7 +226,7 @@ export function matchAwardsHTML(matchId, events) {
   if (!awards.length) return '';
   return `<div class="match-awards">${awards.map(a =>
     `<span class="match-award-chip" title="${esc(a.title)} — ${esc(a.detail)}">` +
-    `${a.icon} <strong>${esc(displayName(a.player))}</strong> <span class="match-award-title">${esc(a.title)}</span></span>`
+    `${a.icon} <strong><bdi>${esc(a.player)}</bdi> · ${esc(displayName(a.owner))}</strong> <span class="match-award-title">${esc(a.title)}</span></span>`
   ).join('')}</div>`;
 }
 
@@ -275,8 +274,11 @@ export function getSeasonStatTotals(player, seasonFilter) {
   return { goals, assists };
 }
 
-export function fbPlayerKey(name) {
-  return (name || '').trim().toLowerCase();
+export function fbPlayerKey(name, owner) {
+  const normalized = (name || '').trim().toLowerCase();
+  // A name is unique only within its owner's squad. Keep the canonical owner
+  // and encode a tuple so punctuation in names cannot collide with a separator.
+  return normalized && owner ? JSON.stringify([owner, normalized]) : '';
 }
 
 export function getMatchIdsForSeason(seasonFilter) {
@@ -287,26 +289,30 @@ export function getMatchIdsForSeason(seasonFilter) {
 
 export function computeFootballPlayerStats(seasonFilter = 'all') {
   const matchIds = getMatchIdsForSeason(seasonFilter);
+  return aggregateFootballPlayerStats(state.db.goalEvents.filter(e => matchIds.has(e.matchId)));
+}
+
+export function aggregateFootballPlayerStats(events) {
   const map = Object.create(null);
 
-  const ensure = (rawName) => {
-    const key = fbPlayerKey(rawName);
+  const ensure = (rawName, owner) => {
+    const key = fbPlayerKey(rawName, owner);
     if (!key) return null;
-    if (!map[key]) map[key] = { name: rawName.trim(), goals: 0, assists: 0, matchIds: new Set() };
+    if (!map[key]) map[key] = { key, name: rawName.trim(), owner, goals: 0, assists: 0, matchIds: new Set() };
     return map[key];
   };
 
-  state.db.goalEvents.filter(e => matchIds.has(e.matchId)).forEach(e => {
-    const scorer = ensure(e.scorer);
+  events.forEach(e => {
+    const scorer = ensure(e.scorer, e.owner);
     if (scorer) {
       scorer.goals++;
-      scorer.matchIds.add(e.matchId);
+      if (e.matchId) scorer.matchIds.add(e.matchId);
     }
     if (e.assist) {
-      const a = ensure(e.assist);
+      const a = ensure(e.assist, e.owner);
       if (a) {
         a.assists++;
-        a.matchIds.add(e.matchId);
+        if (e.matchId) a.matchIds.add(e.matchId);
       }
     }
   });
@@ -314,7 +320,9 @@ export function computeFootballPlayerStats(seasonFilter = 'all') {
   return Object.values(map).map(p => {
     const matches = p.matchIds.size;
     return {
+      key: p.key,
       name: p.name,
+      owner: p.owner,
       goals: p.goals,
       assists: p.assists,
       contributions: p.goals + p.assists,

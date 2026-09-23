@@ -1,7 +1,7 @@
 // Synthetic data only. This client is used exclusively by the test harness.
 export const players = ['Wael','Omar','Abdul Rahim','Mohammad','Mustafa','Abdul Qader'];
 export const ids = { season:'10000000-0000-4000-8000-000000000001', match:'20000000-0000-4000-8000-000000000001', group:'30000000-0000-4000-8000-000000000001', question:'40000000-0000-4000-8000-000000000001' };
-export function fixtureClient({ profile = null, empty = false } = {}) {
+export function fixtureClient({ profile = null, empty = false, overlappingSquads = false } = {}) {
   const db = {
     players: empty ? [] : players.map(name => ({ name,role:name === 'Wael' ? 'admin' : 'player',created:1 })),
     seasons: empty ? [] : [{id:ids.season,name:'Season 01',active:true,created:1}],
@@ -14,6 +14,13 @@ export function fixtureClient({ profile = null, empty = false } = {}) {
     chat_group_members: ['Wael','Omar'].map(player=>({group_id:ids.group,player})),chat_invitations:[],
     chat_messages:[{id:'50000000-0000-4000-8000-000000000001',group_id:ids.group,author:'Omar',body:'That late winner! Ready for a rematch?',created_at:'2026-09-08T12:00:00Z'},{id:'50000000-0000-4000-8000-000000000002',group_id:ids.group,author:'Wael',body:'Same time tomorrow. See you on the pitch.',created_at:'2026-09-08T12:01:00Z'}],
   };
+  if (overlappingSquads) {
+    db.matches = [{id:ids.match,player1:'Wael',player2:'Mustafa',goals1:1,goals2:3,date:'2026-09-22',season_id:ids.season,timestamp:1000}];
+    db.match_goal_events = ['Wael','Mustafa','Mustafa','Mustafa'].map((owner,index) => ({
+      id:'overlap-'+index,match_id:ids.match,owner,scorer:'Zlatan Ibrahimović',assist:index===3?'':'Ronaldinho',minute:10+index*10,sort_order:index,
+    }));
+    db.squad_players = ['Wael','Mustafa'].flatMap(owner => ['Zlatan Ibrahimović','Ronaldinho'].map((name,index) => ({id:owner+'-'+index,owner,name,position:'FW',active:true})));
+  }
   let signedIn = profile;
   const calls = [], listeners = [], channels = [];
   const client = {
