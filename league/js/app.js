@@ -42,12 +42,12 @@ document.addEventListener('click', event => {
   const link = event.target.closest('.nav-item[data-page]');
   if (link) { event.preventDefault(); ui.navigateTo(link.dataset.page, link); }
   const row = event.target.closest('[data-football-player]');
-  if (row) statistics.showFootballPlayerDetail(row.dataset.footballPlayer, row.dataset.footballOwner);
+  if (row) statistics.showFootballPlayerDetail(row.dataset.footballPlayer, row.dataset.footballOwner, true, row.dataset.footballId || null);
 });
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape') ui.closeSidebar();
   if ((event.key === 'Enter' || event.key === ' ') && event.target.matches('[data-football-player]')) {
-    event.preventDefault(); statistics.showFootballPlayerDetail(event.target.dataset.footballPlayer, event.target.dataset.footballOwner);
+    event.preventDefault(); statistics.showFootballPlayerDetail(event.target.dataset.footballPlayer, event.target.dataset.footballOwner, true, event.target.dataset.footballId || null);
   }
 });
 window.addEventListener('hashchange', () => {

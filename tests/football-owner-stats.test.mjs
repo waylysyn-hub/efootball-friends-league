@@ -7,6 +7,27 @@ const striker = 'Zlatan Ibrahimović';
 const maker = 'Ronaldinho';
 const plain = value => JSON.parse(JSON.stringify(value));
 
+test('renames retain one identity while a reused name stays a distinct footballer in league and public statistics',async t=>{
+  const app=await mount('league/index.html',{profile:'Wael'});t.after(()=>app.close());
+  const {client,window:w}=app;
+  client.db.squad_players.find(p=>p.id==='s1').name='Ibrahimović renamed';
+  client.db.squad_players.push({id:'different-striker',owner:'Wael',name:striker,active:true,position:'FW'});
+  const other='20000000-0000-4000-8000-000000000008';
+  client.db.matches.push({...client.db.matches[0],id:other,goals1:2,goals2:0,timestamp:2000});
+  client.db.match_goal_events.push({id:'extra-1',match_id:other,owner:'Wael',scorer:'Ibrahimović renamed',scorer_id:'s1',assist:'',minute:1,sort_order:0},
+    {id:'extra-2',match_id:other,owner:'Wael',scorer:striker,scorer_id:'different-striker',assist:'',minute:2,sort_order:1});
+  await w.League.refresh();const stats=w.League.computeFootballPlayerStats('all');
+  assert.equal(stats.find(p=>p.playerId==='s1').goals,3);assert.equal(stats.find(p=>p.playerId==='different-striker').goals,1);
+  w.League.navigateTo('footballStats');w.League.showFootballPlayerDetail('Ibrahimović renamed','Wael',false,'s1');
+  assert.match(app.document.querySelector('.fb-detail-stats').textContent,/الأهداف: 3/);
+  assert.equal(w.League.isSelfAssist({scorer:striker,assist:striker,scorerId:'s1',assistId:'different-striker'}),false);
+  const hub=await mount('index.html');t.after(()=>hub.close());
+  hub.client.db.matches=structuredClone(client.db.matches);hub.client.db.match_goal_events=structuredClone(client.db.match_goal_events);
+  hub.document.getElementById('retryHub').click();await settle();
+  const scores=[...hub.document.querySelectorAll('.hub-scorer-goals')].map(node=>Number(node.textContent));
+  assert.deepEqual(scores,[3,1,1]);assert.deepEqual(app.errors,[]);assert.deepEqual(hub.errors,[]);
+});
+
 test('same-name strikers and playmakers keep separate owner totals, appearances and averages', async t => {
   const app = await mount('league/index.html', { profile: 'Wael', overlappingSquads: true }); t.after(() => app.close());
   const state = app.module('league/js/state.js').state;
@@ -22,9 +43,9 @@ test('same-name strikers and playmakers keep separate owner totals, appearances 
   assert.notEqual(app.window.League.fbPlayerKey('a::b', 'c'), app.window.League.fbPlayerKey('a', 'b::c'));
   const secondSeason = 'second-season';
   state.db.matches.push({id:'other-match',player1:'Wael',player2:'Omar',season:secondSeason});
-  state.db.goalEvents.push({matchId:'other-match',owner:'Wael',scorer:'  Zlatan Ibrahimović  ',assist:maker,minute:20});
+  state.db.goalEvents.push({matchId:'other-match',owner:'Wael',scorer:'  Zlatan Ibrahimović  ',scorerId:'Wael-0',assist:maker,assistId:'Wael-1',minute:20});
   // A footballer may score and assist in the same match; count that appearance once.
-  state.db.goalEvents.push({matchId:'other-match',owner:'Wael',scorer:maker,assist:striker,minute:30});
+  state.db.goalEvents.push({matchId:'other-match',owner:'Wael',scorer:maker,scorerId:'Wael-1',assist:striker,assistId:'Wael-0',minute:30});
   state.db.goalEvents.push({matchId:'missing-match',owner:'Wael',scorer:striker,assist:'',minute:0});
   const all = app.window.League.computeFootballPlayerStats('all');
   const wael = all.find(p => p.name === striker && p.owner === 'Wael');

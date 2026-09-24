@@ -68,7 +68,7 @@ export function renderFootballStats() {
         </tr>
       </thead>
       <tbody>
-        ${players.map(p => `<tr class="fb-row-click" data-football-player="${esc(p.name)}" data-football-owner="${esc(p.owner)}" tabindex="0" aria-label="تفاصيل ${esc(p.name)} · فريق ${esc(displayName(p.owner))}">
+        ${players.map(p => `<tr class="fb-row-click" data-football-player="${esc(p.name)}" data-football-owner="${esc(p.owner)}" data-football-id="${esc(p.playerId || '')}" tabindex="0" aria-label="تفاصيل ${esc(p.name)} · فريق ${esc(displayName(p.owner))}">
           <td><strong><bdi>${esc(p.name)}</bdi></strong><span class="fb-owner">فريق ${esc(displayName(p.owner))}</span></td>
           <td>${p.goals}</td>
           <td>${p.assists}</td>
@@ -78,8 +78,9 @@ export function renderFootballStats() {
         </tr>`).join('')}
       </tbody>
     </table>`;
-  if (selectedFootballPlayer && players.some(p => p.key === fbPlayerKey(selectedFootballPlayer.name, selectedFootballPlayer.owner))) {
-    showFootballPlayerDetail(selectedFootballPlayer.name, selectedFootballPlayer.owner, false);
+  if (selectedFootballPlayer && players.some(p => p.key === selectedFootballPlayer.key)) {
+    const selected = players.find(p => p.key === selectedFootballPlayer.key);
+    showFootballPlayerDetail(selected.name, selected.owner, false, selected.playerId);
   } else closeFootballPlayerDetail();
 }
 
@@ -88,12 +89,14 @@ export function closeFootballPlayerDetail() {
   document.getElementById('fbPlayerDetail')?.classList.add('hidden');
 }
 
-export function showFootballPlayerDetail(name, owner, scroll = true) {
+export function showFootballPlayerDetail(name, owner, scroll = true, playerId = null) {
   const detail = document.getElementById('fbPlayerDetail');
   if (!detail) return;
   const filter = document.getElementById('fbStatsSeasonFilter')?.value || 'all';
   const matchIds = getMatchIdsForSeason(filter);
-  const key = fbPlayerKey(name, owner);
+  const candidates = computeFootballPlayerStats(filter).filter(p => p.owner === owner && (playerId ? p.playerId === playerId : p.name === name));
+  if (candidates.length !== 1) return closeFootballPlayerDetail();
+  const key = candidates[0].key;
   if (!key) return closeFootballPlayerDetail();
 
   const goals = [];
@@ -101,11 +104,11 @@ export function showFootballPlayerDetail(name, owner, scroll = true) {
   state.db.goalEvents.filter(e => matchIds.has(e.matchId)).forEach(e => {
     const m = state.db.matches.find(x => x.id === e.matchId);
     if (!m) return;
-    if (fbPlayerKey(e.scorer, e.owner) === key) goals.push({ e, m });
-    if (e.assist && fbPlayerKey(e.assist, e.owner) === key) assists.push({ e, m });
+    if (fbPlayerKey(e.scorer, e.owner, e.scorerId) === key) goals.push({ e, m });
+    if (e.assist && fbPlayerKey(e.assist, e.owner, e.assistId) === key) assists.push({ e, m });
   });
   if (!goals.length && !assists.length) return closeFootballPlayerDetail();
-  selectedFootballPlayer = { name, owner };
+  selectedFootballPlayer = { name, owner, key };
 
   const matchSet = new Set([...goals, ...assists].map(x => x.m.id));
   const gpg = matchSet.size ? (goals.length / matchSet.size).toFixed(2) : '0.00';

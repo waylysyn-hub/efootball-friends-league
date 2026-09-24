@@ -50,7 +50,7 @@ export function renderMatchDetails() {
       <div class="panel mt-16">
         <div class="panel-header">⚽ الأهداف</div>
         <div class="panel-body">
-          ${events.length ? goalEventTimelineHTML(m.id) : `<div class="empty-state">${m.goals1 + m.goals2 === 0 ? 'لا توجد أهداف مسجلة في هذه المباراة.' : 'لم تُسجّل تفاصيل أهداف لهذه المباراة.'}</div>`}
+          ${events.length ? goalEventTimelineHTML(m.id) : `<div class="empty-state">${m.goals1 + m.goals2 === 0 ? 'لا توجد أهداف في هذه المباراة.' : 'لم تُسجّل تفاصيل أهداف لهذه المباراة.'}</div>`}
         </div>
       </div>
       ${isAdmin() ? `<div class="form-actions mt-16">
