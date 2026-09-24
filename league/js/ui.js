@@ -122,15 +122,21 @@ export function formatDate(dateStr) {
   } catch { return dateStr; }
 }
 
-export function showConfirm(title, message, onConfirm) {
+let cancelConfirmation = null;
+export function showConfirm(title, message, onConfirm, onCancel = null) {
+  cancelConfirmation = onCancel;
   document.getElementById('confirmTitle').textContent = title;
   document.getElementById('confirmMessage').textContent = message;
   openDialog('confirmModal', closeConfirmModal);
   const button = document.getElementById('confirmYes');
   button.onclick = () => withBusy('confirm', button, async () => {
     if (!state.user) throw new Error('Session ended');
-    await onConfirm(); closeDialog('confirmModal');
+    await onConfirm(); cancelConfirmation = null; closeDialog('confirmModal');
   });
  }
 
-export function closeConfirmModal() { if (!isBusy('confirm')) closeDialog('confirmModal'); }
+export function closeConfirmModal() {
+  if (isBusy('confirm')) return;
+  const cancel = cancelConfirmation; cancelConfirmation = null;
+  closeDialog('confirmModal'); cancel?.();
+}

@@ -1,7 +1,7 @@
 import { displayName, displaySeason, AR_LOCALE } from '../../shared/locale.js';
 import { state } from './state.js';
 import { esc, navigateTo } from './ui.js';
-import { getMatchGoalEvents, goalEventTimelineHTML, matchAwardsHTML } from './goal-events.js';
+import { getMatchGoalEvents, goalEventTimelineHTML, matchAwardsHTML, hasMissingGoalDetails } from './goal-events.js';
 import { isAdmin } from './admin.js';
 
 export function openMatchDetails(matchId) {
@@ -45,11 +45,12 @@ export function renderMatchDetails() {
         <span class="md-player">${esc(displayName(m.player2))}</span>
       </div>
       <div class="match-details-meta">${esc(resultBadge)}</div>
+      ${hasMissingGoalDetails(m) ? '<p class="entry-note"><span class="entry-missing-badge">تفاصيل ناقصة</span> النتيجة محفوظة. يمكن للمدير إضافة تفاصيل الأهداف من تعديل المباراة.</p>' : ''}
       ${matchAwardsHTML(m.id)}
       <div class="panel mt-16">
         <div class="panel-header">⚽ الأهداف</div>
         <div class="panel-body">
-          ${events.length ? goalEventTimelineHTML(m.id) : "<div class=\"empty-state\">لم تُسجّل تفاصيل أهداف لهذه المباراة.</div>"}
+          ${events.length ? goalEventTimelineHTML(m.id) : `<div class="empty-state">${m.goals1 + m.goals2 === 0 ? 'لا توجد أهداف مسجلة في هذه المباراة.' : 'لم تُسجّل تفاصيل أهداف لهذه المباراة.'}</div>`}
         </div>
       </div>
       ${isAdmin() ? `<div class="form-actions mt-16">

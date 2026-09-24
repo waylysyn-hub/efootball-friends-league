@@ -8,7 +8,7 @@ function record(app, score = '1') {
  w.League.navigateTo('recordMatch');
  d.getElementById('matchPlayer1').value='Wael'; d.getElementById('matchPlayer2').value='Omar';
  d.getElementById('matchGoals1').value=score; w.League.updateMatchPreview();
- w.League.addGoalEventRow('goalEventsList');
+ w.League.setMatchEntryMode('match','detailed');
  return d.querySelector('#goalEventsList .ge-row');
 }
 test('scorer/assist select only the owner squad, omit self-assist and reset after team changes',async t=>{
@@ -24,15 +24,15 @@ test('scorer/assist select only the owner squad, omit self-assist and reset afte
  assert.equal(row.querySelector('.ge-scorer').value,'');assert.equal(row.querySelector('.ge-assist').value,'');
  assert.deepEqual([...row.querySelector('.ge-scorer').options].map(o=>o.value),['','Didier Drogba']);
  d.getElementById('matchPlayer2').value='';w.League.updateMatchPreview();
- assert.equal(row.querySelector('.ge-owner').value,'');assert.equal(row.querySelector('.ge-scorer').value,'');
- assert.equal(row.querySelector('.ge-scorer').disabled,true);assert.deepEqual(app.errors,[]);
+ const changed=d.querySelector('#goalEventsList .ge-row');
+ assert.equal(changed.querySelector('.ge-owner').value,'');assert.equal(changed.querySelector('.ge-scorer').value,'');
+ assert.equal(changed.querySelector('.ge-scorer').disabled,true);assert.deepEqual(app.errors,[]);
 });
-test('missing details cannot save a scored match; no-assist selection persists as empty text',async t=>{
+test('detailed mode requires its scorer; optional assist and minute retain the existing data format',async t=>{
  const app=await mount('league/index.html',{profile:'Wael'});t.after(()=>app.close());const {window:w,document:d,client}=app;
- record(app);w.League.removeGoalEventRow('goalEventsList',0);await w.League.saveMatch();
- assert.equal(client.calls.filter(c=>c.rpc==='save_league_match').length,0);assert.match(d.getElementById('matchFormError').textContent,/لا تطابق/);
- w.League.addGoalEventRow('goalEventsList');await w.League.saveMatch();assert.match(d.getElementById('matchFormError').textContent,/اختر المسجّل/);
- d.querySelector('.ge-scorer').value='Zlatan Ibrahimović';await w.League.saveMatch();
+ record(app);await w.League.saveMatch();
+ assert.equal(client.calls.filter(c=>c.rpc==='save_league_match').length,0);assert.match(d.getElementById('goalEventsList-0-scorerError').textContent,/اختر المسجّل/);
+ d.querySelector('.ge-scorer').value='Zlatan Ibrahimović';await w.League.saveMatch();await w.League.confirmMatchSave();
  const saved=client.calls.find(c=>c.rpc==='save_league_match');assert.equal(saved.args.goal_events[0].assist,'');assert.equal(saved.args.goal_events[0].minute,0);
 });
 test('empty squad can be filled within the match, failed save retains draft and retry identity',async t=>{

@@ -4,7 +4,11 @@ Each league account now has a saved squad of football players. Owners can add, e
 
 Recording or editing a goal uses native select controls for the scorer and assist, filtered to the selected owner's active squad. The assist defaults to **بدون أسيست** (stored as an empty string). Changing the owner clears both player choices, and choosing a scorer removes that player from assist choices. A player can be added from the goal card without discarding the match draft.
 
-New scored matches require details for every goal. The match and goal events are saved in one transaction; Postgres rejects missing details, foreign-team players and self-assists. Existing score-only matches may keep their original score without inventing goal details. Historical names remain snapshots: edits can retain a previously recorded name even if the player was renamed or archived, while new matches require active squad members.
+Quick entry is the default: admins can save scores without goal details. Detailed entry creates one row per goal and requires a squad scorer for each row, unless the admin explicitly chooses to defer all details. Both paths present a review before saving the match and events in one transaction. A nonempty goal list must exactly match both team scores; Postgres rejects foreign-team players and self-assists. Historical names remain snapshots: edits can retain a previously recorded name even if the player was renamed or archived, while new matches require active squad members.
+
+Quick matches update league results and standings immediately. Individual scorer/assist awards use only the goal events actually entered, still separated by squad owner. The history marks scored matches with missing details and supports completing them later through Edit. A 0–0 result needs no goal details. Blank optional minutes keep the existing stored value `0`; entered minutes must be integers from 1 to 120.
+
+Entry modes preserve drafts; changing a team clears that team's scorer/assist choices. Score increases create blank goal rows, reductions ask before discarding rows, and manual goal/team changes update scores automatically. New/cancel actions confirm before clearing a draft. Failed saves retain both the inputs and stable match ID, including recovery after a committed result's response is lost.
 
 ## Football-player statistics and awards
 
@@ -16,18 +20,18 @@ For example, Zlatan with Wael scoring once and Zlatan with Mustafa scoring three
 
 ## Database rollout
 
-Run `supabase/migrations/20260920075946_squad_goal_selection.sql` after the consistency and safeupdate migrations, before deploying the frontend. The migration creates `squad_players`, enables RLS, grants authenticated reads and owner/admin writes, and updates the existing `save_league_match` function. It adds no real players automatically and does not reset or rewrite competition data. Re-running an older consistency migration afterwards would replace the new match validation; reapply the squad migration last if this is ever necessary.
+Run `supabase/migrations/20260920075946_squad_goal_selection.sql` after the consistency and safeupdate migrations. It creates `squad_players`, enables RLS and grants authenticated reads and owner/admin writes. Then apply `supabase/migrations/20260923055900_quick_match_entry.sql` before deploying this frontend. The latest migration replaces only the existing `save_league_match` function to accept an empty goal array for score-only games. It preserves its signature, invoker security, admin check, row locks, squad validation and atomic transaction. It adds no tables, columns or real players and does not rewrite competition data. If an older migration is reapplied, apply the quick-entry migration last to retain this behavior.
 
 Squad ownership and IDs cannot be changed through client table updates. Players are archived rather than deleted. Competition export/restore continues to cover seasons, matches and goal snapshots; squads, accounts and chat remain separate and are preserved by competition resets/restores.
 
 ## Verification
 
 - `npm test`: SQL/RLS/transaction tests plus frontend behavior, including owner isolation, cross-team rejection, exact counts, no assist, historical edits, archived players, form retention and retry identity.
-- `npm run test:browser`: all seven viewport projects include squad navigation and goal entry, opening the player dialog, preserving the match draft and saving without an assist.
+- `npm run test:browser`: seven full regression viewport projects, plus match-entry coverage at 320, 375 and 414 pixels. Quick/review/edit and detailed 3–2 flows check overflow, touch targets, optional-minute validation and score-reduction cancellation. Screenshots are saved for mobile and desktop review.
 - GitHub's native PostgreSQL job also runs with `pg-safeupdate` enabled.
 
 Only synthetic test players are used by these automated tests.
 
 ## Validation status
 
-The local Node/PGlite/frontend suite passes all 49 tests, together with static security, syntax and asset checks. Seven-viewport browser scenarios include overlapping squad names, and native PostgreSQL with `pg-safeupdate` runs in GitHub Actions before deployment. No real squad players are added by the migration or tests.
+The Node/PGlite/frontend suite covers quick 0–0, 1–0, 3–2, detailed 3–2, deferred details completed later, duplicate teams, invalid scores/minutes, confirmed deletion, mode switching, network failure, lost responses and admin permissions. Native PostgreSQL with `pg-safeupdate` runs in GitHub Actions before deployment, including migration repeatability and preservation of existing matches and events. No real matches or squad players are added by tests.
