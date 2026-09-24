@@ -240,10 +240,10 @@
 <p class="match-stats-hint">الخانات تطابق النتيجة تلقائيًا. اختر المسجّل من تشكيلة صاحب الفريق، والأسيست والدقيقة اختياريان.</p>
 <div class="goal-events-list" id="goalEventsList"></div><div class="ge-actions"><button class="btn-sm btn-ge-add" onclick="League.addGoalEventRow('goalEventsList')" type="button">+ إضافة هدف</button></div>
 <div class="goal-events-summary" id="goalEventsSummary"></div><div class="match-awards-preview" id="matchAwardsPreview"></div></fieldset></details>
-<button type="button" class="btn-secondary entry-add-details" id="matchAddDetails" onclick="League.setMatchEntryMode('match','detailed')">إضافة تفاصيل الأهداف</button>
+
 <div class="qa-setup-banner hidden" id="goalEventsSetupBanner"></div><div class="form-error hidden" id="matchFormError" role="alert"></div>
-<div class="entry-primary-actions"><button class="btn-primary" id="saveMatchButton" onclick="League.saveMatch()" type="button">حفظ المباراة</button><button class="btn-secondary" onclick="League.cancelMatchEntry()" type="button">إلغاء</button></div>
-<div class="entry-reset"><button class="btn-secondary" id="newMatchButton" onclick="League.clearMatchForm()" type="button">بدء مباراة جديدة</button></div></div></div></div>
+<div class="entry-primary-actions"><button class="btn-primary" id="saveMatchButton" onclick="League.saveMatch()" type="button">حفظ المباراة</button><button type="button" class="btn-secondary entry-add-details" id="matchAddDetails" onclick="League.setMatchEntryMode('match','detailed')">إضافة تفاصيل الأهداف اختياريًا</button></div>
+<div class="entry-reset"><button class="btn-secondary" id="newMatchButton" onclick="League.clearMatchForm()" type="button">بدء مباراة جديدة</button><button class="btn-secondary" onclick="League.cancelMatchEntry()" type="button">إلغاء</button></div></div></div></div>
 <!-- MATCH HISTORY PAGE -->
 <div class="page hidden" id="page-matchHistory">
 <div class="page-header">
@@ -495,7 +495,7 @@
 <p class="match-stats-hint">الخانات تطابق النتيجة تلقائيًا. اختر المسجّل من تشكيلة صاحب الفريق، والأسيست والدقيقة اختياريان.</p>
 <div class="goal-events-list" id="editGoalEventsList"></div><div class="ge-actions"><button class="btn-sm btn-ge-add" onclick="League.addGoalEventRow('editGoalEventsList')" type="button">+ إضافة هدف</button></div>
 <div class="goal-events-summary" id="editGoalEventsSummary"></div><div class="match-awards-preview" id="editMatchAwardsPreview"></div></fieldset></details>
-<button type="button" class="btn-secondary entry-add-details" id="editAddDetails" onclick="League.setMatchEntryMode('edit','detailed')">إضافة تفاصيل الأهداف</button>
+<button type="button" class="btn-secondary entry-add-details" id="editAddDetails" onclick="League.setMatchEntryMode('edit','detailed')">إضافة تفاصيل الأهداف اختياريًا</button>
 <div class="form-error hidden" id="editError" role="alert"></div></div><div class="modal-footer"><button class="btn-primary" id="saveEditButton" onclick="League.saveEditMatch()" type="button">حفظ المباراة</button><button class="btn-secondary" onclick="League.closeEditModal()" type="button">إلغاء</button></div></div></div>
 <div class="modal-overlay hidden" id="matchReviewModal" data-busy-region><div class="modal match-entry"><div class="modal-header"><h3>مراجعة المباراة قبل الحفظ</h3><button type="button" class="modal-close" aria-label="العودة لتعديل البيانات" onclick="League.closeMatchReview()">✕</button></div><div class="modal-body"><div id="matchReviewSummary"></div><div id="matchReviewError" class="form-error hidden" role="alert"></div></div><div class="modal-footer"><button id="confirmMatchSaveButton" class="btn-primary" type="button" onclick="League.confirmMatchSave()">حفظ المباراة</button><button class="btn-secondary" type="button" onclick="League.closeMatchReview()">تعديل البيانات</button></div></div></div>
 <!-- CONFIRM MODAL -->

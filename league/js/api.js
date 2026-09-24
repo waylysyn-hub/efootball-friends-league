@@ -22,6 +22,7 @@ export function mapMatch(row) {
   return {
     id: row.id,
     player1: row.player1, player2: row.player2,
+    player1Id: row.player1_id || null, player2Id: row.player2_id || null,
     goals1: row.goals1, goals2: row.goals2,
     date: row.date, season: row.season_id,
     timestamp: Number(row.timestamp) || (row.created_at ? new Date(row.created_at).getTime() : Date.now())
@@ -65,6 +66,7 @@ export function mapGoalEvent(row) {
     id: row.id,
     matchId: row.match_id,
     owner: row.owner,
+    ownerId: row.owner_id || null, scorerId: row.scorer_id || null, assistId: row.assist_id || null,
     scorer: row.scorer,
     assist: row.assist || '',
     minute: row.minute ?? 0,
@@ -80,7 +82,7 @@ export function setDefaultDate() {
 let fetchInFlight = null;
 export async function fetchPlayers() {
   if (!sb) throw new Error('Connection unavailable');
-  const { data, error } = await sb.from('players').select('name, role, created').order('name');
+  const { data, error } = await sb.from('players').select('id, name, role, created').order('name');
   if (error) throw error;
   state.db.accounts = Object.fromEntries((data || []).map(player => [player.name, player]));
   populateAllPlayerDropdowns();
@@ -99,7 +101,7 @@ async function loadSnapshot() {
   const eveningUser = state.profile?.role === 'admin' ? state.user : null;
   if (eveningUser) tables.push('league_evenings');
   const results = await Promise.all(tables.map(table =>
-    sb.from(table).select(table === 'players' ? 'name, role, created' : '*')
+    sb.from(table).select(table === 'players' ? 'id, name, role, created' : '*')
   ));
   const data = {};
   results.forEach((result, index) => {

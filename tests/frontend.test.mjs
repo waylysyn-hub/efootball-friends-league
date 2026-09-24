@@ -37,6 +37,28 @@ test('League empty competition renders statistics, awards and profiles safely',a
  assert.deepEqual(app.errors,[]);
 });
 
+test('backup import retains stable player identities and still accepts old name snapshots',async t=>{
+ const app=await mount('league/index.html',{profile:'Wael'});t.after(()=>app.close());
+ const {normalizeBackup}=app.module('league/js/admin.js');
+ const data=JSON.parse(JSON.stringify(app.module('league/js/state.js').state.db));
+ const squadIds=new Map();
+ for(const event of data.goalEvents)for(const field of ['scorerId','assistId'])if(event[field]){
+  if(!squadIds.has(event[field]))squadIds.set(event[field],randomUUID());event[field]=squadIds.get(event[field]);
+ }
+ const normalized=normalizeBackup(data);
+ assert.equal(normalized.matches[0].player1Id,data.matches[0].player1Id);
+ assert.equal(normalized.matches[0].player2Id,data.matches[0].player2Id);
+ assert.notEqual(normalized.matches[0].id,data.matches[0].id);
+ for(let i=0;i<data.goalEvents.length;i++)for(const field of ['ownerId','scorerId','assistId'])assert.equal(normalized.goalEvents[i][field],data.goalEvents[i][field]??null);
+ assert.equal(normalized.goalEvents[0].matchId,normalized.matches[0].id);
+ const legacy=JSON.parse(JSON.stringify(data));
+ for(const row of [...legacy.matches,...legacy.goalEvents])for(const field of ['player1Id','player2Id','ownerId','scorerId','assistId'])delete row[field];
+ assert.equal(normalizeBackup(legacy).goalEvents[0].scorerId,null);
+ data.goalEvents[0].scorerId='bad-id';assert.throws(()=>normalizeBackup(data),/معرّف لاعب غير صالح/);
+ app.client.emitAuth('SIGNED_IN','Omar');await settle();app.window.League.exportData();
+ assert.match(app.document.getElementById('toast').textContent,/صلاحية مدير/);assert.deepEqual(app.errors,[]);
+});
+
 test('Failed match save preserves form, duplicate click coalesces and retry reuses identity',async t=>{
  const app=await mount('league/index.html',{profile:'Wael'});t.after(()=>app.close());const {window:w,document:d,client}=app;
  w.League.navigateTo('recordMatch');

@@ -15,7 +15,7 @@ function fill(app, g1 = 1, g2 = 0, prefix = 'match') {
 function complete(app, prefix = 'match') {
   const id = prefix === 'edit' ? 'editGoalEventsList' : 'goalEventsList';
   app.document.querySelectorAll(`#${id} .ge-row`).forEach((row, i) => {
-    row.querySelector('.ge-scorer').value = row.querySelector('.ge-owner').value === 'Wael' ? 'Zlatan Ibrahimović' : 'Didier Drogba';
+    row.querySelector('.ge-scorer').value = row.querySelector('.ge-owner').value === 'Wael' ? 's1' : 's4';
     app.window.League.onGoalScorerChange(id, i);
   });
 }
@@ -31,6 +31,9 @@ for (const score of [[0, 0], [1, 0], [3, 2]]) test(`quick ${score.join('–')} r
   if (score[0]) assert.match(d.getElementById('matchReviewSummary').textContent, /بنتيجته فقط/);
   await w.League.confirmMatchSave();
   const saved = calls(app)[0].args; assert.deepEqual(Array.from(saved.goal_events), []);
+  assert.equal(saved.match_data.player1_id,app.client.db.players.find(p=>p.name==='Wael').id);
+  assert.equal(saved.match_data.player2_id,app.client.db.players.find(p=>p.name==='Omar').id);
+  assert.equal('player1' in saved.match_data,false);assert.equal('player2' in saved.match_data,false);
   assert.equal(saved.match_data.goals1, score[0]); assert.equal(saved.match_data.goals2, score[1]);
   assert.equal(d.getElementById('matchPlayer1').value, ''); assert.equal(d.getElementById('matchGoals1').value, '0');
   assert.equal(d.getElementById('matchEntrySuccess').hidden, false);
@@ -47,19 +50,20 @@ test('detailed 3–2 automatically creates owner rows, switches modes without lo
   fill(app, 3, 2); w.League.setMatchEntryMode('match', 'detailed'); complete(app);
   let rows = w.League.collectGoalEventsFromForm('goalEventsList');
   assert.deepEqual(Array.from(rows, row => row.owner), ['Wael','Wael','Wael','Omar','Omar']);
-  d.querySelector('.ge-assist').value = 'Ronaldinho'; d.querySelector('.ge-minute').value = '120';
+  d.querySelector('.ge-assist').value = 's2'; d.querySelector('.ge-minute').value = '120';
   const before = JSON.stringify(w.League.collectGoalEventsFromForm('goalEventsList'));
   w.League.setMatchEntryMode('match','quick'); w.League.setMatchEntryMode('match','detailed');
   assert.equal(JSON.stringify(w.League.collectGoalEventsFromForm('goalEventsList')), before);
-  w.League.saveMatch(); assert.match(d.getElementById('matchReviewSummary').textContent, /تفاصيل أهداف مكتملة5/);
+  w.League.saveMatch(); assert.match(d.getElementById('matchReviewSummary').textContent, /تفاصيل الأهداف5 أهداف مسجلة/);
   await w.League.confirmMatchSave(); rows = calls(app)[0].args.goal_events;
-  assert.equal(rows.length, 5); assert.equal(rows[0].assist, 'Ronaldinho'); assert.equal(rows[0].minute, 120);
-  assert.equal(rows[1].minute, 0); assert.equal(rows[1].assist, ''); assert.deepEqual(app.errors, []);
+  assert.equal(rows.length, 5); assert.equal(rows[0].assist_id, 's2'); assert.equal(rows[0].minute, 120);
+  assert.equal(rows[0].scorer_id,'s1');assert.equal('scorer' in rows[0],false);assert.equal('owner' in rows[0],false);
+  assert.equal(rows[1].minute, 0); assert.equal(rows[1].assist_id, null); assert.deepEqual(app.errors, []);
 });
 
 test('0–0 detailed mode has an empty explanation and no required scorer', async t => {
   const app = await setup(t); fill(app,0,0); app.window.League.setMatchEntryMode('match','detailed');
-  assert.match(app.document.getElementById('goalEventsList').textContent, /لا توجد أهداف مسجلة/);
+  assert.match(app.document.getElementById('goalEventsList').textContent, /لا توجد أهداف في هذه المباراة/);
   app.window.League.saveMatch(); await app.window.League.confirmMatchSave(); assert.equal(calls(app).length,1);
 });
 
@@ -89,7 +93,7 @@ test('field errors reject missing/duplicate teams, fractions, negatives and inva
   const app=await setup(t),{document:d,window:w}=app;
   w.League.saveMatch(); assert.equal(d.getElementById('matchPlayer1').getAttribute('aria-invalid'),'true');
   fill(app); assert.equal(d.querySelector('#matchPlayer2 option[value="Wael"]').disabled,true);
-  d.getElementById('matchPlayer2').value='Wael'; w.League.saveMatch(); assert.match(d.getElementById('matchPlayer2Error').textContent,/نفسه/);
+  d.getElementById('matchPlayer2').value='Wael'; w.League.saveMatch(); assert.match(d.getElementById('matchPlayer2Error').textContent,/لاعبين مختلفين/);
   fill(app); for(const value of ['','-1','1.5','100']) {d.getElementById('matchGoals1').value=value; w.League.saveMatch(); assert.equal(d.getElementById('matchGoals1').getAttribute('aria-invalid'),'true');}
   fill(app); w.League.setMatchEntryMode('match','detailed'); w.League.saveMatch(); assert.equal(d.querySelector('.ge-scorer').getAttribute('aria-invalid'),'true'); complete(app);
   for(const value of ['0','-1','1.5','121']) {d.querySelector('.ge-minute').value=value; w.League.saveMatch(); assert.match(d.querySelector('.ge-minute').nextElementSibling.textContent,/1 إلى 120/);}
@@ -106,6 +110,32 @@ test('explicit deferral permits unfinished rows and the saved game can be comple
   w.League.saveEditMatch(); await w.League.confirmMatchSave();
   assert.equal(calls(app)[1].args.match_data.id,id); assert.equal(app.client.db.matches.length,2);
   assert.equal(d.querySelectorAll('#match-card-'+id+' .entry-missing-badge').length,0); assert.equal(app.client.db.match_goal_events.filter(row=>row.match_id===id).length,5);
+  const stats=JSON.stringify(w.League.computeFootballPlayerStats(ids.season));
+  w.League.openEditModal(id);w.League.saveEditMatch();await w.League.confirmMatchSave();
+  assert.equal(app.client.db.match_goal_events.filter(row=>row.match_id===id).length,5);assert.equal(app.client.db.matches.length,2);
+  assert.equal(JSON.stringify(w.League.computeFootballPlayerStats(ids.season)),stats);
+});
+
+test('historical goals without a squad reference are edited by their saved event identity',async t=>{
+  const app=await setup(t),{document:d,window:w,client}=app;
+  client.db.match_goal_events[0].scorer='Retired footballer';client.db.match_goal_events[0].scorer_id=null;
+  await w.League.refresh();w.League.openEditModal(ids.match);
+  assert.equal(d.querySelector('#editGoalEventsList .ge-scorer').value,'legacy:e1');
+  w.League.saveEditMatch();await w.League.confirmMatchSave();
+  const goal=calls(app)[0].args.goal_events[0];assert.equal(goal.legacy_scorer_event_id,'e1');assert.equal(goal.scorer_id,null);assert.equal('scorer' in goal,false);
+  assert.equal(client.db.match_goal_events.find(e=>e.id==='e1').scorer,'Retired footballer');
+  w.League.openEditModal(ids.match);w.League.saveEditMatch();client.fail='matches';await w.League.confirmMatchSave();
+  w.League.openEditModal(ids.match);assert.equal(d.querySelector('#editGoalEventsList .ge-scorer').value,'legacy:e1');
+  client.fail=null;w.League.saveEditMatch();await w.League.confirmMatchSave();
+  assert.equal(client.db.match_goal_events.filter(e=>e.id==='e1').length,1);
+});
+
+test('editing partial historical details fills only missing rows and preserves saved selections',async t=>{
+  const app=await setup(t),{document:d,window:w,client}=app;
+  client.db.match_goal_events=client.db.match_goal_events.slice(0,1);await w.League.refresh();w.League.openEditModal(ids.match);
+  const rows=w.League.collectGoalEventsFromForm('editGoalEventsList');assert.equal(rows.length,3);
+  assert.equal(rows[0].scorerId,'s1');assert.equal(rows[0].minute,12);assert.equal(rows[0].sourceEventId,'e1');
+  w.League.saveEditMatch();assert.equal(calls(app).length,0);assert.match(d.getElementById('editGoalEventsList-1-scorerError').textContent,/اختر المسجّل/);
 });
 
 test('new/cancel confirmation preserves drafts, navigation and realtime do not silently reset them', async t => {

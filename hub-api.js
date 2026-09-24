@@ -1,3 +1,4 @@
+import { footballIdentity } from './shared/football-identity.js';
 import { displaySeason } from './shared/locale.js';
 /**
  * Tournament Hub — loads real data from Supabase (Friends League).
@@ -126,8 +127,8 @@ export async function loadTournamentData(seasonId = null) {
         if (!seasonMatchIds.has(e.match_id)) return;
         const teamId = nameToId[e.owner];
         if (!teamId || !e.scorer) return;
-        const key = `${e.scorer}::${teamId}`;
-        if (!map[key]) map[key] = { player_name: e.scorer, team_id: teamId, goals: 0 };
+        const key = footballIdentity(e.scorer, e.owner, e.scorer_id);
+        if (!map[key]) map[key] = { player_id: e.scorer_id || null, player_name: e.scorer, team_id: teamId, goals: 0 };
         map[key].goals += 1;
       });
       Object.values(map).forEach((s) => scorers.push(s));

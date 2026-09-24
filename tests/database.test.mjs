@@ -18,6 +18,32 @@ test('Postgres security and transactional behavior',async t=>{
  await db.exec(eveningMigration);await db.exec(eveningMigration);
  const quickMigration=await fs.readFile(new URL('../supabase/migrations/20260923055900_quick_match_entry.sql',import.meta.url),'utf8');
  await db.exec(quickMigration);await db.exec(quickMigration);
+ const identityMigration=await fs.readFile(new URL('../supabase/migrations/20260924064448_match_player_identifiers.sql',import.meta.url),'utf8');
+ await t.test('identifier migration preserves historical snapshots and never guesses unresolved identities on reapply',async()=>{
+  const oldMatch=randomUUID(),member=randomUUID(),laterMember=randomUUID();
+  const initialSeason=(await db.query('select id from public.seasons limit 1')).rows[0].id;
+  await db.query("insert into public.squad_players(id,owner,name,active) values($1,'Wael','Migration scorer',false)",[member]);
+  await db.query("insert into public.matches(id,player1,player2,goals1,goals2,date,season_id) values($1,'Wael','Omar',2,0,'2026-09-01',$2)",[oldMatch,initialSeason]);
+  await db.query("insert into public.match_goal_events(match_id,owner,scorer,minute,sort_order) values($1,'Wael','Migration scorer',12,0),($1,'Wael','Unresolved old scorer',67,1)",[oldMatch]);
+  const snapshot=async()=>({
+   players:(await db.query("select to_jsonb(p)-'id' as row from public.players p order by name")).rows,
+   matches:(await db.query("select to_jsonb(m)-'player1_id'-'player2_id' as row from public.matches m order by id")).rows,
+   goals:(await db.query("select to_jsonb(e)-'owner_id'-'scorer_id'-'assist_id' as row from public.match_goal_events e order by id")).rows,
+   standings:(await db.query('select * from public.standings order by season,player')).rows,
+   achievements:(await db.query('select * from public.achievements order by player,achievement_id')).rows,
+  });
+  const before=await snapshot();await db.exec(identityMigration);assert.deepEqual(await snapshot(),before);
+  const publicIds=(await db.query('select name,id from public.players order by name')).rows;
+  assert.equal(new Set(publicIds.map(p=>p.id)).size,players.length);
+  const oldGoals=(await db.query('select scorer,scorer_id,owner_id from public.match_goal_events where match_id=$1 order by sort_order',[oldMatch])).rows;
+  assert.equal(oldGoals[0].scorer_id,member);assert.equal(oldGoals[1].scorer_id,null);assert.ok(oldGoals.every(e=>e.owner_id));
+  await db.query("insert into public.squad_players(id,owner,name) values($1,'Wael','Unresolved old scorer')",[laterMember]);
+  await db.exec(identityMigration);assert.deepEqual(await snapshot(),before);
+  assert.deepEqual((await db.query('select name,id from public.players order by name')).rows,publicIds);
+  assert.equal((await db.query("select scorer_id from public.match_goal_events where scorer='Unresolved old scorer'")).rows[0].scorer_id,null);
+  assert.equal((await db.query("select tgenabled from pg_trigger where tgrelid='public.matches'::regclass and tgname='matches_refresh_derived'")).rows[0].tgenabled,'O');
+  await db.query('delete from public.matches where id=$1',[oldMatch]);await db.query('delete from public.squad_players where id in ($1,$2)',[member,laterMember]);
+ });
  const accounts=Object.fromEntries(players.map(name=>[name,randomUUID()]));
  for(const [name,id] of Object.entries(accounts))await db.query('insert into public.player_accounts(name,auth_user_id) values($1,$2)',[name,id]);
  const as=(name,sql,params=[])=>db.transaction(async tx=>{
@@ -149,7 +175,7 @@ test('Postgres security and transactional behavior',async t=>{
   assert.equal((await as(null,'select points from public.standings where player=$1 and season=$2',['Wael',season]))[0].points,before+3);
   assert.equal((await as(null,'select id from public.match_goal_events where match_id=$1',[id])).length,0);
   const snapshot=async()=>(await db.query("select jsonb_build_object('matches',(select jsonb_agg(to_jsonb(m) order by id) from public.matches m),'events',(select jsonb_agg(to_jsonb(e) order by id) from public.match_goal_events e),'function',(select jsonb_build_object('oid',oid,'owner',proowner,'acl',proacl,'definer',prosecdef,'config',proconfig) from pg_proc where oid='public.save_league_match(jsonb,jsonb)'::regprocedure)) as value")).rows[0].value;
-  const original=await snapshot(); await db.exec(quickMigration); await db.exec(quickMigration); assert.deepEqual(await snapshot(),original);
+  const original=await snapshot(); await db.exec(identityMigration); await db.exec(identityMigration); assert.deepEqual(await snapshot(),original);
   await as('Wael','select public.save_league_match($1,$2)',[{...payload,id},events]);
   assert.equal((await as(null,'select id from public.matches where id=$1',[id])).length,1);
   assert.equal((await as(null,'select id from public.match_goal_events where match_id=$1',[id])).length,1);
@@ -162,6 +188,57 @@ test('Postgres security and transactional behavior',async t=>{
   await as('Wael','select public.save_league_match($1,$2)',[payload,[{...events[0],assist:''}]]);
   await assert.rejects(as('Wael','select public.save_league_match($1,$2)',[{...payload,id:randomUUID()},events]),/EFL_SCORER_NOT_IN_SQUAD/);
   await as('Wael',"update public.squad_players set active=true where name='Zlatan' and owner='Wael'");
+ });
+ await t.test('UUID-only requests reject duplicate teams, forged owners and cross-team scorers at the database boundary',async()=>{
+  const roster=Object.fromEntries((await as(null,'select name,id from public.players')).map(row=>[row.name,row.id]));
+  const squad=(await as('Wael','select id,name,owner from public.squad_players'));
+  const scorer=squad.find(p=>p.name==='Zlatan'&&p.owner==='Wael').id,maker=squad.find(p=>p.name==='Ronaldinho').id,opponent=squad.find(p=>p.owner==='Omar').id;
+  const data={id:randomUUID(),player1_id:roster.Wael,player2_id:roster.Omar,goals1:1,goals2:0,date:'2026-09-24',season_id:season};
+  const goal={owner_id:roster.Wael,scorer_id:scorer,assist_id:maker,minute:12};
+  await assert.rejects(as('Wael','select public.save_league_match($1,$2)',[{...data,player2_id:roster.Wael},[]]),/EFL_DIFFERENT_PLAYERS/);
+  await assert.rejects(as('Wael','select public.save_league_match($1,$2)',[{...payload,id:data.id,player2:'Wael'},[]]),/EFL_DIFFERENT_PLAYERS/);
+  await assert.rejects(as('Wael',"insert into public.matches(player1_id,player2_id,goals1,goals2,date,season_id) values($1,$1,0,0,current_date,$2)",[roster.Wael,season]),/EFL_DIFFERENT_PLAYERS/);
+  for(const name of players.filter(name=>name!=='Wael'))await assert.rejects(as(name,'select public.save_league_match($1,$2)',[data,[goal]]),/insufficient_privilege|permission denied/i);
+  for(const [bad,message] of [[{...goal,scorer_id:opponent},/EFL_SCORER_NOT_IN_SQUAD/],[{...goal,assist_id:opponent},/EFL_ASSIST_NOT_IN_SQUAD/],[{...goal,assist_id:scorer},/EFL_SELF_ASSIST/],[{...goal,owner_id:roster.Mustafa},/EFL_GOAL_COUNT/],[{...goal,scorer_id:randomUUID(),scorer:'Zlatan'},/EFL_SCORER_NOT_IN_SQUAD/]]) {
+   await assert.rejects(as('Wael','select public.save_league_match($1,$2)',[data,[bad]]),message);
+  }
+  for(const minute of [-1,121,1.5,'text'])await assert.rejects(as('Wael','select public.save_league_match($1,$2)',[data,[{...goal,minute}]]),/check constraint|invalid input syntax/);
+  await as('Wael','select public.save_league_match($1,$2)',[data,[goal]]);
+  const saved=(await as(null,'select * from public.match_goal_events where match_id=$1',[data.id]))[0];
+  assert.equal(saved.scorer_id,scorer);assert.equal(saved.assist_id,maker);assert.equal(saved.owner,'Wael');
+  await assert.rejects(as('Wael','update public.matches set player2_id=$1 where id=$2',[roster.Wael,data.id]),/EFL_DIFFERENT_PLAYERS/);
+  await assert.rejects(as('Wael','update public.match_goal_events set scorer_id=$1 where id=$2',[opponent,saved.id]),/EFL_SCORER_NOT_IN_SQUAD/);
+  await as('Wael',"update public.squad_players set name='Zlatan renamed' where id=$1",[scorer]);
+  const editing=[{...goal,source_event_id:saved.id}];
+  await as('Wael','select public.save_league_match($1,$2)',[data,editing]);await as('Wael','select public.save_league_match($1,$2)',[data,editing]);
+  const edited=await as(null,'select id,scorer,scorer_id,assist_id from public.match_goal_events where match_id=$1',[data.id]);
+  assert.equal(edited.length,1);assert.equal(edited[0].id,saved.id);assert.equal(edited[0].scorer,'Zlatan');assert.equal(edited[0].scorer_id,scorer);
+  const reused=(await as('Wael',"insert into public.squad_players(owner,name) values('Wael','Zlatan') returning id"))[0].id;
+  await as('Wael','select public.save_league_match($1,$2)',[data,[{...goal,source_event_id:saved.id,assist_id:reused}]]);
+  const sameLabels=(await as(null,'select scorer,assist,scorer_id,assist_id from public.match_goal_events where match_id=$1',[data.id]))[0];
+  assert.equal(sameLabels.scorer,sameLabels.assist);assert.notEqual(sameLabels.scorer_id,sameLabels.assist_id);
+  const backup={
+   seasons:await as(null,'select * from public.seasons'),
+   matches:await as(null,'select id,player1,player2,player1_id as "player1Id",player2_id as "player2Id",goals1,goals2,date::text,season_id as season,timestamp from public.matches order by id'),
+   goalEvents:await as(null,'select match_id as "matchId",owner,owner_id as "ownerId",scorer,scorer_id as "scorerId",assist,assist_id as "assistId",minute,sort_order as "sortOrder" from public.match_goal_events order by match_id,sort_order'),matchStats:[]
+  };
+  await as('Wael','select public.restore_league_competition($1)',[backup]);
+  assert.deepEqual(await as(null,'select match_id as "matchId",owner,owner_id as "ownerId",scorer,scorer_id as "scorerId",assist,assist_id as "assistId",minute,sort_order as "sortOrder" from public.match_goal_events order by match_id,sort_order'),backup.goalEvents);
+  assert.deepEqual(await as(null,'select id,player1,player2,player1_id as "player1Id",player2_id as "player2Id",goals1,goals2,date::text,season_id as season,timestamp from public.matches order by id'),backup.matches);
+  await as('Wael','select public.save_league_match($1,$2)',[data,[{owner:'Wael',scorer:'Zlatan',assist:'',minute:12}]]);
+  assert.equal((await as(null,'select scorer_id from public.match_goal_events where match_id=$1',[data.id]))[0].scorer_id,scorer);
+  await db.query('delete from public.squad_players where id=$1',[reused]);
+  await as('Wael',"update public.squad_players set name='Zlatan' where id=$1",[scorer]);await as('Wael','delete from public.matches where id=$1',[data.id]);
+ });
+ await t.test('unresolved historical players use the original event ID, survive retries, and cannot be copied to a different game',async()=>{
+  const id=randomUUID();await as('Wael',"insert into public.matches(id,player1,player2,goals1,goals2,date,season_id) values($1,'Wael','Omar',1,0,current_date,$2)",[id,season]);
+  const old=(await as('Wael',"insert into public.match_goal_events(match_id,owner,scorer,assist) values($1,'Wael','Retired snapshot','Old maker') returning id,owner_id",[id]))[0];
+  const goal={owner_id:old.owner_id,source_event_id:old.id,legacy_scorer_event_id:old.id,legacy_assist_event_id:old.id,minute:25};
+  await as('Wael','select public.save_league_match($1,$2)',[{...payload,id},[goal]]);await as('Wael','select public.save_league_match($1,$2)',[{...payload,id},[goal]]);
+  const kept=await as(null,'select id,scorer,assist,scorer_id from public.match_goal_events where match_id=$1',[id]);
+  assert.deepEqual(kept,[{id:old.id,scorer:'Retired snapshot',assist:'Old maker',scorer_id:null}]);
+  await assert.rejects(as('Wael','select public.save_league_match($1,$2)',[{...payload,id:randomUUID()},[goal]]),/EFL_SCORER_NOT_IN_SQUAD/);
+  await as('Wael','delete from public.matches where id=$1',[id]);
  });
  await t.test('pre-squad historical names and score-only matches remain editable',async()=>{
   const old=randomUUID(),scoreOnly=randomUUID();
