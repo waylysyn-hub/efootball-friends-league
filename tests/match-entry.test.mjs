@@ -80,6 +80,36 @@ test('score increases preserve filled rows and decreases can be cancelled before
   assert.equal(d.querySelector('.ge-minute').value,'44'); assert.deepEqual(app.errors,[]);
 });
 
+test('blank surplus rows are removed immediately but any entered detail requires confirmation', async t => {
+  const app=await setup(t),{document:d,window:w}=app;
+  fill(app,3,2);w.League.setMatchEntryMode('match','detailed');
+  d.querySelector('.ge-scorer').value='s1';
+  fill(app,2,1);
+  assert.equal(d.querySelectorAll('#goalEventsList .ge-row').length,3);
+  assert.equal(d.getElementById('confirmModal').classList.contains('hidden'),true);
+  assert.equal(d.querySelector('.ge-scorer').value,'s1');
+  const last=d.querySelectorAll('#goalEventsList .ge-row')[2];last.querySelector('.ge-minute').value='12';
+  d.getElementById('matchGoals2').value='0';w.League.updateMatchPreview();
+  assert.equal(d.getElementById('confirmModal').classList.contains('hidden'),false);
+  assert.equal(d.getElementById('confirmYes').textContent,'متابعة التغيير');
+  w.League.closeConfirmModal();assert.equal(d.getElementById('matchGoals2').value,'1');
+  assert.equal(d.querySelectorAll('#goalEventsList .ge-minute')[2].value,'12');
+});
+
+test('Abdul Qader is removed from the other list and is restored after either opponent changes', async t => {
+  const app=await setup(t),{document:d,window:w}=app;
+  d.getElementById('matchPlayer1').value='Abdul Qader';w.League.updateMatchPreview();
+  assert.equal(d.querySelector('#matchPlayer2 option[value="Abdul Qader"]'),null);
+  d.getElementById('matchPlayer2').value='Mohammad';w.League.updateMatchPreview();
+  assert.equal(d.querySelector('#matchPlayer1 option[value="Mohammad"]'),null);
+  d.getElementById('matchPlayer1').value='Wael';w.League.updateMatchPreview();
+  assert.ok(d.querySelector('#matchPlayer2 option[value="Abdul Qader"]'));
+  assert.equal(d.getElementById('matchPlayer2').value,'Mohammad');
+  d.getElementById('matchPlayer2').value='Abdul Qader';w.League.updateMatchPreview();
+  assert.ok(d.querySelector('#matchPlayer1 option[value="Mohammad"]'));
+  assert.equal(d.querySelector('#matchPlayer1 option[value="Abdul Qader"]'),null);
+});
+
 test('manual row additions, owner reassignment and confirmed removals update the score automatically', async t => {
   const app=await setup(t),{document:d,window:w}=app; fill(app,1,0); w.League.setMatchEntryMode('match','detailed'); complete(app);
   w.League.addGoalEventRow('goalEventsList'); assert.equal(d.getElementById('matchGoals1').value,'2');
@@ -92,8 +122,9 @@ test('manual row additions, owner reassignment and confirmed removals update the
 test('field errors reject missing/duplicate teams, fractions, negatives and invalid optional minutes', async t => {
   const app=await setup(t),{document:d,window:w}=app;
   w.League.saveMatch(); assert.equal(d.getElementById('matchPlayer1').getAttribute('aria-invalid'),'true');
-  fill(app); assert.equal(d.querySelector('#matchPlayer2 option[value="Wael"]').disabled,true);
-  d.getElementById('matchPlayer2').value='Wael'; w.League.saveMatch(); assert.match(d.getElementById('matchPlayer2Error').textContent,/لاعبين مختلفين/);
+  fill(app); assert.equal(d.querySelector('#matchPlayer2 option[value="Wael"]'),null);
+  d.getElementById('matchPlayer2').add(new w.Option('وائل','Wael'));
+  d.getElementById('matchPlayer2').value='Wael'; w.League.saveMatch(); assert.match(d.getElementById('matchPlayer2Error').textContent,/لاعبين أو فريقين مختلفين/);
   fill(app); for(const value of ['','-1','1.5','100']) {d.getElementById('matchGoals1').value=value; w.League.saveMatch(); assert.equal(d.getElementById('matchGoals1').getAttribute('aria-invalid'),'true');}
   fill(app); w.League.setMatchEntryMode('match','detailed'); w.League.saveMatch(); assert.equal(d.querySelector('.ge-scorer').getAttribute('aria-invalid'),'true'); complete(app);
   for(const value of ['0','-1','1.5','121']) {d.querySelector('.ge-minute').value=value; w.League.saveMatch(); assert.match(d.querySelector('.ge-minute').nextElementSibling.textContent,/1 إلى 120/);}

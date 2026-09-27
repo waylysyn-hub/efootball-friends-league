@@ -50,11 +50,10 @@ test('detailed 3–2 preserves inputs, validates minutes and confirms score redu
 
 test('opponents are excluded both ways and malformed numeric input cannot reach review',async({page})=>{
   const errors=[];page.on('pageerror',error=>errors.push(error.message));await ready(page);
-  await expect(page.locator('#matchPlayer2 option[value="Wael"]')).toBeDisabled();
-  await expect(page.locator('#matchPlayer1 option[value="Omar"]')).toBeDisabled();
-  expect(await page.locator('#matchPlayer2 option[value="Wael"]').evaluate(option=>option.hidden)).toBe(true);
-  await page.locator('#matchPlayer1').selectOption('Mustafa');await expect(page.locator('#matchPlayer2 option[value="Wael"]')).toBeEnabled();
-  await page.locator('#matchPlayer2').selectOption('Wael');await expect(page.locator('#matchPlayer1 option[value="Wael"]')).toBeDisabled();
+  await expect(page.locator('#matchPlayer2 option[value="Wael"]')).toHaveCount(0);
+  await expect(page.locator('#matchPlayer1 option[value="Omar"]')).toHaveCount(0);
+  await page.locator('#matchPlayer1').selectOption('Mustafa');await expect(page.locator('#matchPlayer2 option[value="Wael"]')).toHaveCount(1);
+  await page.locator('#matchPlayer2').selectOption('Wael');await expect(page.locator('#matchPlayer1 option[value="Wael"]')).toHaveCount(0);
   await page.locator('#matchPlayer2').selectOption('Omar');await page.locator('#matchPlayer1').selectOption('Wael');
   await page.locator('#matchGoals1').fill('1');await page.locator('#matchAddDetails').click();await page.locator('#goalEventsList .ge-scorer').selectOption('s1');
   const minute=page.locator('#goalEventsList .ge-minute');await minute.focus();await minute.press('e');

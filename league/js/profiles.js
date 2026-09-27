@@ -22,11 +22,11 @@ export function matchPlayerLabel(name) {
   return esc(displayName(name));
 }
 
-export function fillPlayerSelect(selectEl, emptyLabel) {
+export function fillPlayerSelect(selectEl, emptyLabel, excludedId = null) {
   if (!selectEl) return;
   const prev = selectEl.value;
   selectEl.innerHTML = emptyLabel ? `<option value="">${emptyLabel}</option>` : '';
-  getPlayers().forEach(p => {
+  getPlayers().filter(p => !excludedId || playerId(p) !== excludedId).forEach(p => {
     const opt = document.createElement('option');
     opt.value = p;
     opt.textContent = displayName(p);

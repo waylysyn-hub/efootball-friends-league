@@ -8,7 +8,7 @@ Quick entry is the default: admins can save scores without goal details. Detaile
 
 Quick matches update league results and standings immediately. Individual scorer/assist awards use only the goal events actually entered, still separated by squad owner. The history marks scored matches with missing details and supports completing them later through Edit. A 0–0 result needs no goal details. Blank optional minutes keep the existing stored value `0`; entered minutes must be integers from 1 to 120.
 
-Entry modes preserve drafts; changing a team clears that team's scorer/assist choices. Score increases create blank goal rows, reductions ask before discarding rows, and manual goal/team changes update scores automatically. New/cancel actions confirm before clearing a draft. Failed saves retain both the inputs and stable match ID, including recovery after a committed result's response is lost.
+Entry modes preserve drafts; changing a team clears that team's scorer/assist choices. Each opponent is removed from the other selector by UUID and becomes available again when the selection changes. Score increases create blank goal rows; reductions discard blank surplus rows immediately and ask before discarding any entered scorer, assist or minute. Manual goal/team changes update scores automatically. New/cancel actions confirm before clearing a draft. Failed saves retain both the inputs and stable match ID, including recovery after a committed result's response is lost.
 
 ## Football-player statistics and awards
 
@@ -31,8 +31,11 @@ Squad ownership and IDs cannot be changed through client table updates. Players 
 - `npm test`: SQL/RLS/transaction tests plus frontend behavior, including owner isolation, UUID-only and direct-table rejection, renamed/reused names, backup round trips, exact counts, no assist, historical/partial edits, archived players, form retention and retry identity.
 - `npm run test:browser`: seven full regression viewport projects, plus match-entry coverage at 320, 375 and 414 pixels. Quick/review/edit and detailed 3–2 flows check overflow, touch targets, optional-minute validation and score-reduction cancellation. Screenshots are saved for mobile and desktop review.
 - GitHub's native PostgreSQL job also runs with `pg-safeupdate` enabled.
+- `npm run test:e2e`: real Supabase Auth password sign-in, PostgREST RPCs and SQL persistence checks at 320, 375, 414 and 1366px. CI starts a disposable local Supabase stack, applies this repository's schema and migrations, and creates six temporary Auth users through the Auth admin API. Tests enter through the normal login form; they do not inject an authenticated profile or replace the Supabase client. The administrator records quick results, completes details later, edits repeatedly and retries failures. A normal Auth account is denied administrative RPCs and direct match inserts. Browser credentials and service keys are only for the disposable stack, and the frontend receives only its anonymous key.
 
 Only synthetic test players are used by these automated tests.
+
+The E2E seed and SQL helpers require `EFL_LOCAL_E2E=1` plus a local `EFL_E2E_CONFIG` status JSON, and reject any API/database URL outside localhost ports 54321/54322. The test browser also blocks hosted Supabase requests. See the `authenticated-supabase` job in `.github/workflows/security-checks.yml` for the complete reproducible setup. Production account passwords are not required or changed. Export, import, account-management links and resets are visible only to the administrator; existing server permissions remain authoritative.
 
 ## Validation status
 
