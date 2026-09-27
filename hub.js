@@ -1,3 +1,4 @@
+import { footballIdentity } from './shared/football-identity.js';
 import { displayName, displaySeason, playerInitials, AR_LOCALE } from './shared/locale.js';
 import { loadTournamentData } from './hub-api.js';
 import { escapeHtml as esc, errorMessage, debounce, setupDrawer, setupConnectivity } from './shared/ui.js';
@@ -117,7 +118,7 @@ function computeQuickStats(fixtures) {
 function computeTopScorers(scorers, teams, limit = 5) {
   const map = Object.create(null);
   scorers.forEach((s) => {
-    const key = `${s.player_name}::${s.team_id}`;
+    const key = footballIdentity(s.player_name, s.team_id, s.player_id);
     if (!map[key]) {
       map[key] = { name: s.player_name || "غير معروف", team: teamById(teams, s.team_id), goals: 0 };
     }

@@ -41,14 +41,14 @@ test('Squad goal cards select teammates, add a missing player and save without a
  await page.locator('#matchPlayer1').selectOption('Wael');await page.locator('#matchPlayer2').selectOption('Omar');await page.locator('#matchGoals1').fill('1');
  await page.locator('#matchDetailedTab').click();
  const row=page.locator('#goalEventsList .ge-row').first();
- await row.locator('.ge-scorer').selectOption('Ronaldinho');
- await expect(row.locator('.ge-assist option[value="Ronaldinho"]')).toHaveCount(0);
+ await row.locator('.ge-scorer').selectOption('s2');
+ await expect(row.locator('.ge-assist option[value="s2"]')).toHaveCount(0);
  await row.locator('.ge-owner').selectOption('Omar');await expect(row.locator('.ge-scorer')).toHaveValue('');await expect(row.locator('.ge-assist')).toHaveValue('');
- await expect(row.locator('.ge-scorer option[value="Ronaldinho"]')).toHaveCount(0);
+ await expect(row.locator('.ge-scorer option[value="s2"]')).toHaveCount(0);
  await row.locator('.ge-owner').selectOption('Wael');await row.locator('.ge-manage').click();
  await page.locator('#squadPlayerName').fill('Test striker');await page.locator('#saveSquadPlayer').click();await expect(page.locator('#squadPlayerModal')).toBeHidden();
  await expect(page.locator('#matchGoals1')).toHaveValue('1');await expect(page.locator('#goalEventsList .ge-row')).toHaveCount(1);
- await page.locator('#goalEventsList .ge-scorer').selectOption('Test striker');await expect(page.locator('#goalEventsList .ge-assist')).toHaveValue('');
+ await page.locator('#goalEventsList .ge-scorer').selectOption(await page.locator('#goalEventsList .ge-scorer option[data-name="Test striker"]').getAttribute('value'));await expect(page.locator('#goalEventsList .ge-assist')).toHaveValue('');
  await noOverflow(page);await page.locator('#saveMatchButton').click();await expect(page.locator('#matchReviewModal')).toBeVisible();await page.locator('#confirmMatchSaveButton').click();await expect(page.locator('#toast')).toContainText('تم تسجيل المباراة');
  await page.evaluate(()=>window.League.navigateTo('squads'));await expect(page.locator('#squadPlayers')).toContainText('Test striker');await noOverflow(page);
  expect(errors).toEqual([]);

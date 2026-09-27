@@ -9,6 +9,8 @@ export function getPlayers() {
   return names.length ? names.sort((a, b) => a.localeCompare(b)) : [];
 }
 
+export function playerId(name) { return state.db.accounts[name]?.id || null; }
+
 export function nick(name) { return NICKNAMES[name] ? NICKNAMES[name].nick : ''; }
 
 export function playerLegendLabel(name) {

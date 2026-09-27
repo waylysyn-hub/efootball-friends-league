@@ -21,6 +21,14 @@ export function fixtureClient({ profile = null, empty = false, overlappingSquads
     }));
     db.squad_players = ['Wael','Mustafa'].flatMap(owner => ['Zlatan Ibrahimović','Ronaldinho'].map((name,index) => ({id:owner+'-'+index,owner,name,position:'FW',active:true})));
   }
+  for (const [index, player] of db.players.entries()) player.id = `60000000-0000-4000-8000-${String(index+1).padStart(12,'0')}`;
+  const playerId = name => db.players.find(p => p.name === name)?.id || null;
+  for (const match of db.matches) { match.player1_id=playerId(match.player1); match.player2_id=playerId(match.player2); }
+  for (const event of db.match_goal_events) {
+    event.owner_id=playerId(event.owner);
+    event.scorer_id=db.squad_players.find(p=>p.owner===event.owner && p.name===event.scorer)?.id || null;
+    event.assist_id=db.squad_players.find(p=>p.owner===event.owner && p.name===event.assist)?.id || null;
+  }
   let signedIn = profile;
   const calls = [], listeners = [], channels = [];
   const client = {
@@ -69,7 +77,24 @@ export function fixtureClient({ profile = null, empty = false, overlappingSquads
         if(!row)return {error:{message:'EFL_EVENING_MISSING'}};
         row.ended_at ||= new Date().toISOString();return {data:{...row},error:null};
       }
-      if(name==='save_league_match'){const index=db.matches.findIndex(m=>m.id===args.match_data.id);if(index<0)db.matches.push(args.match_data);else db.matches[index]={...db.matches[index],...args.match_data};db.match_goal_events=db.match_goal_events.filter(e=>e.match_id!==args.match_data.id).concat(args.goal_events.map((e,i)=>({...e,id:crypto.randomUUID(),match_id:args.match_data.id,sort_order:i})));return {data:args.match_data.id,error:null};}
+      if(name==='save_league_match'){
+        const data={...args.match_data};
+        data.player1 ||= db.players.find(p=>p.id===data.player1_id)?.name;
+        data.player2 ||= db.players.find(p=>p.id===data.player2_id)?.name;
+        const index=db.matches.findIndex(m=>m.id===data.id);if(index<0)db.matches.push(data);else db.matches[index]={...db.matches[index],...data};
+        const events=args.goal_events.map((event,i)=>{
+          const source=db.match_goal_events.find(old=>old.id===event.source_event_id && old.match_id===data.id);
+          const e={...event,id:source?.id || crypto.randomUUID(),match_id:data.id,sort_order:i};
+          e.owner ||= db.players.find(p=>p.id===e.owner_id)?.name;
+          for(const field of ['scorer','assist']) {
+            const old=db.match_goal_events.find(old=>old.id===(e['legacy_'+field+'_event_id'] || e.source_event_id) && old.match_id===data.id && old.owner===e.owner);
+            const member=db.squad_players.find(p=>p.id===e[field+'_id']);
+            e[field]=old && (!e[field+'_id'] || old[field+'_id']===e[field+'_id']) ? old[field] : member?.name || e[field] || '';
+          }
+          return e;
+        });
+        db.match_goal_events=db.match_goal_events.filter(e=>e.match_id!==data.id).concat(events);return {data:data.id,error:null};
+      }
       if(name==='create_league_chat_group'){const group={id:args.group_id,name:args.group_name,description:args.group_description,emoji:args.group_emoji,created_by:signedIn};db.chat_groups.push(group);db.chat_group_members.push({group_id:group.id,player:signedIn});return {data:group,error:null};}
       return {data:null,error:null};
     },

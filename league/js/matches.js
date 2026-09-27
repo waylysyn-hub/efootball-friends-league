@@ -66,7 +66,7 @@ export function matchCardHTML(m) {
         <button class="btn-sm" onclick="League.openMatchDetails('${m.id}')">📄 التفاصيل</button>
         ${isAdmin() ? `
         <button class="btn-sm edit" onclick="League.openEditModal('${m.id}')">✏️ تعديل</button>
-        <button class="btn-sm delete match-delete" onclick="League.deleteMatch('${m.id}')">🗑️ حذف</button>` : ''}
+        <span class="match-delete-wrap"><button class="btn-sm delete match-delete" onclick="League.deleteMatch('${m.id}')">🗑️ حذف</button></span>` : ''}
       </div>
     </div>`;
 }

@@ -123,12 +123,13 @@ export function formatDate(dateStr) {
 }
 
 let cancelConfirmation = null;
-export function showConfirm(title, message, onConfirm, onCancel = null) {
+export function showConfirm(title, message, onConfirm, onCancel = null, confirmLabel = 'تأكيد') {
   cancelConfirmation = onCancel;
   document.getElementById('confirmTitle').textContent = title;
   document.getElementById('confirmMessage').textContent = message;
   openDialog('confirmModal', closeConfirmModal);
   const button = document.getElementById('confirmYes');
+  button.textContent = confirmLabel;
   button.onclick = () => withBusy('confirm', button, async () => {
     if (!state.user) throw new Error('Session ended');
     await onConfirm(); cancelConfirmation = null; closeDialog('confirmModal');

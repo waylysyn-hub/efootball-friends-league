@@ -14,6 +14,7 @@ export function debounce(callback, delay = 250) {
 export function errorMessage(error, fallback = 'تعذّر تنفيذ العملية. حاول مجددًا؛ وإذا تكرر الخطأ حدّث الصفحة.') {
   const message = String(error?.message || '');
   const known = {
+    EFL_DIFFERENT_PLAYERS: 'يجب اختيار لاعبين مختلفين للمباراة.',
     EFL_EVENING_TITLE: 'أدخل اسمًا للسهرة من حرف واحد إلى 80 حرفًا.',
     EFL_EVENING_ATTENDEES: 'اختر لاعبين مختلفين على الأقل من قائمة لاعبي الدوري.',
     EFL_EVENING_ACTIVE: 'توجد سهرة جارية بالفعل. اضغط تحديث لعرضها، ثم أنهِها قبل بدء سهرة جديدة.',

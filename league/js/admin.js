@@ -24,8 +24,9 @@ export function applyAdminUI() {
 }
 
 export function exportData() {
+  if (!requireAdmin()) return;
   const { seasons, matches, goalEvents, matchStats } = state.db;
-  const backup = { version: 2, exportedAt: new Date().toISOString(), seasons, matches, goalEvents, matchStats };
+  const backup = { version: 3, exportedAt: new Date().toISOString(), seasons, matches, goalEvents, matchStats };
   const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
   const link = document.createElement('a');
   link.href = url; link.download = 'efootball-competition-' + new Date().toISOString().slice(0, 10) + '.json';
@@ -71,6 +72,11 @@ export function normalizeBackup(data, players = getPlayers()) {
     return value;
   };
   const requirePlayer = name => { if (!players.includes(name)) throw new Error("تحتوي النسخة الاحتياطية على لاعب غير مسجّل في هذا الدوري."); return name; };
+  const optionalId = value => {
+    if (value == null) return null;
+    if (typeof value !== 'string' || !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(value)) throw new Error("تحتوي النسخة الاحتياطية على معرّف لاعب غير صالح.");
+    return value;
+  };
   const seasons = data.seasons.map(row => {
     if (typeof row.name !== 'string' || !row.name.trim() || row.name.length > 80) throw new Error("اسم الموسم غير صالح.");
     return { id: seasonIds.get(String(row.id)), name: row.name.trim(), active: !!row.active, created: Number(row.created) || 0 };
@@ -82,6 +88,7 @@ export function normalizeBackup(data, players = getPlayers()) {
     if (seasonKey != null && !season) throw new Error("إحدى المباريات مرتبطة بموسم غير موجود.");
     if (row.player1 === row.player2 || typeof row.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(row.date) || Number.isNaN(Date.parse(row.date))) throw new Error("بيانات المباراة غير صحيحة.");
     return { id: matchIds.get(String(row.id)), player1: requirePlayer(row.player1), player2: requirePlayer(row.player2),
+      player1Id: optionalId(row.player1Id ?? row.player1_id), player2Id: optionalId(row.player2Id ?? row.player2_id),
       goals1: requireNumber(row.goals1, 0, 99), goals2: requireNumber(row.goals2, 0, 99), date: row.date, season, timestamp: Number(row.timestamp) || 0 };
   });
   const list = key => { if (data[key] != null && !Array.isArray(data[key])) throw new Error("إحدى قوائم النسخة الاحتياطية غير صالحة."); return data[key] || []; };
@@ -90,6 +97,7 @@ export function normalizeBackup(data, players = getPlayers()) {
     const match = matches.find(m => m.id === matchId);
     if (!match || ![match.player1, match.player2].includes(row.owner) || typeof row.scorer !== 'string' || !row.scorer.trim()) throw new Error("تفاصيل أحد الأهداف غير صحيحة.");
     return { matchId, owner: row.owner, scorer: row.scorer.trim(), assist: String(row.assist || ''),
+      ownerId: optionalId(row.ownerId ?? row.owner_id), scorerId: optionalId(row.scorerId ?? row.scorer_id), assistId: optionalId(row.assistId ?? row.assist_id),
       minute: requireNumber(row.minute ?? 0, 0, 120), sortOrder: requireNumber(row.sortOrder ?? row.sort_order ?? 0, 0, 1000) };
   });
   for (const match of matches) {
