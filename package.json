@@ -5,6 +5,7 @@
   "scripts": {
     "test": "node tests/security-static.mjs && node --experimental-vm-modules --test tests/*.test.mjs",
     "test:browser": "playwright test",
+    "test:e2e": "playwright test --config playwright.e2e.config.mjs",
     "dev": "vite --mode qa",
     "dev:qa": "vite --mode qa",
     "dev:live": "vite"

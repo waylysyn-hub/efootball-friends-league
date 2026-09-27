@@ -4,7 +4,7 @@ import { sb, state } from './state.js';
 import { isAdmin, requireAdmin } from './admin.js';
 import { esc, formatDate, navigateTo, renderPage, showConfirm, showError, showToast } from './ui.js';
 import { getActiveSeason, populateSeasonDropdowns } from './seasons.js';
-import { playerId, populateMatchPlayerDropdowns } from './profiles.js';
+import { fillPlayerSelect, playerId, populateMatchPlayerDropdowns } from './profiles.js';
 import { collectGoalEventsFromForm, countGoalsByOwner, getMatchGoalEvents, isSelfAssist, renderGoalEventsForm, updateGoalEventsUI, validateGoalEvents } from './goal-events.js';
 import { fetchAllData } from './api.js';
 import { updateSidebarPlayer } from './auth-ui.js';
@@ -41,11 +41,9 @@ function focusError(prefix) {
   first?.focus();
 }
 function filterOpponents(prefix) {
+  const selected = [el(prefix + 'Player1').value, el(prefix + 'Player2').value];
   for (const [side, other] of [[1, 2], [2, 1]]) {
-    const opponent = el(prefix + 'Player' + other).value;
-    for (const option of el(prefix + 'Player' + side).options) {
-      option.hidden = option.disabled = !!option.value && !!playerId(opponent) && playerId(option.value) === playerId(opponent);
-    }
+    fillPlayerSelect(el(prefix + 'Player' + side), 'اختر اللاعب', playerId(selected[other - 1]));
   }
 }
 function scoreHTML(data) {
@@ -145,7 +143,9 @@ function syncRows(prefix, events, previous, onCancel = null) {
   const draft = drafts[prefix], data = read(prefix);
   if (draft.mode !== 'detailed' || !validPair(data) || !validScore(data.Goals1) || !validScore(data.Goals2)) return paint(prefix);
   const next = reconcile(events, data);
-  const discarded = events.some(event => !next.includes(event));
+  const discarded = events.some(event => !next.includes(event) && (
+    event.scorer || event.assist || event.minuteInput || event.minuteInvalid || event.sourceEventId
+  ));
   if (discarded) {
     // Keep the committed score and every field intact until the user confirms.
     el(prefix + 'Goals1').value = previous.Goals1;
@@ -175,7 +175,7 @@ export function onMatchEntryChange(prefix = 'match') {
     renderGoalEventsForm(listId(prefix), events);
   }
   clearErrors(prefix);
-  if (data.Player1 && playerId(data.Player1) === playerId(data.Player2)) fieldError(prefix + 'Player2', 'يجب اختيار لاعبين مختلفين للمباراة.');
+  if (data.Player1 && playerId(data.Player1) === playerId(data.Player2)) fieldError(prefix + 'Player2', 'يجب اختيار لاعبين أو فريقين مختلفين للمباراة.');
   for (const side of [1, 2]) if (!validScore(data['Goals' + side])) fieldError(prefix + 'Goals' + side, 'أدخل عددًا صحيحًا من 0 إلى 99.');
   draft.last = data;
   syncRows(prefix, events, previous);
@@ -227,7 +227,7 @@ function validate(prefix) {
     if (!playerId(data['Player' + side])) fieldError(prefix + 'Player' + side, 'اختر الفريق من قائمة لاعبي الدوري.');
     if (!validScore(data['Goals' + side])) fieldError(prefix + 'Goals' + side, 'أدخل عددًا صحيحًا من 0 إلى 99، دون كسور.');
   }
-  if (data.Player1 && playerId(data.Player1) === playerId(data.Player2)) fieldError(prefix + 'Player2', 'يجب اختيار لاعبين مختلفين للمباراة.');
+  if (data.Player1 && playerId(data.Player1) === playerId(data.Player2)) fieldError(prefix + 'Player2', 'يجب اختيار لاعبين أو فريقين مختلفين للمباراة.');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data.Date) || Number.isNaN(Date.parse(data.Date))) fieldError(prefix + 'Date', 'اختر تاريخًا صحيحًا للمباراة.');
   if (!state.db.seasons.some(row => row.id === data.Season)) fieldError(prefix + 'Season', 'اختر موسمًا موجودًا قبل الحفظ.');
   const detailed = drafts[prefix]?.mode === 'detailed' && !el(prefix + 'DeferDetails').checked;
