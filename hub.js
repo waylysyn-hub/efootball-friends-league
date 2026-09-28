@@ -233,7 +233,7 @@ function renderStandings(tournament, standings) {
       </tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
-    <div class="hub-card-footer"><a href="league/index.html#leagueTable" class="hub-link">عرض الترتيب الكامل ←</a></div>`;
+    <div class="hub-card-footer"><a href="league/latest.html#leagueTable" class="hub-link">عرض الترتيب الكامل ←</a></div>`;
 }
 
 function renderAside(tournament, teams, stats) {
@@ -260,7 +260,7 @@ function renderAside(tournament, teams, stats) {
         <div class="hub-stat"><div class="hub-stat-icon">✈️</div><div class="hub-stat-value">${stats.away_wins}</div><div class="hub-stat-label">فوز الضيف</div></div>
       </div>
     </div>
-    ${hubProfile?.role === 'admin' ? `<a href="league/index.html#recordMatch" class="hub-btn-gold" id="addResultBtn">
+    ${hubProfile?.role === 'admin' ? `<a href="league/latest.html#recordMatch" class="hub-btn-gold" id="addResultBtn">
       <span>+ إضافة نتيجة مباراة</span>
       <span class="hub-btn-gold-sub">سجّل نتيجة مباراة جديدة</span>
     </a>` : ''}`;
