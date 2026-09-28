@@ -12,6 +12,10 @@ The existing root SQL filenames remain stable so bookmarked installation instruc
 | `supabase-security-migration.sql` | Private identity helpers, least-privilege grants and RLS | After all table-creation migrations |
 | `supabase-derived-data-migration.sql` | Database-derived standings and achievements | After security |
 | `supabase-consistency-migration.sql` | Atomic match writes, season switch, competition restore, chat creation/invite response and Q&A guards | After derived-data; before newer migrations |
+| `migrations/20260920075946_squad_goal_selection.sql` | Saved squads and scorer/assist validation | After consistency |
+| `migrations/20260922115643_admin_evening_draw.sql` | Admin-only game nights | After squad migration |
+| `migrations/20260923055900_quick_match_entry.sql` | Score-only match entry and deferred goal details | After evening migration |
+| `migrations/20260924064448_match_player_identifiers.sql` | Stable player/squad identities used by current match entry | Last of the current match-entry migrations |
 
 Installing the consistency migration is additive: it creates functions/triggers and does not invoke the reset/restore functions or remove existing rows. Those RPCs remain subject to caller identity and RLS. Its public functions use `security invoker`, an empty search path, explicit authenticated-only EXECUTE grants, and qualified object names.
 

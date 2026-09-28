@@ -175,7 +175,7 @@ export function onMatchEntryChange(prefix = 'match') {
     renderGoalEventsForm(listId(prefix), events);
   }
   clearErrors(prefix);
-  if (data.Player1 && playerId(data.Player1) === playerId(data.Player2)) fieldError(prefix + 'Player2', 'يجب اختيار لاعبين مختلفين للمباراة.');
+  if (data.Player1 && playerId(data.Player1) === playerId(data.Player2)) fieldError(prefix + 'Player2', 'يجب اختيار لاعبين أو فريقين مختلفين للمباراة.');
   for (const side of [1, 2]) if (!validScore(data['Goals' + side])) fieldError(prefix + 'Goals' + side, 'أدخل عددًا صحيحًا من 0 إلى 99.');
   draft.last = data;
   syncRows(prefix, events, previous);
@@ -227,7 +227,7 @@ function validate(prefix) {
     if (!playerId(data['Player' + side])) fieldError(prefix + 'Player' + side, 'اختر الفريق من قائمة لاعبي الدوري.');
     if (!validScore(data['Goals' + side])) fieldError(prefix + 'Goals' + side, 'أدخل عددًا صحيحًا من 0 إلى 99، دون كسور.');
   }
-  if (data.Player1 && playerId(data.Player1) === playerId(data.Player2)) fieldError(prefix + 'Player2', 'يجب اختيار لاعبين مختلفين للمباراة.');
+  if (data.Player1 && playerId(data.Player1) === playerId(data.Player2)) fieldError(prefix + 'Player2', 'يجب اختيار لاعبين أو فريقين مختلفين للمباراة.');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data.Date) || Number.isNaN(Date.parse(data.Date))) fieldError(prefix + 'Date', 'اختر تاريخًا صحيحًا للمباراة.');
   if (!state.db.seasons.some(row => row.id === data.Season)) fieldError(prefix + 'Season', 'اختر موسمًا موجودًا قبل الحفظ.');
   const detailed = drafts[prefix]?.mode === 'detailed' && !el(prefix + 'DeferDetails').checked;

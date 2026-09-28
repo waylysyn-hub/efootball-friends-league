@@ -18,6 +18,8 @@ Run these SQL files in order from **Supabase → SQL Editor**:
 5. `supabase-consistency-migration.sql` — installs transactional writes, season triggers and Q&A guards. Run this before deploying the refactored frontend.
 6. `supabase/migrations/20260920075946_squad_goal_selection.sql` — saved team squads and validated scorer/assist selection.
 7. `supabase/migrations/20260922115643_admin_evening_draw.sql` — admin-only attendance, persistent random pairings and evening history.
+8. `supabase/migrations/20260923055900_quick_match_entry.sql` — allows score-only match saves and later completion of goal details.
+9. `supabase/migrations/20260924064448_match_player_identifiers.sql` — adds stable player/squad UUIDs required by the current match-entry UI while preserving historical name snapshots.
 
 Then create the first user in **Authentication → Users**. The frontend expects deterministic private-league addresses:
 
@@ -47,10 +49,14 @@ Do **not** run `supabase-schema.sql` against an existing populated database beca
 3. Run `supabase-security-migration.sql`.
 4. Run `supabase-derived-data-migration.sql`.
 5. Run `supabase-consistency-migration.sql`, then create/link the first Supabase Auth user as shown above if needed.
-6. Create/link the remaining player Auth users.
-7. Verify normal users cannot mutate matches/seasons and the admin can.
-8. Rotate every password that ever appeared in this repository or Git history.
-9. Remove any legacy password column after migration:
+6. Apply `supabase/migrations/20260920075946_squad_goal_selection.sql`.
+7. Apply `supabase/migrations/20260922115643_admin_evening_draw.sql`.
+8. Apply `supabase/migrations/20260923055900_quick_match_entry.sql`.
+9. Apply `supabase/migrations/20260924064448_match_player_identifiers.sql` before deploying the current match-entry frontend.
+10. Create/link the remaining player Auth users.
+11. Verify normal users cannot mutate matches/seasons and the admin can.
+12. Rotate every password that ever appeared in this repository or Git history.
+13. Remove any legacy password column after migration:
 
 ```sql
 alter table public.players drop column if exists password;
