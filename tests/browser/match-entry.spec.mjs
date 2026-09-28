@@ -66,3 +66,71 @@ test('opponents are excluded both ways and malformed numeric input cannot reach 
   await page.locator('#newMatchButton').click();await expect(page.locator('#confirmMessage')).toContainText('ستفقد المعلومات');await page.keyboard.press('Escape');
   await expect(minute).toHaveValue('12');expect(errors).toEqual([]);
 });
+
+
+test('Abdul Qader cannot be selected twice and forced duplicate values are rejected before review', async ({page}) => {
+  await page.goto('/league/index.html?fixture=admin#recordMatch');
+  await expect(page.locator('#page-recordMatch')).toBeVisible();
+  await page.locator('#matchPlayer1').selectOption('Abdul Qader');
+  await expect(page.locator('#matchPlayer2 option[value="Abdul Qader"]')).toBeDisabled();
+  await page.locator('#matchPlayer1').selectOption('Mustafa');
+  await expect(page.locator('#matchPlayer2 option[value="Abdul Qader"]')).toBeEnabled();
+  await page.evaluate(() => {
+    document.getElementById('matchPlayer1').value = 'Abdul Qader';
+    document.getElementById('matchPlayer2').value = 'Abdul Qader';
+  });
+  await page.locator('#saveMatchButton').click();
+  await expect(page.locator('#matchPlayer2Error')).toHaveText('يجب اختيار لاعبين أو فريقين مختلفين للمباراة.');
+  await expect(page.locator('#matchReviewModal')).toBeHidden();
+});
+
+test('quick 0-0 saves successfully without goal rows', async ({page}) => {
+  await ready(page);
+  await expect(page.locator('#matchGoals1')).toHaveValue('0');
+  await expect(page.locator('#matchGoals2')).toHaveValue('0');
+  await page.locator('#saveMatchButton').click();
+  await expect(page.locator('#matchReviewSummary')).toContainText('لا توجد أهداف في هذه المباراة.');
+  await page.locator('#confirmMatchSaveButton').click();
+  await expect(page.locator('#matchEntrySuccess')).toContainText('تم تسجيل المباراة بنجاح');
+  await page.locator('#viewSavedMatch').click();
+  await expect(page.locator('#matchDetailsContent')).toContainText('لا توجد أهداف في هذه المباراة.');
+  await expect(page.locator('#matchDetailsContent .entry-missing-badge')).toHaveCount(0);
+});
+
+test('detailed 3-2 saves five real timeline rows and editing updates the same match', async ({page}) => {
+  await ready(page);
+  await page.locator('#matchGoals1').fill('3');
+  await page.locator('#matchGoals2').fill('2');
+  await page.locator('#matchDetailedTab').click();
+  const rows = page.locator('#goalEventsList .ge-row');
+  await expect(rows).toHaveCount(5);
+  const minutes = ['12','28','41','55','78'];
+  for (let i = 0; i < 5; i++) {
+    await rows.nth(i).locator('.ge-scorer').selectOption(i < 3 ? 's1' : 's4');
+    if (i === 0) await rows.nth(i).locator('.ge-assist').selectOption('s2');
+    await rows.nth(i).locator('.ge-minute').fill(minutes[i]);
+  }
+  await page.locator('#saveMatchButton').click();
+  await expect(page.locator('#matchReviewSummary')).toContainText('5 أهداف مسجلة');
+  await expect(page.locator('#matchReviewSummary')).toContainText('الأسيست المسجّل1');
+  await page.locator('#confirmMatchSaveButton').click();
+  await expect(page.locator('#matchEntrySuccess')).toBeVisible();
+  await page.locator('#viewSavedMatch').click();
+  await expect(page.locator('#matchDetailsContent .goal-timeline-item')).toHaveCount(5);
+  for (const minute of minutes) await expect(page.locator('#matchDetailsContent')).toContainText(minute + "'");
+  await expect(page.locator('#matchDetailsContent')).toContainText('Ronaldinho');
+  const before = await page.locator('.match-card').count().catch(() => 0);
+  await page.locator('#matchDetailsContent .edit').click();
+  await page.locator('#editGoals1').fill('2');
+  await expect(page.locator('#confirmModal')).toBeVisible();
+  await page.locator('#confirmYes').click();
+  await expect(page.locator('#editGoalEventsList .ge-row')).toHaveCount(4);
+  await page.locator('#saveEditButton').click();
+  await page.locator('#confirmMatchSaveButton').click();
+  await expect(page.locator('#editMatchModal')).toBeHidden();
+  await expect(page.locator('#matchDetailsContent .match-details-score')).toContainText('2 — 2');
+  await expect(page.locator('#matchDetailsContent .goal-timeline-item')).toHaveCount(4);
+  await page.evaluate(() => window.League.navigateTo('matchHistory'));
+  const after = await page.locator('.match-card').count();
+  if (before) expect(after).toBe(before);
+});
