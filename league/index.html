@@ -4,6 +4,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <title>دوري الأصدقاء · مجلس الكبار</title>
 <meta content="نتائج دوري الأصدقاء في مجلس الكبار وترتيب اللاعبين وإنجازاتهم." name="description"/>
 <link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E" rel="icon"/>
@@ -223,7 +226,7 @@
 <!-- RECORD MATCH PAGE -->
 <div class="page hidden" id="page-recordMatch"><div class="page-header"><h2 class="page-title">تسجيل مباراة جديدة</h2><div class="page-subtitle">سجّل النتيجة الآن، وأضف تفاصيل الأهداف متى أردت</div></div>
 <div class="form-container"><div id="matchEntrySuccess" class="entry-success" role="status" tabindex="-1" hidden><strong>تم تسجيل المباراة بنجاح</strong><p id="matchEntrySuccessScore" dir="auto"></p><div class="form-actions"><button class="btn-secondary" id="viewSavedMatch" type="button">عرض المباراة</button><button class="btn-secondary" type="button" onclick="League.clearMatchForm()">تسجيل مباراة أخرى</button></div></div>
-<div class="match-form-card match-entry" id="matchEntryForm" data-busy-region>
+<div class="match-form-card match-entry" id="matchEntryForm" data-entry-version="20260928-modern-v2" data-busy-region>
 
 <div class="entry-modes" role="group" aria-label="طريقة تسجيل المباراة">
 <button id="matchQuickTab" type="button" aria-pressed="true" onclick="League.setMatchEntryMode('match','quick')">تسجيل سريع</button>
@@ -238,7 +241,7 @@
 <label id="matchDeferWrap" class="entry-defer" hidden><input id="matchDeferDetails" type="checkbox" onchange="League.toggleDeferredDetails('match')"/>حفظ النتيجة فقط، وإضافة تفاصيل الأهداف لاحقًا</label>
 <details class="panel goal-events-panel entry-details" id="matchDetailsPanel" open hidden><summary>⚽ تفاصيل الأهداف <span>طي / توسيع</span></summary><fieldset id="matchDetailsFields"><legend class="sr-only">أهداف المباراة</legend>
 <p class="match-stats-hint">الخانات تطابق النتيجة تلقائيًا. اختر المسجّل من تشكيلة صاحب الفريق، والأسيست والدقيقة اختياريان.</p>
-<div class="goal-events-list" id="goalEventsList"></div><div class="ge-actions"><button class="btn-sm btn-ge-add" onclick="League.addGoalEventRow('goalEventsList')" type="button">+ إضافة هدف</button></div>
+<div class="goal-events-list" id="goalEventsList"></div>
 <div class="goal-events-summary" id="goalEventsSummary"></div><div class="match-awards-preview" id="matchAwardsPreview"></div></fieldset></details>
 
 <div class="qa-setup-banner hidden" id="goalEventsSetupBanner"></div><div class="form-error hidden" id="matchFormError" role="alert"></div>
@@ -492,7 +495,7 @@
 <label id="editDeferWrap" class="entry-defer" hidden><input id="editDeferDetails" type="checkbox" onchange="League.toggleDeferredDetails('edit')"/>حفظ النتيجة فقط، وإضافة تفاصيل الأهداف لاحقًا</label>
 <details class="panel goal-events-panel entry-details" id="editDetailsPanel" open hidden><summary>⚽ تفاصيل الأهداف <span>طي / توسيع</span></summary><fieldset id="editDetailsFields"><legend class="sr-only">أهداف المباراة</legend>
 <p class="match-stats-hint">الخانات تطابق النتيجة تلقائيًا. اختر المسجّل من تشكيلة صاحب الفريق، والأسيست والدقيقة اختياريان.</p>
-<div class="goal-events-list" id="editGoalEventsList"></div><div class="ge-actions"><button class="btn-sm btn-ge-add" onclick="League.addGoalEventRow('editGoalEventsList')" type="button">+ إضافة هدف</button></div>
+<div class="goal-events-list" id="editGoalEventsList"></div>
 <div class="goal-events-summary" id="editGoalEventsSummary"></div><div class="match-awards-preview" id="editMatchAwardsPreview"></div></fieldset></details>
 <button type="button" class="btn-secondary entry-add-details" id="editAddDetails" onclick="League.setMatchEntryMode('edit','detailed')">إضافة تفاصيل الأهداف اختياريًا</button>
 <div class="form-error hidden" id="editError" role="alert"></div></div><div class="modal-footer"><button class="btn-primary" id="saveEditButton" onclick="League.saveEditMatch()" type="button">حفظ المباراة</button><button class="btn-secondary" onclick="League.closeEditModal()" type="button">إلغاء</button></div></div></div>
@@ -526,6 +529,6 @@
 <script src="../supabase-config.js"></script>
 <script src="../client-runtime.js"></script>
 <script src="../auth-runtime.js"></script>
-<script src="js/app.js" type="module"></script>
+<script src="js/app.js?v=20260928-modern-v2" type="module"></script>
 </body>
 </html>
