@@ -134,3 +134,24 @@ test('detailed 3-2 saves five real timeline rows and editing updates the same ma
   const after = await page.locator('.match-card').count();
   if (before) expect(after).toBe(before);
 });
+
+
+test('real login-form lifecycle lands on the modern authenticated recordMatch route', async ({page}) => {
+  const errors=[]; page.on('pageerror',error=>errors.push(error.message));
+  await page.goto('/league/latest.html?fixture=public#recordMatch');
+  await expect(page).toHaveURL(/league\/index\.html\?ui=20260928-modern-v2&fixture=public#recordMatch/);
+  await expect(page.locator('#loginScreen')).toBeVisible();
+  await page.locator('#loginUsername').selectOption('Wael');
+  await page.locator('#loginPassword').fill('qa-only-password');
+  await page.locator('#loginButton').click();
+  await expect(page.locator('#mainApp')).toBeVisible();
+  await expect(page.locator('#page-recordMatch')).toBeVisible();
+  await expect(page.locator('#matchEntryForm')).toHaveAttribute('data-entry-version','20260928-modern-v2');
+  await expect(page.locator('#matchQuickTab')).toBeVisible();
+  await expect(page.locator('#matchDetailedTab')).toBeVisible();
+  await expect(page.getByRole('button',{name:'إضافة هدف',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:/احتساب النتيجة من الأهداف/})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:/مسح الحقول/})).toHaveCount(0);
+  await fit(page,'#matchEntryForm');
+  expect(errors).toEqual([]);
+});
