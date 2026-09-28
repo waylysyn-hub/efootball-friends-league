@@ -88,3 +88,19 @@ test('Same-name footballers stay separate in rankings, details and awards',async
  await page.evaluate(id=>window.League.openMatchDetails(id),ids.match);await expect(page.locator('.match-awards')).toContainText('Zlatan Ibrahimović');await expect(page.locator('.match-awards')).toContainText('مصطفى');await noOverflow(page);
  expect(errors).toEqual([]);
 });
+
+
+test('normal player cannot see or open restricted admin tools', async ({page}) => {
+  const errors = watchErrors(page);
+  await page.goto('/league/index.html?fixture=player#settings');
+  await expect(page.locator('#mainApp')).toBeVisible();
+  await expect(page.locator('#page-settings')).toBeVisible();
+  await expect(page.locator('#page-settings .admin-only:visible')).toHaveCount(0);
+  await expect(page.getByRole('link', {name:/إدارة الحسابات/})).toBeHidden();
+  await expect(page.getByRole('button', {name:'تنزيل نسخة احتياطية'})).toBeHidden();
+  await page.evaluate(() => window.League.navigateTo('recordMatch'));
+  await expect(page.locator('#page-dashboard')).toBeVisible();
+  await page.evaluate(() => window.League.navigateTo('evenings'));
+  await expect(page.locator('#page-dashboard')).toBeVisible();
+  expect(errors).toEqual([]);
+});
