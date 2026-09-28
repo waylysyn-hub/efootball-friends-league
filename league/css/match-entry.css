@@ -47,6 +47,7 @@
 .match-entry :is(button, summary, input, select):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .match-entry button:disabled { opacity: .55; cursor: not-allowed; }
 @media (max-width: 540px) {
+  .match-entry button, .entry-success button { min-height: 48px; }
   .match-delete-wrap { flex: 1 1 100%; margin-inline-start: 0; padding-top: 12px; border-top: 1px solid var(--border); text-align: end; }
   .entry-teams { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .entry-scores { gap: 16px; }
