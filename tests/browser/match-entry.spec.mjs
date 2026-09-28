@@ -1,7 +1,12 @@
 import { test, expect } from '@playwright/test';
 
 async function ready(page) {
-  await page.goto('/league/index.html?fixture=admin#recordMatch');
+  await page.goto('/league/latest.html?fixture=public#recordMatch');
+  await expect(page.locator('#loginScreen')).toBeVisible();
+  await page.locator('#loginUsername').selectOption('Wael');
+  await page.locator('#loginPassword').fill('qa-only-password');
+  await page.locator('#loginButton').click();
+  await expect(page.locator('#mainApp')).toBeVisible();
   await expect(page.locator('#page-recordMatch')).toBeVisible();
   await page.locator('#matchPlayer1').selectOption('Wael');
   await page.locator('#matchPlayer2').selectOption('Omar');
@@ -69,8 +74,7 @@ test('opponents are excluded both ways and malformed numeric input cannot reach 
 
 
 test('Abdul Qader cannot be selected twice and forced duplicate values are rejected before review', async ({page}) => {
-  await page.goto('/league/index.html?fixture=admin#recordMatch');
-  await expect(page.locator('#page-recordMatch')).toBeVisible();
+  await ready(page);
   await page.locator('#matchPlayer1').selectOption('Abdul Qader');
   await expect(page.locator('#matchPlayer2 option[value="Abdul Qader"]')).toBeDisabled();
   await page.locator('#matchPlayer1').selectOption('Mustafa');
