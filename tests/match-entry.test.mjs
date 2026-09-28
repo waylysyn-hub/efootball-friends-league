@@ -93,7 +93,7 @@ test('field errors reject missing/duplicate teams, fractions, negatives and inva
   const app=await setup(t),{document:d,window:w}=app;
   w.League.saveMatch(); assert.equal(d.getElementById('matchPlayer1').getAttribute('aria-invalid'),'true');
   fill(app); assert.equal(d.querySelector('#matchPlayer2 option[value="Wael"]').disabled,true);
-  d.getElementById('matchPlayer2').value='Wael'; w.League.saveMatch(); assert.match(d.getElementById('matchPlayer2Error').textContent,/لاعبين مختلفين/);
+  d.getElementById('matchPlayer2').value='Wael'; w.League.saveMatch(); assert.match(d.getElementById('matchPlayer2Error').textContent,/لاعبين أو فريقين مختلفين/);
   fill(app); for(const value of ['','-1','1.5','100']) {d.getElementById('matchGoals1').value=value; w.League.saveMatch(); assert.equal(d.getElementById('matchGoals1').getAttribute('aria-invalid'),'true');}
   fill(app); w.League.setMatchEntryMode('match','detailed'); w.League.saveMatch(); assert.equal(d.querySelector('.ge-scorer').getAttribute('aria-invalid'),'true'); complete(app);
   for(const value of ['0','-1','1.5','121']) {d.querySelector('.ge-minute').value=value; w.League.saveMatch(); assert.match(d.querySelector('.ge-minute').nextElementSibling.textContent,/1 إلى 120/);}
