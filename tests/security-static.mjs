@@ -34,6 +34,13 @@ for(const file of ['supabase-derived-data-migration.sql','supabase-consistency-m
 }
 assert.match(auth,/auth\.signInWithPassword/);assert.match(auth,/from\('player_accounts'\)/);assert.match(auth,/localStorage\.removeItem\('efl_user'\)/);
 assert.match(read('league/js/admin.js'),/state\.profile\?\.role === 'admin'/,'Admin UI reads authenticated profile');
+const leagueHtml=read('league/index.html');
+assert.match(leagueHtml,/data-entry-version="20260928-modern-v2"/,'Published league page must carry the modern match-entry version');
+assert.ok(!/احتساب النتيجة من الأهداف|مسح الحقول/.test(leagueHtml),'Legacy match-entry controls must not ship');
+assert.ok(!/btn-ge-add/.test(leagueHtml),'Goal rows must be derived from the score, not manual add buttons');
+assert.ok(fs.existsSync(path.join(root,'league/latest.html')),'Fresh league launcher must exist');
+assert.match(read('index.html'),/href="league\/latest\.html"/,'Hub must route league entry through the fresh launcher');
+assert.match(read('groups-chat/index.html'),/href="\.\.\/league\/latest\.html"/,'Chat must route league entry through the fresh launcher');
 for(const page of ['index.html','league/index.html','groups-chat/index.html']) {
  const doc=new JSDOM(read(page)).window.document;
  const scripts=[...doc.querySelectorAll('script[src]')];const names=scripts.map(s=>path.basename(s.getAttribute('src')));

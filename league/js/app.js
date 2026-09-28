@@ -18,6 +18,25 @@ import * as admin from './admin.js';
 import * as squads from './squads.js';
 import * as evenings from './evenings.js';
 
+const MATCH_ENTRY_UI_VERSION = '20260928-modern-v2';
+function ensureModernMatchEntryMarkup() {
+  const form = document.getElementById('matchEntryForm');
+  const modern = form?.dataset.entryVersion === MATCH_ENTRY_UI_VERSION &&
+    document.getElementById('matchQuickTab') &&
+    document.getElementById('matchDetailedTab') &&
+    document.getElementById('matchReviewModal') &&
+    ![...document.querySelectorAll('button')].some(button => /احتساب النتيجة من الأهداف|مسح الحقول/.test(button.textContent || ''));
+  if (modern) return true;
+  const url = new URL(location.href);
+  if (url.searchParams.get('ui') !== MATCH_ENTRY_UI_VERSION) {
+    url.searchParams.set('ui', MATCH_ENTRY_UI_VERSION);
+    location.replace(url);
+  } else {
+    document.body.textContent = 'تعذّر تحميل واجهة تسجيل المباريات الحديثة. حدّث الصفحة بالكامل ثم حاول مجددًا.';
+  }
+  return false;
+}
+
 // One explicit compatibility namespace for existing HTML actions. Data and
 // authenticated state stay module-local; RLS remains the authorization boundary.
 const actions = { ...ui, ...matches, ...details, ...goals, ...seasons, ...profiles,
@@ -73,6 +92,7 @@ async function loadRoster() {
 }
 
 async function init() {
+  if (!ensureModernMatchEntryMarkup()) return;
   applyAdminUI();
   if (!sb) {
     showLogin();
