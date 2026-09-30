@@ -7,7 +7,7 @@ export function fixtureClient({ profile = null, empty = false, overlappingSquads
     seasons: empty ? [] : [{id:ids.season,name:'Season 01',active:true,created:1}],
     matches: empty ? [] : [{id:ids.match,player1:'Wael',player2:'Omar',goals1:2,goals2:1,date:'2026-09-08',season_id:ids.season,timestamp:1000}],
     match_goal_events: empty ? [] : [{id:'e1',match_id:ids.match,owner:'Wael',scorer:'Zlatan Ibrahimović',assist:'Ronaldinho',minute:12,sort_order:0},{id:'e2',match_id:ids.match,owner:'Omar',scorer:'Didier Drogba',assist:'',minute:38,sort_order:1},{id:'e3',match_id:ids.match,owner:'Wael',scorer:'Zlatan Ibrahimović',assist:'Del Piero',minute:78,sort_order:2}],
-    squad_players: empty ? [] : [{id:'s1',owner:'Wael',name:'Zlatan Ibrahimović',position:'FW',active:true},{id:'s2',owner:'Wael',name:'Ronaldinho',position:'MF',active:true},{id:'s3',owner:'Wael',name:'Del Piero',position:'FW',active:true},{id:'s4',owner:'Omar',name:'Didier Drogba',position:'FW',active:true}],
+    squad_players: empty ? [] : [{id:'s1',owner:'Wael',name:'Zlatan Ibrahimović',position:'CF',active:true},{id:'s2',owner:'Wael',name:'Ronaldinho',position:'AMF',active:true},{id:'s3',owner:'Wael',name:'Del Piero',position:'SS',active:true},{id:'s4',owner:'Omar',name:'Didier Drogba',position:'CF',active:true}],
     league_evenings:[],match_stats:[],standings:[],achievements: empty ? [] : [{player:'Wael',achievement_id:'first_win'}],
     questions: empty ? [] : [{id:ids.question,author:'Wael',body:'Who is ready for the next match?',closed:false,timestamp:1000}],answers:[],
     chat_groups:[{id:ids.group,name:'Matchday room',description:'Fixtures, results and the next challenge.',emoji:'⚽',created_by:'Wael',created_at:'2026-09-08T12:00:00Z'}],
@@ -19,7 +19,7 @@ export function fixtureClient({ profile = null, empty = false, overlappingSquads
     db.match_goal_events = ['Wael','Mustafa','Mustafa','Mustafa'].map((owner,index) => ({
       id:'overlap-'+index,match_id:ids.match,owner,scorer:'Zlatan Ibrahimović',assist:index===3?'':'Ronaldinho',minute:10+index*10,sort_order:index,
     }));
-    db.squad_players = ['Wael','Mustafa'].flatMap(owner => ['Zlatan Ibrahimović','Ronaldinho'].map((name,index) => ({id:owner+'-'+index,owner,name,position:'FW',active:true})));
+    db.squad_players = ['Wael','Mustafa'].flatMap(owner => ['Zlatan Ibrahimović','Ronaldinho'].map((name,index) => ({id:owner+'-'+index,owner,name,position:index===0?'CF':'AMF',active:true})));
   }
   for (const [index, player] of db.players.entries()) player.id = `60000000-0000-4000-8000-${String(index+1).padStart(12,'0')}`;
   const playerId = name => db.players.find(p => p.name === name)?.id || null;
