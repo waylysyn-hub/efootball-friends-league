@@ -36,13 +36,13 @@ test('large squad keeps every identity across field/list, filters, sorting and c
 });
 test('add second keeper, reject duplicate, edit into midfield, archive and refetch without changing matches',async({page},testInfo)=>{
   await page.goto('/league/index.html?fixture=squads#squads');await expect(allPlayers(page)).toHaveCount(25);
-  await page.locator('#addSquadPlayer').click();await page.locator('#squadPlayerName').fill('حارس اختبار ثانٍ باسم طويل');await page.locator('#squadPlayerPosition').selectOption('GK');
+  await page.locator('#addSquadPlayer').click();await page.locator('#squadPlayerName').fill('حارس اختبار ثانٍ باسم طويل');await page.locator('#squadPlayerPosition').selectOption('GK');await page.locator('#squadPlayerRole').selectOption('substitute');
   await page.locator('#squadPlayerNumber').fill('99');await page.locator('#squadPlayerRating').fill('105');await page.locator('#saveSquadPlayer').click();await expect(page.locator('#squadPlayerModal')).toBeHidden();
-  await expect(page.locator('[data-squad-group="GK"] [data-squad-player]')).toHaveCount(2);await safeLayout(page);
-  await page.reload();await expect(allPlayers(page)).toHaveCount(26);await expect(page.locator('[data-squad-group="GK"] [data-squad-player]')).toHaveCount(2);
+  await expect(page.locator('[data-squad-player].position-GK')).toHaveCount(2);await expect(page.locator('.position-GK[data-squad-role="substitute"]')).toHaveCount(1);await safeLayout(page);
+  await page.reload();await expect(allPlayers(page)).toHaveCount(26);await expect(page.locator('[data-squad-player].position-GK')).toHaveCount(2);await expect(page.locator('.position-GK[data-squad-role="substitute"]')).toHaveCount(1);
   await page.locator('#addSquadPlayer').click();await page.locator('#squadPlayerName').fill('حارس اختبار ثانٍ باسم طويل');await page.locator('#saveSquadPlayer').click();await expect(page.locator('#squadPlayerError')).toContainText('موجود');await page.keyboard.press('Escape');
   await page.locator('#editSquad').click();const keeper=allPlayers(page).filter({hasText:'حارس اختبار ثانٍ باسم طويل'});
-  await keeper.getByRole('button',{name:'تعديل حارس اختبار ثانٍ باسم طويل',exact:true}).click();await page.locator('#squadPlayerPosition').selectOption('MF');await page.locator('#saveSquadPlayer').click();await expect(page.locator('#squadPlayerModal')).toBeHidden();
+  await keeper.getByRole('button',{name:'تعديل حارس اختبار ثانٍ باسم طويل',exact:true}).click();await page.locator('#squadPlayerPosition').selectOption('MF');await page.locator('#squadPlayerRole').selectOption('starter');await page.locator('#saveSquadPlayer').click();await expect(page.locator('#squadPlayerModal')).toBeHidden();
   await expect(page.locator('[data-squad-group="GK"] [data-squad-player]')).toHaveCount(1);await expect(page.locator('[data-squad-group="MF"] [data-squad-player]')).toHaveCount(9);
   await keeper.getByRole('button',{name:'إبعاد حارس اختبار ثانٍ باسم طويل',exact:true}).click();await expect(allPlayers(page)).toHaveCount(25);
   await page.reload();await expect(allPlayers(page)).toHaveCount(25);await page.locator('#squadArchive summary').click();await expect(page.locator('#squadArchivePlayers')).toContainText('حارس اختبار ثانٍ باسم طويل');
