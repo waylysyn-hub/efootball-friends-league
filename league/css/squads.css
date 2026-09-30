@@ -4,7 +4,7 @@
 #page-squads .position-DF { --position-color: var(--roster-blue); }
 #page-squads .position-MF { --position-color: var(--roster-green); }
 #page-squads .position-FW { --position-color: var(--roster-red); }
-#page-squads .position-SUB, #page-squads .position-UNK { --position-color: var(--roster-gray); }
+#page-squads .position-UNK, #page-squads .role-substitute { --position-color: var(--roster-gray); }
 .roster-owner { max-width: 320px; margin-bottom: 24px; }
 .roster-panel { padding: 28px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow-sm); min-width: 0; }
 .roster-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
@@ -25,7 +25,7 @@
 .roster-view-switch button[aria-pressed="true"] { background: var(--primary-soft); color: var(--primary); border-color: var(--border-strong); }
 .roster-view-switch svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.5; }
 .roster-results { font-size: .8rem; color: var(--muted); }
-.roster-filters { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
+.roster-filters { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
 .roster-filters .form-group { margin: 0; min-width: 0; }
 .roster-filters input, .roster-filters select { width: 100%; min-width: 0; min-height: 44px; }
 .roster-filters label { font-size: .75rem; }
@@ -56,6 +56,9 @@
 .roster-number { color: var(--position-color); }
 .roster-rating { font-size: .7rem; color: var(--primary); white-space: nowrap; }
 .roster-rating > span { font-size: .65rem; }
+.roster-role-badge { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; padding: 2px 8px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: .65rem; }
+.roster-player-substitute { border-style: dashed; }
+.role-substitute { padding: 12px; margin-top: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
 .roster-player-actions { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; margin-top: auto; justify-content: center; }
 .roster-player-actions .btn-sm { font-size: .7rem; min-height: 44px; padding: 6px 8px; }
 .roster-group-empty { color: var(--muted); font-size: .75rem; text-align: center; padding: 6px; }
@@ -94,7 +97,7 @@
   .roster-view-switch { width: 100%; }
   .roster-view-switch button { flex: 1; padding: 8px; font-size: .8rem; }
   .roster-viewbar { gap: 8px; }
-  .roster-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .roster-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .roster-filters .form-group:first-child { grid-column: 1 / -1; }
   .roster-field { padding: 10px; }
   .roster-field::before { inset: 7px; }
