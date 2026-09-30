@@ -5,7 +5,7 @@ import { getPlayers } from './profiles.js';
 import { collectGoalEventsFromForm, renderGoalEventsForm } from './goal-events.js';
 import { closeDialog, errorMessage, escapeHtml as esc, isBusy, openDialog, showError, toast, withBusy } from '../../shared/ui.js';
 import { SQUAD_GROUPS, SQUAD_ROLES, bindSquadPhotos, filterSquadMembers, safeSquadPhoto, squadArchiveHTML, squadInitials, squadPlayersHTML, squadSummary, uniqueSquad } from './squad-view.js';
-import { removeSquadPhotoObject, uploadSquadPhoto, validateSquadPhotoFile } from './squad-images.js';
+import { normalizeExternalSquadPhotoUrl, removeSquadPhotoObject, uploadSquadPhoto, validateSquadPhotoFile, verifyExternalSquadPhotoUrl } from './squad-images.js';
 
 export const POSITIONS = Object.fromEntries(SQUAD_GROUPS.map(g => [g.key, g.short]));
 const presentation = { view: 'pitch', search: '', position: '', role: '', sort: 'position', editing: false, collapsed: new Set() };
@@ -221,13 +221,14 @@ export async function saveSquadPlayer() {
   const numberText = document.getElementById('squadPlayerNumber').value.trim();
   const ratingText = document.getElementById('squadPlayerRating').value.trim();
   const photo = document.getElementById('squadPlayerPhoto').value.trim();
+  const normalizedPhoto = photo ? normalizeExternalSquadPhotoUrl(photo) : '';
   const selectedPhotoFile = editor.selectedPhotoFile;
   if (!name || name.length > 100) return showError(errorElement, 'أدخل اسم اللاعب من حرف واحد إلى 100 حرف.');
   if (!POSITIONS[position]) return showError(errorElement, 'اختر مركزًا صحيحًا للاعب.');
   if (!SQUAD_ROLES.some(role => role.key === lineupRole)) return showError(errorElement, 'اختر حالة صحيحة للاعب.');
   if (numberText && (!Number.isInteger(Number(numberText)) || Number(numberText) < 0 || Number(numberText) > 99)) return showError(errorElement, 'رقم القميص عدد صحيح بين 0 و99.');
   if (ratingText && (!Number.isFinite(Number(ratingText)) || Number(ratingText) < 0 || Number(ratingText) > 120)) return showError(errorElement, 'أدخل تقييمًا بين 0 و120.');
-  if (photo && (photo.length > 2048 || !safeSquadPhoto(photo))) return showError(errorElement, 'أدخل رابط صورة صالحًا يبدأ بـ https://.');
+  if (photo && (photo.length > 2048 || !normalizedPhoto)) return showError(errorElement, 'استخدم رابط صورة مباشر يبدأ بـ https://، وليس رابط صفحة بحث أو مشاركة.');
   if (selectedPhotoFile) { const photoError = validateSquadPhotoFile(selectedPhotoFile); if (photoError) return showError(errorElement, photoError); }
   const duplicate = state.db.squads.find(p => p.owner === editor.owner && p.id !== editor.id && p.name.toLowerCase() === name.toLowerCase());
   if (duplicate) return showError(errorElement, duplicate.active ? 'هذا اللاعب موجود في التشكيلة بالفعل.' : 'هذا اللاعب موجود خارج التشكيلة. استخدم «إعادة» بدل إضافته مجددًا.');
@@ -238,8 +239,10 @@ export async function saveSquadPlayer() {
       const existing = state.db.squads.find(p => p.id === editor.id);
       const ownerPlayerId = state.db.accounts[editor.owner]?.id;
       let uploadedPhoto = null;
-      let photoUrl = editor.photoRemoved ? null : (photo || editor.originalPhotoUrl || null);
-      let photoPath = editor.photoRemoved ? null : (photo && photo !== editor.originalPhotoUrl ? null : editor.originalPhotoPath);
+      let verifiedPhoto = normalizedPhoto;
+      if (photo && !selectedPhotoFile) verifiedPhoto = await verifyExternalSquadPhotoUrl(photo);
+      let photoUrl = editor.photoRemoved ? null : (verifiedPhoto || editor.originalPhotoUrl || null);
+      let photoPath = editor.photoRemoved ? null : (verifiedPhoto && verifiedPhoto !== editor.originalPhotoUrl ? null : editor.originalPhotoPath);
       if (selectedPhotoFile) {
         if (!ownerPlayerId) throw new Error('تعذّر تحديد صاحب التشكيلة لرفع الصورة.');
         uploadedPhoto = await uploadSquadPhoto(sb, selectedPhotoFile, ownerPlayerId, id, editor.photoObjectId);
