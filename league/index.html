@@ -528,7 +528,7 @@
 <div class="modal-overlay hidden" id="squadPlayerModal" dir="rtl" lang="ar" data-busy-region>
 <div class="modal"><div class="modal-header"><h3 id="squadPlayerTitle">إضافة لاعب</h3><button class="modal-close" type="button" aria-label="إغلاق" onclick="League.closeSquadPlayer()">✕</button></div>
 <form class="modal-body" id="squadPlayerForm">
-<div class="form-group"><label for="squadPlayerName">اسم لاعب كرة القدم</label><input id="squadPlayerName" maxlength="100" required placeholder="مثال: ليونيل ميسي" autocomplete="off" dir="auto"/></div>
+<div class="form-group"><label for="squadPlayerName">اسم لاعب كرة القدم</label><input id="squadPlayerName" maxlength="100" required placeholder="مثال: ليونيل ميسي" autocomplete="off" dir="auto" oninput="League.refreshSquadPhotoInitials()"/></div>
 <div class="roster-editor-fields"><div class="form-group"><label for="squadPlayerPosition">المركز</label><select id="squadPlayerPosition"><option value="GK">حارس</option><option value="DF">دفاع</option><option value="MF">وسط</option><option value="FW">هجوم</option><option value="UNK">غير محدد المركز</option></select></div><div class="form-group"><label for="squadPlayerRole">الحالة</label><select id="squadPlayerRole"><option value="starter">أساسي</option><option value="substitute">احتياط</option></select></div></div>
 <div class="roster-editor-fields"><div class="form-group"><label for="squadPlayerNumber">رقم القميص <span>(اختياري)</span></label><input type="number" id="squadPlayerNumber" min="0" max="99" step="1" inputmode="numeric" placeholder="—"/></div><div class="form-group"><label for="squadPlayerRating">التقييم <span>(اختياري)</span></label><input type="number" id="squadPlayerRating" min="0" max="120" step="0.1" inputmode="decimal" placeholder="—"/></div></div>
 <div class="form-group squad-photo-field"><label>صورة اللاعب <span>(اختياري)</span></label>
@@ -540,7 +540,7 @@
 <button class="btn-ghost" type="button" id="removeSquadPhoto" onclick="League.clearSquadPhoto()">إزالة الصورة</button>
 <small id="squadPhotoHint">JPG أو PNG أو WebP. تُقصّ الصورة مربعة وتُضغط تلقائيًا قبل الرفع.</small>
 </div></div>
-<details class="squad-photo-link"><summary>استخدام رابط HTTPS بدل الرفع</summary><input type="url" id="squadPlayerPhoto" maxlength="2048" dir="ltr" placeholder="https://…" aria-describedby="squadPhotoHint"/></details>
+<details class="squad-photo-link"><summary>استخدام رابط HTTPS بدل الرفع</summary><input type="url" id="squadPlayerPhoto" maxlength="2048" dir="ltr" placeholder="https://…" aria-describedby="squadPhotoHint" oninput="League.previewSquadPhotoLink()"/></details>
 </div>
 <p class="match-stats-hint">سيظهر اللاعب ضمن خيارات المسجّل والأسيست لهذا الفريق.</p><div id="squadPlayerError" class="form-error hidden"></div>
 <div class="form-actions"><button type="submit" class="btn-primary" id="saveSquadPlayer">حفظ اللاعب</button><button type="button" class="btn-secondary" onclick="League.closeSquadPlayer()">إلغاء</button></div>
