@@ -76,6 +76,11 @@ test('upload, persist and remove a managed player image without using manual URL
   expect(saved.player.photo_path).toMatch(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.webp$/);
   expect(saved.calls.some(call=>call.storage==='upload'&&call.type==='image/webp'&&call.size>0)).toBe(true);
 
+  const savedCard=allPlayers(page).filter({hasText:'حارس بصورة'});
+  await expect(savedCard.locator('.roster-avatar img')).toHaveCount(1);
+  await expect(savedCard.locator('.roster-avatar')).toHaveClass(/has-photo/);
+  await expect(savedCard.locator('.roster-avatar img')).toHaveCSS('opacity','1');
+
   await page.locator('#editSquad').click();
   const card=allPlayers(page).filter({hasText:'حارس بصورة'});
   await card.getByRole('button',{name:'تعديل حارس بصورة',exact:true}).click();
