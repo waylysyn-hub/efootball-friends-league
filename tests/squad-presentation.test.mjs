@@ -12,10 +12,11 @@ const ids=d=>[...d.querySelectorAll('#squadPlayers [data-squad-player]')].map(p=
 test('pitch and list share all 25 identities, grouped counts and optional rating summary',async t=>{
   const {window:w,document:d}=await setup(t);
   const pitch=ids(d);assert.equal(pitch.length,25);assert.equal(new Set(pitch).size,25);
-  for(const [key,count] of Object.entries({GK:1,DF:9,MF:8,FW:4,SUB:2,UNK:1})) {
+  for(const [key,count] of Object.entries({GK:1,DF:9,MF:8,FW:6,UNK:1})) {
     assert.equal(d.querySelector(`[data-squad-stat="${key}"] strong`).textContent,String(count));
-    assert.equal(d.querySelectorAll(`#squadPlayers [data-squad-group="${key}"] [data-squad-player]`).length,count);
   }
+  assert.equal(d.querySelector('[data-squad-stat="substitute"] strong').textContent,'2');
+  assert.equal(d.querySelectorAll('#squadPlayers [data-squad-role="substitute"]').length,2);
   assert.match(d.getElementById('squadUpdated').textContent,/2026/);
   assert.ok(d.querySelector('[data-squad-stat="rating"]'));
   assert.equal(d.querySelector('#squadPlayers table'),null);
@@ -24,10 +25,11 @@ test('pitch and list share all 25 identities, grouped counts and optional rating
 });
 test('two keepers, missing/unknown positions and duplicate fetched IDs stay complete and unique',async t=>{
   const app=await setup(t),{window:w,document:d,client}=app;
-  client.db.squad_players.push({...client.db.squad_players[0]}, {id:'second-gk',owner:'Wael',name:'حارس ثان',position:'GK',active:true},
+  client.db.squad_players.push({...client.db.squad_players[0]}, {id:'second-gk',owner:'Wael',name:'حارس ثان',position:'GK',lineup_role:'substitute',active:true},
     {id:'missing-position',owner:'Wael',name:'بلا مركز',position:null,active:true});
   await w.League.refresh();assert.equal(ids(d).length,27);assert.equal(new Set(ids(d)).size,27);
-  assert.equal(d.querySelectorAll('[data-squad-group="GK"] [data-squad-player]').length,2);
+  assert.equal(d.querySelectorAll('[data-squad-player].position-GK').length,2);
+  assert.equal(d.querySelector('[data-squad-player="second-gk"]').dataset.squadRole,'substitute');
   assert.equal(d.querySelectorAll('[data-squad-group="UNK"] [data-squad-player]').length,2);
   w.League.setSquadView('list');assert.equal(ids(d).length,27);
 });
@@ -48,11 +50,12 @@ test('editor moves a player, keeps metadata on refetch and archives without touc
   const {window:w,document:d,client}=await setup(t);
   const matches=JSON.stringify(client.db.matches),events=JSON.stringify(client.db.match_goal_events);
   w.League.editSquad();w.League.openSquadPlayer('Wael','qa-roster-1');
-  d.getElementById('squadPlayerPosition').value='GK';d.getElementById('squadPlayerNumber').value='99';d.getElementById('squadPlayerRating').value='103.5';
+  d.getElementById('squadPlayerPosition').value='GK';d.getElementById('squadPlayerRole').value='substitute';d.getElementById('squadPlayerNumber').value='99';d.getElementById('squadPlayerRating').value='103.5';
   await w.League.saveSquadPlayer();await w.League.refresh();
-  assert.equal(d.querySelectorAll('[data-squad-group="GK"] [data-squad-player]').length,2);
+  assert.equal(d.querySelectorAll('[data-squad-player].position-GK').length,2);
   assert.equal(d.querySelectorAll('[data-squad-group="DF"] [data-squad-player]').length,8);
   assert.equal(client.db.squad_players.find(p=>p.id==='qa-roster-1').rating,103.5);
+  assert.equal(client.db.squad_players.find(p=>p.id==='qa-roster-1').lineup_role,'substitute');
   assert.ok(client.db.squad_players.find(p=>p.id==='qa-roster-1').updated_at);
   await w.League.toggleSquadPlayer('qa-roster-1',d.querySelector('[data-squad-toggle="qa-roster-1"]'));
   assert.ok(!ids(d).includes('qa-roster-1'));assert.equal(d.querySelectorAll('#squadArchivePlayers [data-squad-player="qa-roster-1"]').length,1);
