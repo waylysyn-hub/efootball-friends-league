@@ -273,7 +273,10 @@ export async function saveSquadPlayer() {
       try { await reloadSquads(); toast(selectedPhotoFile ? 'تم حفظ اللاعب ورفع صورته.' : 'تم حفظ اللاعب في التشكيلة.'); }
       catch { toast('تم حفظ اللاعب، لكن تعذّر تحديث القائمة. اضغط تحديث قبل تسجيل المباراة.', 'error'); }
     } catch (error) {
-      showError(errorElement, errorMessage(error, 'تعذّر حفظ اللاعب. بياناتك ما زالت موجودة؛ حاول مجددًا.'));
+      const message = error?.code === '23514' && /squad_players_photo_path_check/i.test(String(error?.message || ''))
+        ? 'تعذّر ربط الصورة باللاعب بسبب مسار صورة غير صالح. أعد اختيار الصورة ثم حاول الحفظ.'
+        : errorMessage(error, 'تعذّر حفظ اللاعب. بياناتك ما زالت موجودة؛ حاول مجددًا.');
+      showError(errorElement, message);
     }
   }, 'جارٍ الحفظ…');
 }
