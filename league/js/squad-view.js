@@ -105,6 +105,40 @@ function playerCard(player, canEdit) {
     ${canEdit ? `<div class="roster-player-actions"><button class="btn-sm" data-squad-edit="${esc(player.id)}" type="button" aria-label="تعديل ${esc(player.name)}">تعديل</button><button class="btn-sm" data-squad-toggle="${esc(player.id)}" type="button" aria-label="${player.active ? 'إبعاد' : 'إعادة'} ${esc(player.name)}">${player.active ? 'إبعاد' : 'إعادة'}</button><button class="btn-sm btn-danger" data-squad-delete="${esc(player.id)}" type="button" aria-label="حذف ${esc(player.name)}">حذف</button></div>` : ''}
   </article>`;
 }
+const PITCH_LAYOUT = {
+  FW: [
+    ['LWF', 'CF', 'RWF'],
+    [null, 'SS', null],
+  ],
+  MF: [
+    ['LMF', 'AMF', 'RMF'],
+    [null, 'CMF', null],
+    [null, 'DMF', null],
+  ],
+  DF: [
+    ['LB', 'CB', 'RB'],
+  ],
+  GK: [
+    [null, 'GK', null],
+  ],
+};
+
+function pitchSlot(position, players, canEdit, side) {
+  if (!position) return '<div class="roster-pitch-slot is-empty" aria-hidden="true"></div>';
+  const members = players.filter(p => squadPosition(p) === position);
+  return `<div class="roster-pitch-slot pitch-${side}" data-pitch-position="${position}">${members.map(p => playerCard(p, canEdit)).join('')}</div>`;
+}
+
+function pitchLineSection(key, players, canEdit, collapsed) {
+  const group = lineByKey.get(key);
+  const members = players.filter(p => squadLine(p) === key);
+  const rows = PITCH_LAYOUT[key] || [];
+  return `<details class="roster-group roster-pitch-line position-${key}" data-squad-group="${key}" ${collapsed.has(key) ? '' : 'open'}>
+    <summary><span class="roster-group-heading"><span class="roster-dot" aria-hidden="true"></span>${group.label}<span class="roster-group-count">${members.length}</span></span><span class="roster-group-code" aria-hidden="true">${group.code}</span></summary>
+    <div class="roster-pitch-rows">${rows.map(row => `<div class="roster-pitch-row">${pitchSlot(row[0], members, canEdit, 'left')}${pitchSlot(row[1], members, canEdit, 'center')}${pitchSlot(row[2], members, canEdit, 'right')}</div>`).join('')}</div>
+  </details>`;
+}
+
 function lineSection(key, players, canEdit, collapsed) {
   const group = lineByKey.get(key);
   const members = players.filter(p => squadLine(p) === key).sort((a,b)=>squadPositionMeta(a).order-squadPositionMeta(b).order || nameOrder.compare(a.name,b.name));
@@ -119,7 +153,7 @@ export function squadPlayersHTML(players, { view = 'pitch', sort = 'position', c
 
   const starters = players.filter(p => squadRole(p) === 'starter');
   const substitutes = players.filter(p => squadRole(p) === 'substitute');
-  const field = ['FW', 'MF', 'DF', 'GK'].map(key => lineSection(key, starters, canEdit, collapsed)).join('');
+  const field = ['FW', 'MF', 'DF', 'GK'].map(key => pitchLineSection(key, starters, canEdit, collapsed)).join('');
   const reserveKey = 'substitute';
   const reserve = `<details class="roster-group role-substitute" data-squad-role-group="substitute" ${collapsed.has(reserveKey) ? '' : 'open'}>
     <summary><span class="roster-group-heading"><span class="roster-dot" aria-hidden="true"></span>الاحتياط<span class="roster-group-count">${substitutes.length}</span></span><span class="roster-group-code" aria-hidden="true">SUB</span></summary>
