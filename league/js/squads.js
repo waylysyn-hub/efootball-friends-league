@@ -4,10 +4,12 @@ import { isAdmin } from './admin.js';
 import { getPlayers } from './profiles.js';
 import { collectGoalEventsFromForm, renderGoalEventsForm } from './goal-events.js';
 import { closeDialog, errorMessage, escapeHtml as esc, isBusy, openDialog, showError, toast, withBusy } from '../../shared/ui.js';
+import { SQUAD_GROUPS, bindSquadPhotos, filterSquadMembers, safeSquadPhoto, squadArchiveHTML, squadPlayersHTML, squadSummary, uniqueSquad } from './squad-view.js';
 
-export const POSITIONS = { GK: 'حارس', DF: 'دفاع', MF: 'وسط', FW: 'هجوم' };
+export const POSITIONS = Object.fromEntries(SQUAD_GROUPS.map(g => [g.key, g.short]));
+const presentation = { view: 'pitch', search: '', position: '', sort: 'position', editing: false, collapsed: new Set() };
 export function getSquad(owner) {
-  return state.db.squads.filter(p => p.owner === owner && p.active)
+  return uniqueSquad(state.db.squads.filter(p => p.owner === owner && p.active))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 export function canManageSquad(owner) { return !!state.user && (isAdmin() || owner === state.user); }
@@ -20,27 +22,88 @@ export function renderSquads() {
   select.value = owner || '';
   const canEdit = canManageSquad(owner) && state.squadsReady;
   document.getElementById('addSquadPlayer').hidden = !canEdit;
+  document.getElementById('editSquad').hidden = !canEdit;
+  document.getElementById('editSquad').setAttribute('aria-pressed', String(presentation.editing && canEdit));
+  document.getElementById('editSquad').textContent = presentation.editing && canEdit ? 'إنهاء التعديل' : 'تعديل التشكيلة';
+  document.getElementById('squadTitle').textContent = `تشكيلة ${displayName(owner || '')}`;
   document.getElementById('squadPermission').textContent = canEdit
     ? 'أضف لاعبي فريقك ليظهروا في قوائم الهدف والأسيست. إبعاد لاعب من التشكيلة لا يغيّر المباريات السابقة.'
     : 'يمكنك مشاهدة هذه التشكيلة. تعديلها متاح لصاحبها ومدير الدوري.';
   const container = document.getElementById('squadPlayers');
+  document.getElementById('squadSummary').hidden = !state.squadsReady;
+  document.getElementById('squadFilters').hidden = !state.squadsReady;
+  document.getElementById('squadArchive').hidden = true;
+  document.getElementById('squadArchivePlayers').replaceChildren();
   if (!state.squadsReady) {
+    document.getElementById('squadCount').textContent = 'تعذّر تحميل التشكيلة';
+    document.getElementById('squadUpdated').textContent = 'آخر تحديث: غير متاح';
     container.innerHTML = '<div class="empty-state">التشكيلات غير متاحة حاليًا. حدّث الصفحة أو تواصل مع مدير الدوري لإكمال الإعداد.</div>';
     return;
   }
-  const members = state.db.squads.filter(p => p.owner === owner)
-    .sort((a, b) => Number(b.active) - Number(a.active) || a.name.localeCompare(b.name));
-  document.getElementById('squadCount').textContent = `${members.filter(p => p.active).length} لاعب في التشكيلة`;
-  container.innerHTML = members.length ? members.map(p => `<article class="squad-card ${p.active ? '' : 'squad-archived'}">
-    <span class="squad-position">${POSITIONS[p.position] || "—"}</span>
-    <div class="squad-player-name"><strong dir="auto">${esc(p.name)}</strong><span>${POSITIONS[p.position] || ''}${p.active ? '' : ' · خارج التشكيلة'}</span></div>
-    ${canEdit ? `<div class="squad-actions"><button class="btn-sm" data-squad-edit="${esc(p.id)}" type="button">تعديل</button><button class="btn-sm" data-squad-toggle="${esc(p.id)}" type="button">${p.active ? 'إبعاد' : 'إعادة'}</button></div>` : ''}
-  </article>`).join('') : '<div class="empty-state">التشكيلة فارغة. ابدأ بإضافة أسماء لاعبي الفريق.</div>';
-  container.querySelectorAll('[data-squad-edit]').forEach(button => { button.onclick = () => openSquadPlayer(owner, button.dataset.squadEdit); });
-  container.querySelectorAll('[data-squad-toggle]').forEach(button => { button.onclick = () => toggleSquadPlayer(button.dataset.squadToggle, button); });
+  const members = uniqueSquad(state.db.squads.filter(p => p.owner === owner));
+  const active = members.filter(p => p.active), summary = squadSummary(members);
+  document.getElementById('squadCount').textContent = `${summary.total} لاعب في التشكيلة`;
+  const updates = members.map(p => Date.parse(p.updated_at)).filter(Number.isFinite);
+  document.getElementById('squadUpdated').textContent = updates.length
+    ? `آخر تحديث: ${new Intl.DateTimeFormat('ar', { dateStyle: 'medium', timeStyle: 'short' }).format(Math.max(...updates))}`
+    : 'آخر تحديث: لم يُسجّل بعد';
+  document.getElementById('squadSummary').innerHTML = [
+    ['إجمالي اللاعبين', summary.total, 'total'], ...SQUAD_GROUPS.map(g => [g.label, summary.counts[g.key], g.key]),
+    ...(summary.average !== null ? [['متوسط التقييم', summary.average, 'rating']] : []),
+  ].map(([label, value, key]) => `<div class="roster-stat position-${key}" data-squad-stat="${key}"><strong>${value}</strong><span>${label}</span></div>`).join('');
+  for (const view of ['pitch', 'list']) document.getElementById('squadView-' + view).setAttribute('aria-pressed', String(presentation.view === view));
+  renderSquadMembers(active, canEdit);
+  const archived = members.filter(p => !p.active);
+  document.getElementById('squadArchive').hidden = !archived.length;
+  document.getElementById('squadArchiveCount').textContent = archived.length;
+  document.getElementById('squadArchivePlayers').innerHTML = squadArchiveHTML(archived, canEdit);
+  bindMemberActions(document.getElementById('squadArchivePlayers'), owner);
 }
 
-export function selectSquad(owner) { state.selectedSquad = owner; renderSquads(); }
+function bindMemberActions(container, owner) {
+  container.querySelectorAll('[data-squad-edit]').forEach(button => { button.onclick = () => openSquadPlayer(owner, button.dataset.squadEdit); });
+  container.querySelectorAll('[data-squad-toggle]').forEach(button => { button.onclick = () => toggleSquadPlayer(button.dataset.squadToggle, button); });
+  bindSquadPhotos(container);
+}
+function renderSquadMembers(active = getSquad(state.selectedSquad), canEdit = canManageSquad(state.selectedSquad) && state.squadsReady) {
+  const container = document.getElementById('squadPlayers'), visible = filterSquadMembers(active, presentation);
+  container.className = `roster-${presentation.view}`;
+  document.getElementById('squadResults').textContent = `${visible.length} من ${active.length} لاعب`;
+  container.innerHTML = !active.length ? `<div class="roster-empty"><span aria-hidden="true">＋</span><h3>لم تتم إضافة لاعبين بعد</h3><p>ابدأ ببناء فريقك، وسيأخذ كل لاعب مكانه هنا.</p>${canEdit ? '<button class="btn-primary" type="button" data-squad-add>إضافة لاعب</button>' : ''}</div>`
+    : !visible.length ? '<div class="roster-empty"><h3>لا يوجد لاعب يطابق البحث</h3><button class="btn-secondary" type="button" data-squad-reset>مسح البحث والفلترة</button></div>'
+      : squadPlayersHTML(visible, { view: presentation.view, sort: presentation.sort, canEdit: canEdit && presentation.editing, collapsed: presentation.collapsed });
+  container.querySelector('[data-squad-add]')?.addEventListener('click', () => openSquadPlayer());
+  container.querySelector('[data-squad-reset]')?.addEventListener('click', resetSquadFilters);
+  container.querySelectorAll('[data-squad-group]').forEach(group => {
+    group.addEventListener('toggle', () => {
+      if (!group.isConnected) return;
+      if (group.open) presentation.collapsed.delete(group.dataset.squadGroup); else presentation.collapsed.add(group.dataset.squadGroup);
+    });
+  });
+  bindMemberActions(container, state.selectedSquad);
+}
+export function setSquadView(view) {
+  if (!['pitch', 'list'].includes(view)) return;
+  presentation.view = view; renderSquads();
+}
+export function editSquad() { presentation.editing = !presentation.editing; renderSquads(); }
+export function filterSquad() {
+  presentation.search = document.getElementById('squadSearch').value;
+  presentation.position = document.getElementById('squadPositionFilter').value;
+  presentation.sort = document.getElementById('squadSort').value;
+  renderSquadMembers();
+}
+function resetSquadFilters() {
+  presentation.search = ''; presentation.position = '';
+  document.getElementById('squadSearch').value = ''; document.getElementById('squadPositionFilter').value = '';
+  renderSquadMembers();
+}
+export function selectSquad(owner) {
+  state.selectedSquad = owner; presentation.editing = false; presentation.collapsed.clear();
+  presentation.search = ''; presentation.position = '';
+  document.getElementById('squadSearch').value = ''; document.getElementById('squadPositionFilter').value = '';
+  renderSquads();
+}
 export function openSquadPlayer(owner = state.selectedSquad || state.user, id = null) {
   if (!state.squadsReady) return toast('تعذّر تحميل التشكيلات. حدّث الصفحة وحاول مجددًا.', 'error');
   if (!canManageSquad(owner)) return toast('تعديل التشكيلة متاح لصاحبها ومدير الدوري فقط.', 'error');
@@ -49,7 +112,10 @@ export function openSquadPlayer(owner = state.selectedSquad || state.user, id = 
   state.squadEditor = { owner, id, pendingId: crypto.randomUUID() };
   document.getElementById('squadPlayerTitle').textContent = `${member ? 'تعديل لاعب' : 'إضافة لاعب'} · ${displayName(owner)}`;
   document.getElementById('squadPlayerName').value = member?.name || '';
-  document.getElementById('squadPlayerPosition').value = member?.position || 'FW';
+  document.getElementById('squadPlayerPosition').value = member && POSITIONS[member.position] ? member.position : 'UNK';
+  document.getElementById('squadPlayerNumber').value = member?.shirt_number ?? '';
+  document.getElementById('squadPlayerRating').value = member?.rating ?? '';
+  document.getElementById('squadPlayerPhoto').value = member?.photo_url || '';
   document.getElementById('squadPlayerError').classList.add('hidden');
   openDialog('squadPlayerModal', closeSquadPlayer);
   document.getElementById('squadPlayerName').focus();
@@ -70,21 +136,31 @@ export async function saveSquadPlayer() {
   const errorElement = document.getElementById('squadPlayerError');
   const name = document.getElementById('squadPlayerName').value.trim();
   const position = document.getElementById('squadPlayerPosition').value;
+  const numberText = document.getElementById('squadPlayerNumber').value.trim();
+  const ratingText = document.getElementById('squadPlayerRating').value.trim();
+  const photo = document.getElementById('squadPlayerPhoto').value.trim();
   if (!name || name.length > 100) return showError(errorElement, 'أدخل اسم اللاعب من حرف واحد إلى 100 حرف.');
   if (!POSITIONS[position]) return showError(errorElement, 'اختر مركزًا صحيحًا للاعب.');
+  if (numberText && (!Number.isInteger(Number(numberText)) || Number(numberText) < 0 || Number(numberText) > 99)) return showError(errorElement, 'رقم القميص عدد صحيح بين 0 و99.');
+  if (ratingText && (!Number.isFinite(Number(ratingText)) || Number(ratingText) < 0 || Number(ratingText) > 120)) return showError(errorElement, 'أدخل تقييمًا بين 0 و120.');
+  if (photo && (photo.length > 2048 || !safeSquadPhoto(photo))) return showError(errorElement, 'أدخل رابط صورة صالحًا يبدأ بـ https://.');
   const duplicate = state.db.squads.find(p => p.owner === editor.owner && p.id !== editor.id && p.name.toLowerCase() === name.toLowerCase());
   if (duplicate) return showError(errorElement, duplicate.active ? 'هذا اللاعب موجود في التشكيلة بالفعل.' : 'هذا اللاعب موجود خارج التشكيلة. استخدم «إعادة» بدل إضافته مجددًا.');
   return withBusy('save-squad-player', document.getElementById('saveSquadPlayer'), async () => {
     errorElement.classList.add('hidden');
     try {
       const id = editor.id || editor.pendingId;
+      const metadata = { shirt_number: numberText ? Number(numberText) : null, rating: ratingText ? Number(ratingText) : null, photo_url: photo || null };
+      // Older deployments can continue saving ordinary four-position squads before rollout.
+      const existing = state.db.squads.find(p => p.id === editor.id);
+      const values = { name, position, ...((existing && 'updated_at' in existing) || numberText || ratingText || photo || (existing && ['shirt_number', 'rating', 'photo_url'].some(key => existing[key] != null)) ? metadata : {}) };
       const query = editor.id
-        ? sb.from('squad_players').update({ name, position }).eq('id', id).eq('owner', editor.owner)
-        : sb.from('squad_players').insert({ id, owner: editor.owner, name, position, active: true });
+        ? sb.from('squad_players').update(values).eq('id', id).eq('owner', editor.owner)
+        : sb.from('squad_players').insert({ id, owner: editor.owner, ...values, active: true });
       const { data, error } = await query.select('*');
       if (error?.code === '23505' && !editor.id) {
         const previous = await sb.from('squad_players').select('*').eq('id', id).maybeSingle();
-        if (previous.error || previous.data?.owner !== editor.owner || previous.data?.name !== name || previous.data?.position !== position) throw error;
+        if (previous.error || previous.data?.owner !== editor.owner || Object.entries(values).some(([key, value]) => previous.data?.[key] !== value)) throw error;
       } else if (error) throw error;
       else if (!data?.length) throw { code: '42501' };
       closeDialog('squadPlayerModal');

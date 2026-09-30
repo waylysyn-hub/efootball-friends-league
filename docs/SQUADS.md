@@ -1,6 +1,18 @@
 # Saved squads and goal entry
 
-Each league account now has a saved squad of football players. Owners can add, edit, archive and restore their own players; the league administrator can manage every squad. Other players can view squads. These are roster lists with positions, not tactical starting-XI diagrams.
+Each league account has a saved squad of football players. Owners can add, edit, archive and restore their own players; the league administrator can manage every squad. Other players can view squads.
+
+## Squad presentation
+
+The squad card shows the owner, active player count, position counts, recorded last-update time and average of the available ratings (unrated players are excluded). Pitch and list views render the same deduplicated UUID collection, with shared search, position filtering and sorting. Pitch rows wrap without limiting the squad to eleven players: forwards, midfielders, defenders and all goalkeepers appear on the field. Substitutes and players with an unspecified position have separate sections. Position sections can be collapsed on mobile and desktop. The list groups by position by default; name and rating sorts show a globally ordered list.
+
+Each card has a position accent, initials or an optional HTTPS photo, and optional shirt number/rating. Images stay hidden until successfully loaded; failures retain the initials. Long names wrap without truncation. The editor supports `GK`, `DF`, `MF`, `FW`, `SUB` and `UNK`, shirt numbers 0–99 and ratings 0–120. Empty optional values are stored as NULL; no rating, image or shirt number is invented.
+
+Use **تعديل التشكيلة** to reveal member actions. **إبعاد** removes a player from both active views and the current scorer lists while preserving their historical identity; **خارج التشكيلة** exposes archived players and the existing restore action. Archiving is distinct from the active substitute position. No hard-delete permission is added.
+
+Apply `20260930063126_squad_presentation.sql` after the existing squad/identity migrations before rolling out the new editor. It adds nullable metadata, extends allowed position codes, and records new updates with a private invoker trigger. Historical rows retain their actual data and show “لم يُسجّل بعد” until an update occurs, since their old edit times are unknown. Existing owner/admin RLS and immutable owner/UUID grants remain unchanged. The migration does not write to matches, goal events, standings, accounts or seasons and is safe to reapply.
+
+`tests/squad-presentation.test.mjs` covers single/multiple keepers, large squads, unknown positions, deduplication, sorting, metadata edits, archive/refetch, fallback images and unchanged match history. The SQL suite tests persisted metadata, permissions, validation and repeat migration. `tests/browser/squads.spec.mjs` checks layout, long names, section collapse and editing/reload across the responsive viewport matrix. Its `fixture=squads` data is **isolated QA only**, with session persistence solely for browser reload tests; it is never production persistence proof.
 
 Recording or editing a goal uses native select controls for the scorer and assist, filtered to the selected owner's active squad. The assist defaults to **بدون أسيست** (stored as an empty string). Changing the owner clears both player choices, and choosing a scorer removes that player from assist choices. A player can be added from the goal card without discarding the match draft.
 
