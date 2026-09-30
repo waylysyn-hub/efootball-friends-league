@@ -136,11 +136,8 @@ test('starting XI stays exactly eleven and unused players can be deleted',async(
   await expect(page.locator('#squadLineupStatus')).toContainText('11/11');
 
   await page.locator('#addSquadPlayer').click();
-  await page.locator('#squadPlayerName').fill('الأساسي الثاني عشر');
-  await page.locator('#squadPlayerPosition').selectOption('CF');
-  await page.locator('#squadPlayerRole').selectOption('starter');
-  await page.locator('#saveSquadPlayer').click();
-  await expect(page.locator('#squadPlayerError')).toContainText('11/11');
+  await expect(page.locator('#squadPlayerRole option[value="starter"]')).toBeDisabled();
+  await expect(page.locator('#squadPlayerRole')).toHaveValue('substitute');
   await page.keyboard.press('Escape');
 
   await page.locator('#editSquad').click();
