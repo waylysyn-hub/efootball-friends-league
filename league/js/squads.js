@@ -4,10 +4,10 @@ import { isAdmin } from './admin.js';
 import { getPlayers } from './profiles.js';
 import { collectGoalEventsFromForm, renderGoalEventsForm } from './goal-events.js';
 import { closeDialog, errorMessage, escapeHtml as esc, isBusy, openDialog, showError, toast, withBusy } from '../../shared/ui.js';
-import { SQUAD_GROUPS, SQUAD_ROLES, bindSquadPhotos, filterSquadMembers, safeSquadPhoto, squadArchiveHTML, squadInitials, squadPlayersHTML, squadSummary, uniqueSquad } from './squad-view.js';
+import { SQUAD_GROUPS, SQUAD_POSITIONS, SQUAD_ROLES, bindSquadPhotos, filterSquadMembers, safeSquadPhoto, squadArchiveHTML, squadInitials, squadPlayersHTML, squadSummary, uniqueSquad } from './squad-view.js';
 import { normalizeExternalSquadPhotoUrl, removeSquadPhotoObject, uploadSquadPhoto, validateSquadPhotoFile, verifyExternalSquadPhotoUrl } from './squad-images.js';
 
-export const POSITIONS = Object.fromEntries(SQUAD_GROUPS.map(g => [g.key, g.short]));
+export const POSITIONS = Object.fromEntries(SQUAD_POSITIONS.map(position => [position.key, position.label]));
 const presentation = { view: 'pitch', search: '', position: '', role: '', sort: 'position', editing: false, collapsed: new Set() };
 export function getSquad(owner) {
   return uniqueSquad(state.db.squads.filter(p => p.owner === owner && p.active))
@@ -43,13 +43,16 @@ export function renderSquads() {
   }
   const members = uniqueSquad(state.db.squads.filter(p => p.owner === owner));
   const active = members.filter(p => p.active), summary = squadSummary(members);
-  document.getElementById('squadCount').textContent = `${summary.total} لاعب في التشكيلة`;
+  document.getElementById('squadCount').textContent = `${summary.total} لاعب · ${summary.starters}/11 أساسي`;
+  const lineupStatus = document.getElementById('squadLineupStatus');
+  lineupStatus.textContent = summary.complete ? 'التشكيلة الأساسية مكتملة 11/11' : `التشكيلة الأساسية غير مكتملة: ${summary.starters}/11`;
+  lineupStatus.className = `roster-lineup-status ${summary.complete ? 'is-complete' : 'is-incomplete'}`;
   const updates = members.map(p => Date.parse(p.updated_at)).filter(Number.isFinite);
   document.getElementById('squadUpdated').textContent = updates.length
     ? `آخر تحديث: ${new Intl.DateTimeFormat('ar', { dateStyle: 'medium', timeStyle: 'short' }).format(Math.max(...updates))}`
     : 'آخر تحديث: لم يُسجّل بعد';
   document.getElementById('squadSummary').innerHTML = [
-    ['إجمالي اللاعبين', summary.total, 'total'], ...SQUAD_GROUPS.map(g => [g.label, summary.counts[g.key], g.key]), ['الاحتياط', summary.substitutes, 'substitute'],
+    ['إجمالي اللاعبين', summary.total, 'total'], ['الأساسيون', `${summary.starters}/11`, 'starter'], ...SQUAD_GROUPS.map(g => [g.label, summary.counts[g.key], g.key]), ['الاحتياط', summary.substitutes, 'substitute'],
     ...(summary.average !== null ? [['متوسط التقييم', summary.average, 'rating']] : []),
   ].map(([label, value, key]) => `<div class="roster-stat position-${key}" data-squad-stat="${key}"><strong>${value}</strong><span>${label}</span></div>`).join('');
   for (const view of ['pitch', 'list']) document.getElementById('squadView-' + view).setAttribute('aria-pressed', String(presentation.view === view));
@@ -64,6 +67,7 @@ export function renderSquads() {
 function bindMemberActions(container, owner) {
   container.querySelectorAll('[data-squad-edit]').forEach(button => { button.onclick = () => openSquadPlayer(owner, button.dataset.squadEdit); });
   container.querySelectorAll('[data-squad-toggle]').forEach(button => { button.onclick = () => toggleSquadPlayer(button.dataset.squadToggle, button); });
+  container.querySelectorAll('[data-squad-delete]').forEach(button => { button.onclick = () => requestDeleteSquadPlayer(button.dataset.squadDelete, button); });
   bindSquadPhotos(container);
 }
 function renderSquadMembers(active = getSquad(state.selectedSquad), canEdit = canManageSquad(state.selectedSquad) && state.squadsReady) {
@@ -87,7 +91,13 @@ export function setSquadView(view) {
   if (!['pitch', 'list'].includes(view)) return;
   presentation.view = view; renderSquads();
 }
-export function editSquad() { presentation.editing = !presentation.editing; renderSquads(); }
+export function editSquad() {
+  if (!presentation.editing) { presentation.editing = true; return renderSquads(); }
+  const summary = squadSummary(state.db.squads.filter(p => p.owner === state.selectedSquad));
+  if (!summary.complete) return toast(`لا يمكن إنهاء التعديل قبل اختيار 11 لاعبًا أساسيًا بالضبط. الحالي: ${summary.starters}/11.`, 'error');
+  presentation.editing = false;
+  renderSquads();
+}
 export function filterSquad() {
   presentation.search = document.getElementById('squadSearch').value;
   presentation.position = document.getElementById('squadPositionFilter').value;
@@ -118,7 +128,7 @@ export function openSquadPlayer(owner = state.selectedSquad || state.user, id = 
   };
   document.getElementById('squadPlayerTitle').textContent = `${member ? 'تعديل لاعب' : 'إضافة لاعب'} · ${displayName(owner)}`;
   document.getElementById('squadPlayerName').value = member?.name || '';
-  document.getElementById('squadPlayerPosition').value = member && POSITIONS[member.position] ? member.position : 'UNK';
+  document.getElementById('squadPlayerPosition').value = member && POSITIONS[member.position] ? member.position : 'CF';
   document.getElementById('squadPlayerRole').value = member?.lineup_role === 'substitute' ? 'substitute' : 'starter';
   document.getElementById('squadPlayerNumber').value = member?.shirt_number ?? '';
   document.getElementById('squadPlayerRating').value = member?.rating ?? '';
@@ -230,6 +240,8 @@ export async function saveSquadPlayer() {
   if (ratingText && (!Number.isFinite(Number(ratingText)) || Number(ratingText) < 0 || Number(ratingText) > 120)) return showError(errorElement, 'أدخل تقييمًا بين 0 و120.');
   if (photo && (photo.length > 2048 || !normalizedPhoto)) return showError(errorElement, 'استخدم رابط صورة مباشر يبدأ بـ https://، وليس رابط صفحة بحث أو مشاركة.');
   if (selectedPhotoFile) { const photoError = validateSquadPhotoFile(selectedPhotoFile); if (photoError) return showError(errorElement, photoError); }
+  const startersWithoutCurrent = state.db.squads.filter(p => p.owner === editor.owner && p.active && p.id !== editor.id && p.lineup_role !== 'substitute').length;
+  if (lineupRole === 'starter' && startersWithoutCurrent >= 11) return showError(errorElement, 'التشكيلة الأساسية مكتملة 11/11. حوّل لاعبًا أساسيًا إلى احتياط أولًا.');
   const duplicate = state.db.squads.find(p => p.owner === editor.owner && p.id !== editor.id && p.name.toLowerCase() === name.toLowerCase());
   if (duplicate) return showError(errorElement, duplicate.active ? 'هذا اللاعب موجود في التشكيلة بالفعل.' : 'هذا اللاعب موجود خارج التشكيلة. استخدم «إعادة» بدل إضافته مجددًا.');
   return withBusy('save-squad-player', document.getElementById('saveSquadPlayer'), async () => {
@@ -276,9 +288,12 @@ export async function saveSquadPlayer() {
       try { await reloadSquads(); toast(selectedPhotoFile ? 'تم حفظ اللاعب ورفع صورته.' : 'تم حفظ اللاعب في التشكيلة.'); }
       catch { toast('تم حفظ اللاعب، لكن تعذّر تحديث القائمة. اضغط تحديث قبل تسجيل المباراة.', 'error'); }
     } catch (error) {
-      const message = error?.code === '23514' && /squad_players_photo_path_check/i.test(String(error?.message || ''))
-        ? 'تعذّر ربط الصورة باللاعب بسبب مسار صورة غير صالح. أعد اختيار الصورة ثم حاول الحفظ.'
-        : errorMessage(error, 'تعذّر حفظ اللاعب. بياناتك ما زالت موجودة؛ حاول مجددًا.');
+      const rawMessage = String(error?.message || '');
+      const message = /EFL_STARTER_LIMIT/.test(rawMessage)
+        ? 'لا يمكن إضافة أكثر من 11 لاعبًا أساسيًا. حوّل لاعبًا أساسيًا إلى احتياط أولًا.'
+        : error?.code === '23514' && /squad_players_photo_path_check/i.test(rawMessage)
+          ? 'تعذّر ربط الصورة باللاعب بسبب مسار صورة غير صالح. أعد اختيار الصورة ثم حاول الحفظ.'
+          : errorMessage(error, 'تعذّر حفظ اللاعب. بياناتك ما زالت موجودة؛ حاول مجددًا.');
       showError(errorElement, message);
     }
   }, 'جارٍ الحفظ…');
@@ -287,11 +302,46 @@ export async function saveSquadPlayer() {
 export async function toggleSquadPlayer(id, button) {
   const member = state.db.squads.find(p => p.id === id);
   if (!member || !canManageSquad(member.owner)) return;
+  if (!member.active && member.lineup_role !== 'substitute') {
+    const starters = state.db.squads.filter(p => p.owner === member.owner && p.active && p.lineup_role !== 'substitute').length;
+    if (starters >= 11) return toast('الأساسيون مكتملون 11/11. عدّل هذا اللاعب إلى «احتياط» قبل إعادته.', 'error');
+  }
   return withBusy('squad-player-' + id, button, async () => {
     const { data, error } = await sb.from('squad_players').update({ active: !member.active }).eq('id', id).eq('owner', member.owner).select('*');
-    if (error) throw error;
+    if (error) {
+      if (/EFL_STARTER_LIMIT/.test(String(error.message || ''))) return toast('لا يمكن أن يتجاوز الأساسيون 11 لاعبًا.', 'error');
+      throw error;
+    }
     if (!data?.length) throw { code: '42501' };
     try { await reloadSquads(); toast(member.active ? 'تم إبعاد اللاعب. سجله السابق محفوظ.' : 'تمت إعادة اللاعب للتشكيلة.'); }
     catch { toast('تم حفظ التغيير. اضغط تحديث لتحميل التشكيلة الجديدة.', 'error'); }
   }, 'جارٍ الحفظ…');
+}
+
+export function requestDeleteSquadPlayer(id, button) {
+  const member = state.db.squads.find(p => p.id === id);
+  if (!member || !canManageSquad(member.owner)) return;
+  document.getElementById('confirmTitle').textContent = 'حذف اللاعب نهائيًا';
+  document.getElementById('confirmMessage').textContent = `هل تريد حذف «${member.name}» نهائيًا؟ إذا كان له هدف أو أسيست في مباراة سابقة فلن يسمح النظام بالحذف، واستخدم «إبعاد» بدلًا منه.`;
+  const confirm = document.getElementById('confirmYes');
+  confirm.textContent = 'حذف نهائي';
+  confirm.onclick = async () => {
+    if (isBusy('delete-squad-player-' + id)) return;
+    await withBusy('delete-squad-player-' + id, confirm, async () => {
+      const { data, error } = await sb.rpc('delete_squad_player', { target: id });
+      if (error) {
+        if (/EFL_SQUAD_PLAYER_HISTORY/.test(String(error.message || ''))) {
+          closeDialog('confirmModal');
+          return toast('لا يمكن حذف هذا اللاعب نهائيًا لأن له هدفًا أو أسيست محفوظًا في السجل. استخدم «إبعاد».', 'error');
+        }
+        throw error;
+      }
+      closeDialog('confirmModal');
+      if (data) removeSquadPhotoObject(sb, data).catch(() => {});
+      try { await reloadSquads(); toast('تم حذف اللاعب نهائيًا.'); }
+      catch { toast('تم الحذف، لكن تعذّر تحديث القائمة. اضغط تحديث.', 'error'); }
+    }, 'جارٍ الحذف…');
+  };
+  openDialog('confirmModal');
+  confirm.focus();
 }
