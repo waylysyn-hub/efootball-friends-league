@@ -31,7 +31,8 @@ const positionByKey = new Map(SQUAD_POSITIONS.map(position => [position.key, pos
 const lineByKey = new Map(SQUAD_LINES.map(line => [line.key, line]));
 const nameOrder = new Intl.Collator('ar', { numeric: true, sensitivity: 'base' });
 
-export const squadPosition = player => positionByKey.has(player.position) ? player.position : 'UNK';
+const legacyPosition = { DF: 'CB', MF: 'CMF', FW: 'CF' };
+export const squadPosition = player => positionByKey.has(player.position) ? player.position : (legacyPosition[player.position] || 'UNK');
 export const squadPositionMeta = player => positionByKey.get(squadPosition(player)) || { key: 'UNK', label: 'غير محدد', line: 'UNK', order: 999 };
 export const squadLine = player => squadPositionMeta(player).line;
 export const squadRole = player => player.lineup_role === 'substitute' ? 'substitute' : 'starter';
