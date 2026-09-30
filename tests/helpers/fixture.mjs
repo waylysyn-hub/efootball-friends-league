@@ -95,6 +95,14 @@ export function fixtureClient({ profile = null, empty = false, overlappingSquads
         if(!row)return {error:{message:'EFL_EVENING_MISSING'}};
         row.ended_at ||= new Date().toISOString();return {data:{...row},error:null};
       }
+      if(name==='delete_squad_player'){
+        const member=db.squad_players.find(row=>row.id===args.target);
+        if(!member)return {data:null,error:{message:'EFL_SQUAD_PLAYER_NOT_FOUND'}};
+        if(signedIn!=='Wael'&&member.owner!==signedIn)return {data:null,error:{message:'permission denied'}};
+        if(db.match_goal_events.some(event=>event.scorer_id===args.target||event.assist_id===args.target))return {data:null,error:{message:'EFL_SQUAD_PLAYER_HISTORY'}};
+        db.squad_players=db.squad_players.filter(row=>row.id!==args.target);
+        return {data:member.photo_path||null,error:null};
+      }
       if(name==='save_league_match'){
         const data={...args.match_data};
         data.player1 ||= db.players.find(p=>p.id===data.player1_id)?.name;
