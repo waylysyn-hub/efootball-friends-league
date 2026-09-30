@@ -49,7 +49,7 @@ test('empty squad can be filled within the match, failed save retains draft and 
 });
 test('squad ownership controls, archive and restore work without changing match history',async t=>{
  const app=await mount('league/index.html',{profile:'Omar'});t.after(()=>app.close());const {window:w,document:d,client}=app;
- w.League.navigateTo('squads');assert.equal(d.getElementById('addSquadPlayer').hidden,false);
+ w.League.navigateTo('squads');w.League.editSquad();assert.equal(d.getElementById('addSquadPlayer').hidden,false);
  const before=JSON.stringify(client.db.match_goal_events);const button=d.querySelector('[data-squad-toggle]');await w.League.toggleSquadPlayer('s4',button);
  assert.equal(client.db.squad_players.find(p=>p.id==='s4').active,false);assert.equal(JSON.stringify(client.db.match_goal_events),before);
  await w.League.toggleSquadPlayer('s4',d.querySelector('[data-squad-toggle]'));assert.equal(client.db.squad_players.find(p=>p.id==='s4').active,true);

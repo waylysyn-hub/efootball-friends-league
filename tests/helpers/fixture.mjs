@@ -54,7 +54,7 @@ export function fixtureClient({ profile = null, empty = false, overlappingSquads
             let rows=table==='player_accounts' ? (signedIn?[{name:signedIn}]:[]) : [...(db[table] || [])];
             rows=rows.filter(row=>filters.every(fn=>fn(row)));
             if(operation==='insert') { const values=(Array.isArray(value)?value:[value]).map(v=>({id:crypto.randomUUID(),created_at:new Date().toISOString(),...v})); if(values.some(v=>db[table].some(r=>r.id===v.id)))return resolve({error:{code:'23505'}}); db[table].push(...values);rows=values; }
-            if(operation==='update')rows.forEach(row=>Object.assign(row,value));
+            if(operation==='update')rows.forEach(row=>Object.assign(row,value,table==='squad_players'?{updated_at:new Date().toISOString()}:{}));
             if(operation==='delete')db[table]=db[table].filter(row=>!rows.includes(row));
             if(table==='chat_group_members' && columns.includes('chat_groups')) rows=rows.map(row=>({...row,chat_groups:db.chat_groups.find(group=>group.id===row.group_id)}));
             for(const [key,ascending] of orders.reverse()) rows.sort((a,b)=>(String(a[key]).localeCompare(String(b[key])))*(ascending?1:-1));

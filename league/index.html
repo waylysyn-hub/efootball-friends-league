@@ -18,6 +18,7 @@
 <link href="css/evenings.css" rel="stylesheet"/>
 <link href="css/login.css" rel="stylesheet"/>
 <link href="css/match-entry.css" rel="stylesheet"/>
+<link href="css/squads.css" rel="stylesheet"/>
 </head>
 <body>
 <a class="skip-link" href="#loginForm">انتقل إلى المحتوى</a>
@@ -440,9 +441,17 @@
 <!-- SETTINGS PAGE -->
 <section class="page hidden" id="page-squads" dir="rtl" lang="ar">
 <div class="page-header"><h2 class="page-title">التشكيلات</h2><div class="page-subtitle">فريقك، مسجّلوك وصنّاع أهدافك — في مكان واحد.</div></div>
-<div class="squad-toolbar"><div class="form-group"><label for="squadOwner">صاحب الفريق</label><select id="squadOwner" onchange="League.selectSquad(this.value)"></select></div><button id="addSquadPlayer" type="button" class="btn-primary" onclick="League.openSquadPlayer()">+ إضافة لاعب</button></div>
-<p class="match-stats-hint" id="squadPermission"></p><p class="squad-count" id="squadCount" aria-live="polite"></p>
-<div class="squad-grid" id="squadPlayers"></div>
+<div class="roster-owner form-group"><label for="squadOwner">صاحب التشكيلة</label><select id="squadOwner" onchange="League.selectSquad(this.value)"></select></div>
+<article class="roster-panel" aria-labelledby="squadTitle">
+<header class="roster-header"><div class="roster-heading"><span class="roster-eyebrow">فريق واحد. كل الأسماء.</span><h3 id="squadTitle">التشكيلة</h3><div class="roster-meta"><span id="squadCount"></span><span id="squadUpdated"></span></div></div>
+<div class="roster-tools"><button id="editSquad" type="button" class="btn-secondary" aria-pressed="false" onclick="League.editSquad()">تعديل التشكيلة</button><button id="addSquadPlayer" type="button" class="btn-primary" onclick="League.openSquadPlayer()">+ إضافة لاعب</button></div></header>
+<div class="roster-summary" id="squadSummary" aria-label="ملخص التشكيلة"></div>
+<div class="roster-viewbar"><div class="roster-view-switch" role="group" aria-label="طريقة عرض التشكيلة"><button type="button" id="squadView-pitch" aria-pressed="true" aria-controls="squadPlayers" onclick="League.setSquadView('pitch')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><rect x="3" y="2" width="18" height="20" rx="2"/><path d="M3 12h18M8 2v4h8V2M8 22v-4h8v4"/><circle cx="12" cy="12" r="3"/></svg>عرض الملعب</button><button type="button" id="squadView-list" aria-pressed="false" aria-controls="squadPlayers" onclick="League.setSquadView('list')"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M8 5h13M8 12h13M8 19h13M3 5h1M3 12h1M3 19h1"/></svg>عرض القائمة</button></div><span class="roster-results" id="squadResults" role="status" aria-live="polite"></span></div>
+<div class="roster-filters" id="squadFilters"><div class="form-group"><label for="squadSearch">ابحث عن لاعب</label><input type="search" id="squadSearch" placeholder="اسم اللاعب…" autocomplete="off" oninput="League.filterSquad()"/></div><div class="form-group"><label for="squadPositionFilter">المركز</label><select id="squadPositionFilter" onchange="League.filterSquad()"><option value="">جميع المراكز</option><option value="GK">حراس المرمى</option><option value="DF">الدفاع</option><option value="MF">الوسط</option><option value="FW">الهجوم</option><option value="SUB">الاحتياط</option><option value="UNK">غير محدد المركز</option></select></div><div class="form-group"><label for="squadSort">الترتيب</label><select id="squadSort" onchange="League.filterSquad()"><option value="position">حسب المركز</option><option value="name">حسب الاسم</option><option value="rating">الأعلى تقييمًا</option></select></div></div>
+<div id="squadPlayers" class="roster-pitch"></div>
+<details class="roster-archive" id="squadArchive" hidden><summary>خارج التشكيلة <span id="squadArchiveCount"></span></summary><p>لا يظهر هؤلاء ضمن التشكيلة الحالية. تبقى مشاركاتهم السابقة محفوظة ويمكن إعادتهم.</p><div id="squadArchivePlayers" class="roster-list"></div></details>
+<p class="roster-permission" id="squadPermission"></p>
+</article>
 </section>
 <div class="page hidden" id="page-settings">
 <div class="page-header">
@@ -520,7 +529,9 @@
 <div class="modal"><div class="modal-header"><h3 id="squadPlayerTitle">إضافة لاعب</h3><button class="modal-close" type="button" aria-label="إغلاق" onclick="League.closeSquadPlayer()">✕</button></div>
 <form class="modal-body" id="squadPlayerForm">
 <div class="form-group"><label for="squadPlayerName">اسم لاعب كرة القدم</label><input id="squadPlayerName" maxlength="100" required placeholder="مثال: ليونيل ميسي" autocomplete="off" dir="auto"/></div>
-<div class="form-group"><label for="squadPlayerPosition">المركز</label><select id="squadPlayerPosition"><option value="GK">حارس</option><option value="DF">دفاع</option><option value="MF">وسط</option><option value="FW">هجوم</option></select></div>
+<div class="form-group"><label for="squadPlayerPosition">المركز</label><select id="squadPlayerPosition"><option value="GK">حارس</option><option value="DF">دفاع</option><option value="MF">وسط</option><option value="FW">هجوم</option><option value="SUB">احتياط</option><option value="UNK">غير محدد المركز</option></select></div>
+<div class="roster-editor-fields"><div class="form-group"><label for="squadPlayerNumber">رقم القميص <span>(اختياري)</span></label><input type="number" id="squadPlayerNumber" min="0" max="99" step="1" inputmode="numeric" placeholder="—"/></div><div class="form-group"><label for="squadPlayerRating">التقييم <span>(اختياري)</span></label><input type="number" id="squadPlayerRating" min="0" max="120" step="0.1" inputmode="decimal" placeholder="—"/></div></div>
+<div class="form-group"><label for="squadPlayerPhoto">رابط صورة اللاعب <span>(اختياري)</span></label><input type="url" id="squadPlayerPhoto" maxlength="2048" dir="ltr" placeholder="https://…" aria-describedby="squadPhotoHint"/><small id="squadPhotoHint">تظهر أحرف الاسم تلقائيًا عند عدم توفر صورة.</small></div>
 <p class="match-stats-hint">سيظهر اللاعب ضمن خيارات المسجّل والأسيست لهذا الفريق.</p><div id="squadPlayerError" class="form-error hidden"></div>
 <div class="form-actions"><button type="submit" class="btn-primary" id="saveSquadPlayer">حفظ اللاعب</button><button type="button" class="btn-secondary" onclick="League.closeSquadPlayer()">إلغاء</button></div>
 </form></div></div>

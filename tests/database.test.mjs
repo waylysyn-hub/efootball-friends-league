@@ -45,6 +45,14 @@ test('Postgres security and transactional behavior',async t=>{
   await db.query('delete from public.matches where id=$1',[oldMatch]);await db.query('delete from public.squad_players where id in ($1,$2)',[member,laterMember]);
  });
  const accounts=Object.fromEntries(players.map(name=>[name,randomUUID()]));
+ const presentationMigration=await fs.readFile(new URL('../supabase/migrations/20260930063126_squad_presentation.sql',import.meta.url),'utf8');
+ const originalMember=randomUUID();
+ await db.query("insert into public.squad_players(id,owner,name,position) values($1,'Wael','Existing before presentation','DF')",[originalMember]);
+ const originalSquad=(await db.query('select to_jsonb(s) as row from public.squad_players s where id=$1',[originalMember])).rows[0].row;
+ await db.exec(presentationMigration);await db.exec(presentationMigration);
+ const upgradedSquad=(await db.query("select to_jsonb(s)-'updated_at'-'rating'-'shirt_number'-'photo_url' as row,updated_at from public.squad_players s where id=$1",[originalMember])).rows[0];
+ assert.deepEqual(upgradedSquad.row,originalSquad);assert.equal(upgradedSquad.updated_at,null);
+ await db.query('delete from public.squad_players where id=$1',[originalMember]);
  for(const [name,id] of Object.entries(accounts))await db.query('insert into public.player_accounts(name,auth_user_id) values($1,$2)',[name,id]);
  const as=(name,sql,params=[])=>db.transaction(async tx=>{
   await tx.exec('set local role '+(name?'authenticated':'anon'));
@@ -154,6 +162,27 @@ test('Postgres security and transactional behavior',async t=>{
   await assert.rejects(as('Omar',"delete from public.squad_players where owner='Omar'"),/permission denied/);
   await assert.rejects(as('Omar',"insert into public.squad_players(owner,name) values('Omar','drogba')"),/duplicate key/);
   assert.equal((await as('Wael',"update public.squad_players set position='FW' where owner='Omar' returning id")).length,1);
+ });
+ await t.test('squad presentation metadata persists with owner RLS, server timestamps and safe repeat migration',async()=>{
+  const id=randomUUID();
+  const beforeMatches=(await db.query('select * from public.matches order by id')).rows;
+  const beforeGoals=(await db.query('select * from public.match_goal_events order by id')).rows;
+  await as('Omar',"insert into public.squad_players(id,owner,name,position,shirt_number,rating,photo_url) values($1,'Omar','Presentation test','UNK',7,101.5,'https://example.test/player.png')",[id]);
+  const read=async()=>(await as('Omar','select * from public.squad_players where id=$1',[id]))[0];
+  const saved=await read();assert.equal(saved.position,'UNK');assert.equal(saved.shirt_number,7);assert.equal(Number(saved.rating),101.5);assert.ok(saved.updated_at);
+  await as('Omar',"update public.squad_players set position='SUB' where id=$1",[id]);
+  assert.equal((await read()).position,'SUB');assert.ok(new Date((await read()).updated_at)>=new Date(saved.updated_at));
+  for(const sql of ["rating=121","shirt_number=-1","position='INVALID'","photo_url='javascript:alert(1)'"])
+   await assert.rejects(as('Omar',`update public.squad_players set ${sql} where id=$1`,[id]),/check constraint/);
+  assert.deepEqual(await as('Mustafa',"update public.squad_players set rating=120 where id=$1 returning id",[id]),[]);
+  await assert.rejects(as('Omar',"update public.squad_players set updated_at=now() where id=$1",[id]),/permission denied/);
+  await assert.rejects(as('Omar',"update public.squad_players set owner='Mustafa' where id=$1",[id]),/permission denied/);
+  await assert.rejects(as('Omar','delete from public.squad_players where id=$1',[id]),/permission denied/);
+  const before=await read();await db.exec(presentationMigration);assert.deepEqual(await read(),before);
+  await as('Omar','update public.squad_players set active=false where id=$1',[id]);assert.equal((await read()).active,false);
+  assert.deepEqual((await db.query('select * from public.matches order by id')).rows,beforeMatches);
+  assert.deepEqual((await db.query('select * from public.match_goal_events order by id')).rows,beforeGoals);
+  await db.query('delete from public.squad_players where id=$1',[id]);
  });
  await t.test('new goals require a squad scorer, same-team assist and exact counts',async()=>{
   for(const [rows,message] of [
