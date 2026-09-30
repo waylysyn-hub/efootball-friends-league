@@ -225,7 +225,8 @@ create publication supabase_realtime;
     /EFL_STARTER_LIMIT/
   );
   await as('Abdul Qader',"insert into public.squad_players(owner,name,position,lineup_role) values('Abdul Qader','Reserve OK','CF','substitute')");
-  await assert.rejects(as('Abdul Qader',"update public.squad_players set position='DF' where owner='Abdul Qader' limit 1"),/syntax error|check constraint/i);
+  const detail=(await as('Abdul Qader',"select id from public.squad_players where owner='Abdul Qader' order by name limit 1"))[0].id;
+  await assert.rejects(as('Abdul Qader',"update public.squad_players set position='DF' where id=$1",[detail]),/check constraint/i);
  });
  await t.test('squad presentation metadata persists with owner RLS, server timestamps and safe repeat migration',async()=>{
   const id=randomUUID();
