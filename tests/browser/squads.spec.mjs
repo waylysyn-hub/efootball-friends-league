@@ -131,6 +131,25 @@ test('external photo links require a real image and Google imgres is normalized 
 });
 
 
+test('pitch places football left/right correctly and stacks midfield by role',async({page})=>{
+  await page.goto('/league/index.html?fixture=squads#squads');
+  await page.locator('#editSquad').click();
+
+  const leftBack=page.locator('[data-squad-position="LB"][data-squad-role="starter"]').first();
+  const rightBack=page.locator('[data-squad-position="RB"][data-squad-role="starter"]').first();
+  const leftWing=page.locator('[data-squad-position="LWF"][data-squad-role="starter"]').first();
+  const rightWing=page.locator('[data-squad-position="RWF"][data-squad-role="starter"]').first();
+  const dmf=page.locator('[data-squad-position="DMF"][data-squad-role="starter"]').first();
+  const cmf=page.locator('[data-squad-position="CMF"][data-squad-role="starter"]').first();
+  const amf=page.locator('[data-squad-position="AMF"][data-squad-role="starter"]').first();
+
+  const [lb,rb,lw,rw,d,c,a]=await Promise.all([leftBack,rightBack,leftWing,rightWing,dmf,cmf,amf].map(locator=>locator.boundingBox()));
+  expect(lb.x).toBeLessThan(rb.x);
+  expect(lw.x).toBeLessThan(rw.x);
+  expect(a.y).toBeLessThan(c.y);
+  expect(c.y).toBeLessThan(d.y);
+});
+
 test('starting XI stays exactly eleven and unused players can be deleted',async({page})=>{
   await page.goto('/league/index.html?fixture=squads#squads');
   await expect(page.locator('#squadLineupStatus')).toContainText('11/11');
