@@ -59,9 +59,9 @@ test('upload, persist and remove a managed player image without using manual URL
   await page.locator('#squadPlayerName').fill('حارس بصورة');
   await page.locator('#squadPlayerPosition').selectOption('GK');
   await page.locator('#squadPlayerRole').selectOption('substitute');
-  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAQAAABFaP0WAAAADElEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC','base64');
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAFElEQVR4nGM8kWLEAANMDEgANwcARfYBZhhDpbAAAAAASUVORK5CYII=','base64');
   await page.locator('#squadPlayerPhotoFile').setInputFiles({name:'keeper.png',mimeType:'image/png',buffer:png});
-  await expect(page.locator('#squadPhotoPreviewImage')).toHaveAttribute('src',/^blob:/);
+  await expect(page.locator('#squadPhotoPreviewImage')).toHaveAttribute('src',/^blob:/);await expect(page.locator('#squadPhotoPreviewImage')).toBeVisible();
   await page.locator('#saveSquadPlayer').click();
   await expect(page.locator('#squadPlayerModal')).toBeHidden();
 
