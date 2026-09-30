@@ -309,6 +309,10 @@ export async function saveSquadPlayer() {
 export async function toggleSquadPlayer(id, button) {
   const member = state.db.squads.find(p => p.id === id);
   if (!member || !canManageSquad(member.owner)) return;
+  if (!member.active && !POSITIONS[member.position]) {
+    toast('حدّد مركز eFootball للاعب قبل إعادته إلى التشكيلة.', 'error');
+    return openSquadPlayer(member.owner, member.id);
+  }
   if (!member.active && member.lineup_role !== 'substitute') {
     const starters = state.db.squads.filter(p => p.owner === member.owner && p.active && p.lineup_role !== 'substitute').length;
     if (starters >= 11) return toast('الأساسيون مكتملون 11/11. عدّل هذا اللاعب إلى «احتياط» قبل إعادته.', 'error');
