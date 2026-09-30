@@ -99,3 +99,33 @@ test('upload, persist and remove a managed player image without using manual URL
   expect(removed.player.photo_path).toBeNull();
   expect(removed.calls.some(call=>call.storage==='remove')).toBe(true);
 });
+
+
+test('external photo links require a real image and Google imgres is normalized before save',async({page})=>{
+  const servedImage=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAFElEQVR4nGM8kWLEAANMDEgANwcARfYBZhhDpbAAAAAASUVORK5CYII=','base64');
+  await page.route('https://cdn.example.test/**',route=>route.fulfill({status:200,contentType:'image/png',body:servedImage}));
+  await page.goto('/league/index.html?fixture=squads#squads');
+
+  await page.locator('#addSquadPlayer').click();
+  await page.locator('#squadPlayerName').fill('لاعب برابط خارجي');
+  await page.locator('#squadPlayerPosition').selectOption('FW');
+  await page.locator('.squad-photo-link').evaluate(el=>{el.open=true;});
+  const googleResult='https://www.google.com/imgres?imgurl=https%3A%2F%2Fcdn.example.test%2Fplayer.jpg&imgrefurl=https%3A%2F%2Fexample.test';
+  await page.locator('#squadPlayerPhoto').fill(googleResult);
+  await page.locator('#saveSquadPlayer').click();
+  await expect(page.locator('#squadPlayerModal')).toBeHidden();
+
+  const saved=await page.evaluate(()=>window.EFLClient.get().db.squad_players.find(p=>p.name==='لاعب برابط خارجي'));
+  expect(saved.photo_url).toBe('https://cdn.example.test/player.jpg');
+  const card=allPlayers(page).filter({hasText:'لاعب برابط خارجي'});
+  await expect(card.locator('.roster-avatar')).toHaveClass(/has-photo/);
+
+  await page.locator('#addSquadPlayer').click();
+  await page.locator('#squadPlayerName').fill('رابط مشاركة');
+  await page.locator('#squadPlayerPosition').selectOption('MF');
+  await page.locator('.squad-photo-link').evaluate(el=>{el.open=true;});
+  await page.locator('#squadPlayerPhoto').fill('https://share.google/not-an-image');
+  await page.locator('#saveSquadPlayer').click();
+  await expect(page.locator('#squadPlayerError')).toContainText('رابط صورة مباشر');
+  await expect(page.locator('#squadPlayerModal')).toBeVisible();
+});

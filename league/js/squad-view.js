@@ -1,3 +1,4 @@
+import { normalizeExternalSquadPhotoUrl } from './squad-images.js';
 import { escapeHtml as esc } from '../../shared/ui.js';
 
 export const SQUAD_GROUPS = [
@@ -60,11 +61,7 @@ export function squadInitials(name) {
   const words = name.trim().split(/\s+/).filter(Boolean);
   return words.slice(0, 2).map(word => Array.from(word)[0]).join('').toLocaleUpperCase('ar') || '؟';
 }
-export function safeSquadPhoto(value) {
-  if (!value) return '';
-  try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password ? url.href : ''; }
-  catch { return ''; }
-}
+export function safeSquadPhoto(value) { return normalizeExternalSquadPhotoUrl(value); }
 function playerCard(player, canEdit) {
   const group = SQUAD_GROUPS.find(g => g.key === squadPosition(player));
   const role = squadRole(player);
