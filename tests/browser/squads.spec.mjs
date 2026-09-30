@@ -53,6 +53,8 @@ test('add second keeper, reject duplicate, edit into midfield, archive and refet
 
 
 test('upload, persist and remove a managed player image without using manual URLs',async({page})=>{
+  const servedImage=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAFElEQVR4nGM8kWLEAANMDEgANwcARfYBZhhDpbAAAAAASUVORK5CYII=','base64');
+  await page.route('https://storage.example.test/**',route=>route.fulfill({status:200,contentType:'image/png',body:servedImage}));
   await page.goto('/league/index.html?fixture=squads#squads');
   await expect(allPlayers(page)).toHaveCount(25);
   await page.locator('#addSquadPlayer').click();
