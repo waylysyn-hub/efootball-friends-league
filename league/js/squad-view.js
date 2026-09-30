@@ -113,13 +113,65 @@ function lineSection(key, players, canEdit, collapsed) {
     <div class="roster-players">${members.length ? members.map(p => playerCard(p, canEdit)).join('') : '<p class="roster-group-empty">لا يوجد لاعبون في هذا الخط</p>'}</div>
   </details>`;
 }
+
+function pitchSlot(players, positions, canEdit, className, label) {
+  const members = players
+    .filter(player => positions.includes(squadPosition(player)))
+    .sort((a, b) => squadPositionMeta(a).order - squadPositionMeta(b).order || nameOrder.compare(a.name, b.name));
+  return `<div class="roster-pitch-slot ${className}" data-pitch-slot="${positions.join('-')}" aria-label="${label}">
+    ${members.map(player => playerCard(player, canEdit)).join('')}
+  </div>`;
+}
+
+function pitchLineSection(key, players, canEdit, collapsed) {
+  const group = lineByKey.get(key);
+  const members = players.filter(player => squadLine(player) === key);
+  let body = '';
+
+  if (key === 'FW') {
+    body = `<div class="roster-pitch-line roster-pitch-three roster-pitch-attack" dir="ltr">
+      ${pitchSlot(members, ['LWF'], canEdit, 'pitch-left', 'الجناح الأيسر')}
+      ${pitchSlot(members, ['SS', 'CF'], canEdit, 'pitch-center', 'قلب الهجوم')}
+      ${pitchSlot(members, ['RWF'], canEdit, 'pitch-right', 'الجناح الأيمن')}
+    </div>`;
+  } else if (key === 'MF') {
+    body = `<div class="roster-midfield-stack" dir="ltr">
+      <div class="roster-midfield-row midfield-attacking">
+        ${pitchSlot(members, ['AMF'], canEdit, 'pitch-center', 'الوسط الهجومي')}
+      </div>
+      <div class="roster-midfield-row roster-pitch-three midfield-central">
+        ${pitchSlot(members, ['LMF'], canEdit, 'pitch-left', 'الوسط الأيسر')}
+        ${pitchSlot(members, ['CMF'], canEdit, 'pitch-center', 'الوسط المركزي')}
+        ${pitchSlot(members, ['RMF'], canEdit, 'pitch-right', 'الوسط الأيمن')}
+      </div>
+      <div class="roster-midfield-row midfield-defensive">
+        ${pitchSlot(members, ['DMF'], canEdit, 'pitch-center', 'الوسط الدفاعي')}
+      </div>
+    </div>`;
+  } else if (key === 'DF') {
+    body = `<div class="roster-pitch-line roster-pitch-three roster-pitch-defense" dir="ltr">
+      ${pitchSlot(members, ['LB'], canEdit, 'pitch-left', 'الظهير الأيسر')}
+      ${pitchSlot(members, ['CB'], canEdit, 'pitch-center', 'قلب الدفاع')}
+      ${pitchSlot(members, ['RB'], canEdit, 'pitch-right', 'الظهير الأيمن')}
+    </div>`;
+  } else {
+    body = `<div class="roster-pitch-line roster-pitch-one roster-pitch-goalkeeper" dir="ltr">
+      ${pitchSlot(members, ['GK'], canEdit, 'pitch-center', 'حارس المرمى')}
+    </div>`;
+  }
+
+  return `<details class="roster-group position-${key}" data-squad-group="${key}" ${collapsed.has(key) ? '' : 'open'}>
+    <summary><span class="roster-group-heading"><span class="roster-dot" aria-hidden="true"></span>${group.label}<span class="roster-group-count">${members.length}</span></span><span class="roster-group-code" aria-hidden="true">${group.code}</span></summary>
+    ${members.length ? body : '<p class="roster-group-empty">لا يوجد لاعبون في هذا الخط</p>'}
+  </details>`;
+}
 export function squadPlayersHTML(players, { view = 'pitch', sort = 'position', canEdit = false, collapsed = new Set() } = {}) {
   if (view === 'list' && sort !== 'position') return `<div class="roster-players">${players.map(p => playerCard(p, canEdit)).join('')}</div>`;
   if (view === 'list') return SQUAD_LINES.map(line => lineSection(line.key, players, canEdit, collapsed)).join('');
 
   const starters = players.filter(p => squadRole(p) === 'starter');
   const substitutes = players.filter(p => squadRole(p) === 'substitute');
-  const field = ['FW', 'MF', 'DF', 'GK'].map(key => lineSection(key, starters, canEdit, collapsed)).join('');
+  const field = ['FW', 'MF', 'DF', 'GK'].map(key => pitchLineSection(key, starters, canEdit, collapsed)).join('');
   const reserveKey = 'substitute';
   const reserve = `<details class="roster-group role-substitute" data-squad-role-group="substitute" ${collapsed.has(reserveKey) ? '' : 'open'}>
     <summary><span class="roster-group-heading"><span class="roster-dot" aria-hidden="true"></span>الاحتياط<span class="roster-group-count">${substitutes.length}</span></span><span class="roster-group-code" aria-hidden="true">SUB</span></summary>

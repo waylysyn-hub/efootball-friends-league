@@ -50,6 +50,16 @@
 .roster-group-code::after { content: '−'; font-size: 1rem; }
 .roster-group:not([open]) .roster-group-code::after { content: '+'; }
 .roster-players { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; padding: 10px 0; min-width: 0; }
+.roster-pitch-line, .roster-midfield-row { display: grid; align-items: start; gap: 14px; padding: 10px 0; min-width: 0; direction: ltr; }
+.roster-pitch-three { grid-template-columns: minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr); }
+.roster-pitch-one, .midfield-attacking, .midfield-defensive { grid-template-columns: minmax(0,1fr); }
+.roster-pitch-slot { min-width: 0; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: flex-start; direction: ltr; }
+.roster-pitch-slot .roster-player { direction: rtl; }
+.roster-midfield-stack { display: grid; gap: 8px; }
+.midfield-attacking { padding-bottom: 2px; }
+.midfield-central { padding-block: 2px; }
+.midfield-defensive { padding-top: 2px; }
+.roster-pitch-goalkeeper .roster-pitch-slot { max-width: 40%; margin-inline: auto; }
 .roster-player { position: relative; display: flex; flex-direction: column; align-items: center; gap: 9px; min-width: 0; flex: 0 1 126px; width: 126px; padding: 16px 10px 12px; border: 1px solid #8ba89938; border-top: 2px solid var(--position-color); border-radius: 10px; background: var(--surface); box-shadow: 0 3px 10px #0001; text-align: center; }
 .roster-avatar { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--position-color); font-weight: 700; font-size: .95rem; overflow: hidden; }
 .roster-avatar img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; opacity: 0; transition: opacity .15s ease; }
@@ -124,6 +134,10 @@
   .roster-group summary { padding-inline: 4px; }
   .roster-group-heading { font-size: .78rem; }
   .roster-players { gap: 9px; }
+  .roster-pitch-line, .roster-midfield-row { gap: 8px; }
+  .roster-pitch-slot { gap: 8px; }
+  .roster-pitch-three { grid-template-columns: minmax(0,.9fr) minmax(0,1.2fr) minmax(0,.9fr); }
+  .roster-pitch-goalkeeper .roster-pitch-slot { max-width: 60%; }
   .roster-player { width: calc(50% - 5px); flex-basis: calc(50% - 5px); max-width: 130px; padding: 12px 8px; }
   .roster-avatar { width: 38px; height: 38px; font-size: .85rem; }
   .roster-player-copy strong { font-size: .76rem; }
