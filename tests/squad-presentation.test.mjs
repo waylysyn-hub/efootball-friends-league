@@ -70,6 +70,12 @@ test('unknown position can be saved, duplicate names and unsafe photos cannot be
   assert.match(d.getElementById('squadPlayerError').textContent,/موجود/);assert.equal(client.db.squad_players.length,before);
   d.getElementById('squadPlayerName').value='صورة خاطئة';d.getElementById('squadPlayerPhoto').value='javascript:alert(1)';await w.League.saveSquadPlayer();assert.equal(client.db.squad_players.length,before);
   const view=app.module('league/js/squad-view.js');assert.equal(view.safeSquadPhoto('https://user:secret@example.test/a.png'),'');
+  const images=app.module('league/js/squad-images.js');
+  assert.equal(images.normalizeExternalSquadPhotoUrl('https://share.google/example'),'');
+  assert.equal(
+    images.normalizeExternalSquadPhotoUrl('https://www.google.com/imgres?imgurl=https%3A%2F%2Fcdn.example.test%2Fplayer.jpg&imgrefurl=https%3A%2F%2Fexample.test'),
+    'https://cdn.example.test/player.jpg'
+  );
   client.db.squad_players[0].photo_url='https://example.test/missing.png';await w.League.refresh();
   const image=d.querySelector('#squadPlayers img');assert.ok(image);assert.ok(!image.parentElement.classList.contains('has-photo'));image.dispatchEvent(new w.Event('error'));
   assert.equal(d.querySelector('#squadPlayers img'),null);assert.ok(d.querySelector('.roster-avatar span').textContent);
