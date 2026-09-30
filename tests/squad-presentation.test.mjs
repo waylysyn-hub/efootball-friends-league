@@ -82,6 +82,18 @@ test('editor changes detailed position and archive keeps historical match data u
   assert.equal(JSON.stringify(client.db.matches),matches);assert.equal(JSON.stringify(client.db.match_goal_events),events);
 });
 
+test('legacy archived player must choose a detailed position before restore',async t=>{
+  const {window:w,document:d,client}=await setup(t);
+  client.db.squad_players.push({id:'legacy-archived',owner:'Wael',name:'مؤرشف قديم',position:'UNK',lineup_role:'substitute',active:false});
+  await w.League.refresh();
+  w.League.toggleSquadPlayer('legacy-archived');
+  assert.equal(client.db.squad_players.find(p=>p.id==='legacy-archived').active,false);
+  assert.equal(d.getElementById('squadPlayerModal').classList.contains('hidden'),false);
+  assert.equal(d.getElementById('squadPlayerPosition').value,'CF');
+  assert.match(d.getElementById('toast').textContent,/حدّد مركز/);
+  w.League.closeSquadPlayer();
+});
+
 test('safe delete removes unused players and refuses historical scorer or assist rows',async t=>{
   const {window:w,document:d,client}=await setup(t);
   client.db.squad_players.push(
