@@ -28,7 +28,7 @@ export function renderSquads() {
   document.getElementById('editSquad').textContent = presentation.editing && canEdit ? 'إنهاء التعديل' : 'تعديل التشكيلة';
   document.getElementById('squadTitle').textContent = `تشكيلة ${displayName(owner || '')}`;
   document.getElementById('squadPermission').textContent = canEdit
-    ? 'أضف لاعبي فريقك ليظهروا في قوائم الهدف والأسيست. إبعاد لاعب من التشكيلة لا يغيّر المباريات السابقة.'
+    ? 'اختر 11 لاعبًا أساسيًا بالضبط، وأضف أي عدد من الاحتياط. إبعاد لاعب لا يغيّر المباريات السابقة.'
     : 'يمكنك مشاهدة هذه التشكيلة. تعديلها متاح لصاحبها ومدير الدوري.';
   const container = document.getElementById('squadPlayers');
   document.getElementById('squadSummary').hidden = !state.squadsReady;
@@ -38,6 +38,9 @@ export function renderSquads() {
   if (!state.squadsReady) {
     document.getElementById('squadCount').textContent = 'تعذّر تحميل التشكيلة';
     document.getElementById('squadUpdated').textContent = 'آخر تحديث: غير متاح';
+    const lineupStatus = document.getElementById('squadLineupStatus');
+    lineupStatus.textContent = 'حالة التشكيلة الأساسية غير متاحة';
+    lineupStatus.className = 'roster-lineup-status is-incomplete';
     container.innerHTML = '<div class="empty-state">التشكيلات غير متاحة حاليًا. حدّث الصفحة أو تواصل مع مدير الدوري لإكمال الإعداد.</div>';
     return;
   }
@@ -129,7 +132,11 @@ export function openSquadPlayer(owner = state.selectedSquad || state.user, id = 
   document.getElementById('squadPlayerTitle').textContent = `${member ? 'تعديل لاعب' : 'إضافة لاعب'} · ${displayName(owner)}`;
   document.getElementById('squadPlayerName').value = member?.name || '';
   document.getElementById('squadPlayerPosition').value = member && POSITIONS[member.position] ? member.position : 'CF';
-  document.getElementById('squadPlayerRole').value = member?.lineup_role === 'substitute' ? 'substitute' : 'starter';
+  const roleSelect = document.getElementById('squadPlayerRole');
+  const starterOption = roleSelect.querySelector('option[value="starter"]');
+  const starterCount = state.db.squads.filter(p => p.owner === owner && p.active && p.lineup_role !== 'substitute').length;
+  starterOption.disabled = starterCount >= 11 && member?.lineup_role !== 'starter';
+  roleSelect.value = member?.lineup_role === 'substitute' || starterOption.disabled ? 'substitute' : 'starter';
   document.getElementById('squadPlayerNumber').value = member?.shirt_number ?? '';
   document.getElementById('squadPlayerRating').value = member?.rating ?? '';
   document.getElementById('squadPlayerPhoto').value = member?.photo_url || '';
