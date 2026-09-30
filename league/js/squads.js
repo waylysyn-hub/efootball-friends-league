@@ -113,7 +113,7 @@ export function openSquadPlayer(owner = state.selectedSquad || state.user, id = 
   if (id && !member) return;
   state.squadEditor = {
     owner, id, pendingId: crypto.randomUUID(),
-    selectedPhotoFile: null, photoObjectId: null, photoRemoved: false, previewUrl: '',
+    selectedPhotoFile: null, photoObjectId: null, photoRemoved: false, previewUrl: '', pendingUploadedPath: '',
     originalPhotoUrl: member?.photo_url || '', originalPhotoPath: member?.photo_path || null,
   };
   document.getElementById('squadPlayerTitle').textContent = `${member ? 'تعديل لاعب' : 'إضافة لاعب'} · ${displayName(owner)}`;
@@ -154,6 +154,7 @@ export function selectSquadPhoto(event) {
     event.target.value = '';
     return showError(document.getElementById('squadPlayerError'), validation);
   }
+  if (editor.pendingUploadedPath) { removeSquadPhotoObject(sb, editor.pendingUploadedPath).catch(() => {}); editor.pendingUploadedPath = ''; }
   revokeSquadPreview();
   editor.selectedPhotoFile = file;
   editor.photoObjectId = crypto.randomUUID();
@@ -166,6 +167,7 @@ export function selectSquadPhoto(event) {
 export function clearSquadPhoto() {
   const editor = state.squadEditor;
   if (!editor) return;
+  if (editor.pendingUploadedPath) { removeSquadPhotoObject(sb, editor.pendingUploadedPath).catch(() => {}); editor.pendingUploadedPath = ''; }
   revokeSquadPreview();
   editor.selectedPhotoFile = null;
   editor.photoObjectId = null;
@@ -174,8 +176,22 @@ export function clearSquadPhoto() {
   document.getElementById('squadPlayerPhoto').value = '';
   renderSquadPhotoPreview('', document.getElementById('squadPlayerName').value);
 }
+export function previewSquadPhotoLink() {
+  const editor = state.squadEditor;
+  if (!editor?.selectedPhotoFile) {
+    const url = safeSquadPhoto(document.getElementById('squadPlayerPhoto').value.trim());
+    renderSquadPhotoPreview(url, document.getElementById('squadPlayerName').value);
+  }
+}
+export function refreshSquadPhotoInitials() {
+  const editor = state.squadEditor;
+  const image = document.getElementById('squadPhotoPreviewImage');
+  if (editor && image?.hidden) document.getElementById('squadPhotoInitials').textContent = squadInitials(document.getElementById('squadPlayerName').value);
+}
 export function closeSquadPlayer() {
   if (isBusy('save-squad-player')) return;
+  const editor = state.squadEditor;
+  if (editor?.pendingUploadedPath) removeSquadPhotoObject(sb, editor.pendingUploadedPath).catch(() => {});
   revokeSquadPreview();
   closeDialog('squadPlayerModal');
 }
@@ -220,6 +236,7 @@ export async function saveSquadPlayer() {
       if (selectedPhotoFile) {
         if (!ownerPlayerId) throw new Error('تعذّر تحديد صاحب التشكيلة لرفع الصورة.');
         uploadedPhoto = await uploadSquadPhoto(sb, selectedPhotoFile, ownerPlayerId, id, editor.photoObjectId);
+        editor.pendingUploadedPath = uploadedPhoto.path;
         photoUrl = uploadedPhoto.url;
         photoPath = uploadedPhoto.path;
       }
@@ -240,6 +257,7 @@ export async function saveSquadPlayer() {
       } else if (error) throw error;
       else if (!data?.length) throw { code: '42501' };
       const oldManagedPath = editor.originalPhotoPath;
+      editor.pendingUploadedPath = '';
       revokeSquadPreview();
       closeDialog('squadPlayerModal');
       if (oldManagedPath && oldManagedPath !== metadata.photo_path) {
