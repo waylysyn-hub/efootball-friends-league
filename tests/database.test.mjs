@@ -7,7 +7,42 @@ import { players } from './helpers/fixture.mjs';
 
 test('Postgres security and transactional behavior',async t=>{
  const db=await createTestDatabase();t.after(()=>db.close());
- await db.exec("create role anon; create role authenticated; create schema auth; create function auth.uid() returns uuid language sql stable as $select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$; grant usage on schema auth to anon,authenticated; grant execute on function auth.uid() to anon,authenticated; create schema storage; create table storage.buckets(id text primary key,name text not null,public boolean not null default false,file_size_limit bigint,allowed_mime_types text[]); create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text not null,name text not null); alter table storage.objects enable row level security; create function storage.foldername(text) returns text[] language sql immutable as $select case when position('/' in $1)=0 then array[]::text[] else string_to_array(regexp_replace($1,'/[^/]*
+ await db.exec(`
+create role anon;
+create role authenticated;
+create schema auth;
+create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+grant usage on schema auth to anon,authenticated;
+grant execute on function auth.uid() to anon,authenticated;
+
+create schema storage;
+create table storage.buckets(
+  id text primary key,
+  name text not null,
+  public boolean not null default false,
+  file_size_limit bigint,
+  allowed_mime_types text[]
+);
+create table storage.objects(
+  id uuid primary key default gen_random_uuid(),
+  bucket_id text not null,
+  name text not null
+);
+alter table storage.objects enable row level security;
+create function storage.foldername(text) returns text[] language sql immutable as $$
+  select case
+    when position('/' in $1)=0 then array[]::text[]
+    else string_to_array(regexp_replace($1,'/[^/]*$',''),'/')
+  end
+$$;
+create function storage.extension(text) returns text language sql immutable as $$
+  select lower(substring($1 from '\\.([^.]+)$'))
+$$;
+grant usage on schema storage to anon,authenticated;
+grant select,insert,delete on storage.objects to authenticated;
+
+create publication supabase_realtime;
+`);
  const migrations=['supabase-schema.sql','supabase-groups-chat-migration.sql','supabase-security-migration.sql','supabase-derived-data-migration.sql','supabase-consistency-migration.sql'];
  for(const file of migrations)await db.exec(await fs.readFile(new URL('../'+file,import.meta.url),'utf8'));
  // Reapplying the additive migration must remain safe.
