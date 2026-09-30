@@ -41,6 +41,9 @@ set search_path=''
 as $$
 declare starter_count integer;
 begin
+  -- Serialize starter-count changes per squad owner so concurrent requests cannot create a 12th starter.
+  perform pg_catalog.pg_advisory_xact_lock(146454, pg_catalog.hashtext(new.owner));
+
   if new.active and new.lineup_role='starter' then
     select count(*) into starter_count
     from public.squad_players s
