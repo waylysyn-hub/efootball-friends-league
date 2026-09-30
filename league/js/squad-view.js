@@ -72,7 +72,7 @@ function playerCard(player, canEdit) {
   const number = player.shirt_number;
   const hasNumber = number !== null && number !== undefined && number !== '' && Number.isInteger(Number(number)) && Number(number) >= 0 && Number(number) <= 99;
   return `<article class="roster-player position-${group.key}${role === 'substitute' ? ' roster-player-substitute' : ''}${player.active ? '' : ' roster-player-archived'}" data-squad-player="${esc(player.id)}" data-squad-role="${role}">
-    <div class="roster-avatar"><span aria-hidden="true">${esc(squadInitials(player.name))}</span>${photo ? `<img src="${esc(photo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" hidden>` : ''}</div>
+    <div class="roster-avatar"><span aria-hidden="true">${esc(squadInitials(player.name))}</span>${photo ? `<img src="${esc(photo)}" alt="" decoding="async" referrerpolicy="no-referrer">` : ''}</div>
     <div class="roster-player-copy"><strong dir="auto">${esc(player.name)}</strong><span class="roster-player-position">${group.short}${hasNumber ? ` <bdi class="roster-number">#${Number(number)}</bdi>` : ''}</span></div>
     ${role === 'substitute' ? '<span class="roster-role-badge">احتياط</span>' : ''}
     ${rating !== null ? `<span class="roster-rating" aria-label="التقييم ${rating}"><span aria-hidden="true">★</span> <bdi>${rating}</bdi></span>` : ''}
@@ -106,9 +106,16 @@ export function squadArchiveHTML(players, canEdit) {
 }
 export function bindSquadPhotos(container) {
   container.querySelectorAll('.roster-avatar img').forEach(img => {
-    const show = () => { if (img.naturalWidth) { img.hidden = false; img.previousElementSibling.hidden = true; } };
+    const avatar = img.parentElement;
+    const show = () => {
+      if (!img.naturalWidth) return;
+      avatar.classList.add('has-photo');
+    };
     img.onload = show;
-    img.onerror = () => { img.previousElementSibling.hidden = false; img.remove(); };
-    if (img.complete) { if (img.naturalWidth) show(); else img.remove(); }
+    img.onerror = () => { avatar.classList.remove('has-photo'); img.remove(); };
+    if (img.complete) {
+      if (img.naturalWidth) show();
+      else img.remove();
+    }
   });
 }
