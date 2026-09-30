@@ -7,7 +7,42 @@ import { players } from './helpers/fixture.mjs';
 
 test('Postgres security and transactional behavior',async t=>{
  const db=await createTestDatabase();t.after(()=>db.close());
- await db.exec("create role anon; create role authenticated; create schema auth; create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth to anon,authenticated; grant execute on function auth.uid() to anon,authenticated; create publication supabase_realtime;");
+ await db.exec(`
+create role anon;
+create role authenticated;
+create schema auth;
+create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+grant usage on schema auth to anon,authenticated;
+grant execute on function auth.uid() to anon,authenticated;
+
+create schema storage;
+create table storage.buckets(
+  id text primary key,
+  name text not null,
+  public boolean not null default false,
+  file_size_limit bigint,
+  allowed_mime_types text[]
+);
+create table storage.objects(
+  id uuid primary key default gen_random_uuid(),
+  bucket_id text not null,
+  name text not null
+);
+alter table storage.objects enable row level security;
+create function storage.foldername(text) returns text[] language sql immutable as $$
+  select case
+    when position('/' in $1)=0 then array[]::text[]
+    else string_to_array(regexp_replace($1,'/[^/]*$',''),'/')
+  end
+$$;
+create function storage.extension(text) returns text language sql immutable as $$
+  select lower(substring($1 from '\\.([^.]+)$'))
+$$;
+grant usage on schema storage to anon,authenticated;
+grant select,insert,delete on storage.objects to authenticated;
+
+create publication supabase_realtime;
+`);
  const migrations=['supabase-schema.sql','supabase-groups-chat-migration.sql','supabase-security-migration.sql','supabase-derived-data-migration.sql','supabase-consistency-migration.sql'];
  for(const file of migrations)await db.exec(await fs.readFile(new URL('../'+file,import.meta.url),'utf8'));
  // Reapplying the additive migration must remain safe.
@@ -46,12 +81,18 @@ test('Postgres security and transactional behavior',async t=>{
  });
  const accounts=Object.fromEntries(players.map(name=>[name,randomUUID()]));
  const presentationMigration=await fs.readFile(new URL('../supabase/migrations/20260930063126_squad_presentation.sql',import.meta.url),'utf8');
+ const lineupMigration=await fs.readFile(new URL('../supabase/migrations/20260930070000_squad_lineup_role.sql',import.meta.url),'utf8');
+ const imageMigration=await fs.readFile(new URL('../supabase/migrations/20260930071000_squad_player_images.sql',import.meta.url),'utf8');
  const originalMember=randomUUID();
  await db.query("insert into public.squad_players(id,owner,name,position) values($1,'Wael','Existing before presentation','DF')",[originalMember]);
  const originalSquad=(await db.query('select to_jsonb(s) as row from public.squad_players s where id=$1',[originalMember])).rows[0].row;
  await db.exec(presentationMigration);await db.exec(presentationMigration);
- const upgradedSquad=(await db.query("select to_jsonb(s)-'updated_at'-'rating'-'shirt_number'-'photo_url' as row,updated_at from public.squad_players s where id=$1",[originalMember])).rows[0];
- assert.deepEqual(upgradedSquad.row,originalSquad);assert.equal(upgradedSquad.updated_at,null);
+ await db.exec(lineupMigration);await db.exec(lineupMigration);
+ await db.exec(imageMigration);await db.exec(imageMigration);
+ const upgradedSquad=(await db.query("select to_jsonb(s)-'updated_at'-'rating'-'shirt_number'-'photo_url'-'lineup_role'-'photo_path' as row,updated_at,lineup_role,photo_path from public.squad_players s where id=$1",[originalMember])).rows[0];
+ assert.deepEqual(upgradedSquad.row,originalSquad);assert.equal(upgradedSquad.updated_at,null);assert.equal(upgradedSquad.lineup_role,'starter');assert.equal(upgradedSquad.photo_path,null);
+ const imageBucket=(await db.query("select public,file_size_limit,allowed_mime_types from storage.buckets where id='squad-player-images'")).rows[0];
+ assert.equal(imageBucket.public,true);assert.equal(Number(imageBucket.file_size_limit),2097152);assert.deepEqual(imageBucket.allowed_mime_types,['image/webp']);
  await db.query('delete from public.squad_players where id=$1',[originalMember]);
  for(const [name,id] of Object.entries(accounts))await db.query('insert into public.player_accounts(name,auth_user_id) values($1,$2)',[name,id]);
  const as=(name,sql,params=[])=>db.transaction(async tx=>{
@@ -167,22 +208,35 @@ test('Postgres security and transactional behavior',async t=>{
   const id=randomUUID();
   const beforeMatches=(await db.query('select * from public.matches order by id')).rows;
   const beforeGoals=(await db.query('select * from public.match_goal_events order by id')).rows;
-  await as('Omar',"insert into public.squad_players(id,owner,name,position,shirt_number,rating,photo_url) values($1,'Omar','Presentation test','UNK',7,101.5,'https://example.test/player.png')",[id]);
+  await as('Omar',"insert into public.squad_players(id,owner,name,position,lineup_role,shirt_number,rating,photo_url) values($1,'Omar','Presentation test','GK','substitute',7,101.5,'https://example.test/player.png')",[id]);
   const read=async()=>(await as('Omar','select * from public.squad_players where id=$1',[id]))[0];
-  const saved=await read();assert.equal(saved.position,'UNK');assert.equal(saved.shirt_number,7);assert.equal(Number(saved.rating),101.5);assert.ok(saved.updated_at);
-  await as('Omar',"update public.squad_players set position='SUB' where id=$1",[id]);
-  assert.equal((await read()).position,'SUB');assert.ok(new Date((await read()).updated_at)>=new Date(saved.updated_at));
-  for(const sql of ["rating=121","shirt_number=-1","position='INVALID'","photo_url='javascript:alert(1)'"])
+  const saved=await read();assert.equal(saved.position,'GK');assert.equal(saved.lineup_role,'substitute');assert.equal(saved.shirt_number,7);assert.equal(Number(saved.rating),101.5);assert.ok(saved.updated_at);
+  await as('Omar',"update public.squad_players set lineup_role='starter' where id=$1",[id]);
+  assert.equal((await read()).position,'GK');assert.equal((await read()).lineup_role,'starter');assert.ok(new Date((await read()).updated_at)>=new Date(saved.updated_at));
+  for(const sql of ["rating=121","shirt_number=-1","position='SUB'","position='INVALID'","lineup_role='bench'","photo_url='javascript:alert(1)'","photo_path='bad/path.png'"])
    await assert.rejects(as('Omar',`update public.squad_players set ${sql} where id=$1`,[id]),/check constraint/);
   assert.deepEqual(await as('Mustafa',"update public.squad_players set rating=120 where id=$1 returning id",[id]),[]);
   await assert.rejects(as('Omar',"update public.squad_players set updated_at=now() where id=$1",[id]),/permission denied/);
   await assert.rejects(as('Omar',"update public.squad_players set owner='Mustafa' where id=$1",[id]),/permission denied/);
   await assert.rejects(as('Omar','delete from public.squad_players where id=$1',[id]),/permission denied/);
-  const before=await read();await db.exec(presentationMigration);assert.deepEqual(await read(),before);
+  const before=await read();await db.exec(presentationMigration);await db.exec(lineupMigration);await db.exec(imageMigration);assert.deepEqual(await read(),before);
   await as('Omar','update public.squad_players set active=false where id=$1',[id]);assert.equal((await read()).active,false);
   assert.deepEqual((await db.query('select * from public.matches order by id')).rows,beforeMatches);
   assert.deepEqual((await db.query('select * from public.match_goal_events order by id')).rows,beforeGoals);
   await db.query('delete from public.squad_players where id=$1',[id]);
+ });
+ await t.test('managed squad images enforce owner/admin Storage paths and WebP-only writes',async()=>{
+  const member=randomUUID(),object=randomUUID(),omarPlayer=(await db.query("select id from public.players where name='Omar'")).rows[0].id;
+  await as('Omar',"insert into public.squad_players(id,owner,name,position) values($1,'Omar','Image keeper','GK')",[member]);
+  const ownPath=`${omarPlayer}/${member}/${object}.webp`;
+  assert.equal((await as('Omar',"insert into storage.objects(bucket_id,name) values('squad-player-images',$1) returning name",[ownPath]))[0].name,ownPath);
+  await assert.rejects(as('Mustafa',"insert into storage.objects(bucket_id,name) values('squad-player-images',$1)",[ownPath]),/row-level security/);
+  await assert.rejects(as('Omar',"insert into storage.objects(bucket_id,name) values('squad-player-images',$1)",[`${omarPlayer}/${member}/${randomUUID()}.png`]),/row-level security/);
+  const adminPath=`${omarPlayer}/${member}/${randomUUID()}.webp`;
+  assert.equal((await as('Wael',"insert into storage.objects(bucket_id,name) values('squad-player-images',$1) returning name",[adminPath]))[0].name,adminPath);
+  assert.equal((await as('Omar',"delete from storage.objects where name=$1 returning name",[ownPath])).length,1);
+  await db.query("delete from storage.objects where bucket_id='squad-player-images'");
+  await db.query('delete from public.squad_players where id=$1',[member]);
  });
  await t.test('new goals require a squad scorer, same-team assist and exact counts',async()=>{
   for(const [rows,message] of [

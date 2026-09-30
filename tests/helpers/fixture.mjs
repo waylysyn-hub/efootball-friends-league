@@ -30,9 +30,27 @@ export function fixtureClient({ profile = null, empty = false, overlappingSquads
     event.assist_id=db.squad_players.find(p=>p.owner===event.owner && p.name===event.assist)?.id || null;
   }
   let signedIn = profile;
-  const calls = [], listeners = [], channels = [];
+  const calls = [], listeners = [], channels = [], storageObjects = new Map();
   const client = {
     db,calls,channels,fail:null,hold:null,
+    storage:{
+      from(bucket){
+        return {
+          async upload(path,blob,options={}) {
+            calls.push({storage:'upload',bucket,path,size:blob?.size||0,type:options.contentType||blob?.type||''});
+            const key=bucket+':'+path;
+            if(storageObjects.has(key)) return {data:null,error:{status:409,statusCode:'409',error:'Duplicate'}};
+            storageObjects.set(key,blob);return {data:{path},error:null};
+          },
+          getPublicUrl(path){return {data:{publicUrl:`https://storage.example.test/object/public/${bucket}/${path}`}};},
+          async remove(paths){
+            calls.push({storage:'remove',bucket,paths:[...paths]});
+            for(const path of paths)storageObjects.delete(bucket+':'+path);
+            return {data:paths.map(name=>({name})),error:null};
+          },
+        };
+      },
+    },
     auth:{
       async getSession(){return {data:{session:signedIn ? {user:{id:'fixture-user'}}:null},error:null};},
       async signInWithPassword({email}) { signedIn = players.find(name => name.toLowerCase().replaceAll(' ','-')+'@efootball-friends.example' === email) || null; client.emitAuth('SIGNED_IN'); return {data:{user:signedIn ? {id:'fixture-user'}:null},error:signedIn ? null : {status:400}}; },

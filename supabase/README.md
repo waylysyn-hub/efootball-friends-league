@@ -16,6 +16,9 @@ The existing root SQL filenames remain stable so bookmarked installation instruc
 | `migrations/20260922115643_admin_evening_draw.sql` | Admin-only game nights | After squad migration |
 | `migrations/20260923055900_quick_match_entry.sql` | Score-only match entry and deferred goal details | After evening migration |
 | `migrations/20260924064448_match_player_identifiers.sql` | Stable player/squad identities used by current match entry | Last of the current match-entry migrations |
+| `migrations/20260930063126_squad_presentation.sql` | Squad presentation metadata | After stable identifiers |
+| `migrations/20260930070000_squad_lineup_role.sql` | Starter/substitute status independent from football position | After squad presentation |
+| `migrations/20260930071000_squad_player_images.sql` | Managed WebP player images, Storage bucket and owner/admin RLS | After lineup role |
 
 Installing the consistency migration is additive: it creates functions/triggers and does not invoke the reset/restore functions or remove existing rows. Those RPCs remain subject to caller identity and RLS. Its public functions use `security invoker`, an empty search path, explicit authenticated-only EXECUTE grants, and qualified object names.
 
@@ -32,3 +35,8 @@ Apply `migrations/20260920075946_squad_goal_selection.sql` **after** consistency
 ## Private game nights
 
 Apply `migrations/20260922115643_admin_evening_draw.sql` next. `league_evenings` has admin-only RLS and authenticated column grants; anonymous access and client deletion are revoked. An invoker trigger validates distinct registered attendees, generates the random order server-side and stamps the creator/time. Clients can only close an existing evening; a partial unique index permits one active evening. Invoker RPCs preserve a retry's exact order and reject competing active evenings. Reapplying the migration preserves records. No matches are inserted by the draw. See [EVENINGS.md](../docs/EVENINGS.md).
+
+
+## Squad presentation and player images
+
+The current squad UI requires the three 2026-09-30 migrations in timestamp order. Substitute status is stored in `lineup_role`; `SUB` is not a football position. Player images use the public `squad-player-images` bucket for public delivery, while insert/select-for-management/delete operations are restricted by Storage RLS to the mapped squad owner or league admin. Browser-selected images are normalized to WebP before upload; the bucket enforces WebP and a 2 MiB object limit.

@@ -4,7 +4,7 @@
 #page-squads .position-DF { --position-color: var(--roster-blue); }
 #page-squads .position-MF { --position-color: var(--roster-green); }
 #page-squads .position-FW { --position-color: var(--roster-red); }
-#page-squads .position-SUB, #page-squads .position-UNK { --position-color: var(--roster-gray); }
+#page-squads .position-UNK, #page-squads .role-substitute { --position-color: var(--roster-gray); }
 .roster-owner { max-width: 320px; margin-bottom: 24px; }
 .roster-panel { padding: 28px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow-sm); min-width: 0; }
 .roster-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
@@ -25,7 +25,7 @@
 .roster-view-switch button[aria-pressed="true"] { background: var(--primary-soft); color: var(--primary); border-color: var(--border-strong); }
 .roster-view-switch svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.5; }
 .roster-results { font-size: .8rem; color: var(--muted); }
-.roster-filters { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
+.roster-filters { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
 .roster-filters .form-group { margin: 0; min-width: 0; }
 .roster-filters input, .roster-filters select { width: 100%; min-width: 0; min-height: 44px; }
 .roster-filters label { font-size: .75rem; }
@@ -56,6 +56,9 @@
 .roster-number { color: var(--position-color); }
 .roster-rating { font-size: .7rem; color: var(--primary); white-space: nowrap; }
 .roster-rating > span { font-size: .65rem; }
+.roster-role-badge { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; padding: 2px 8px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: .65rem; }
+.roster-player-substitute { border-style: dashed; }
+.role-substitute { padding: 12px; margin-top: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
 .roster-player-actions { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; margin-top: auto; justify-content: center; }
 .roster-player-actions .btn-sm { font-size: .7rem; min-height: 44px; padding: 6px 8px; }
 .roster-group-empty { color: var(--muted); font-size: .75rem; text-align: center; padding: 6px; }
@@ -81,6 +84,16 @@
 .roster-empty p { font-size: .85rem; color: var(--muted); margin-bottom: 20px; }
 .roster-editor-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 #squadPlayerModal label span, #squadPhotoHint { font-size: .75rem; color: var(--muted); }
+.squad-photo-editor { display: flex; align-items: center; gap: 16px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+.squad-photo-preview { position: relative; display: grid; place-items: center; width: 84px; height: 84px; flex: 0 0 84px; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 50%; background: var(--surface); color: var(--primary); font-size: 1.35rem; font-weight: 700; }
+.squad-photo-preview img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.squad-photo-preview [hidden] { display: none; }
+.squad-photo-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.squad-photo-controls small { flex-basis: 100%; line-height: 1.6; }
+.squad-photo-link { margin-top: 10px; }
+.squad-photo-link summary { min-height: 40px; display: flex; align-items: center; cursor: pointer; color: var(--muted); font-size: .75rem; }
+.squad-photo-link input { width: 100%; margin-top: 8px; }
+#removeSquadPhoto { min-height: 44px; }
 [data-theme='light'] #page-squads { --roster-gold: #8d611c; --roster-blue: #32648d; --roster-green: #287353; --roster-red: #aa4c26; --roster-gray: #596675; }
 @media (max-width: 700px) {
   .roster-panel { padding: 16px; border-radius: 16px; }
@@ -94,7 +107,7 @@
   .roster-view-switch { width: 100%; }
   .roster-view-switch button { flex: 1; padding: 8px; font-size: .8rem; }
   .roster-viewbar { gap: 8px; }
-  .roster-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .roster-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .roster-filters .form-group:first-child { grid-column: 1 / -1; }
   .roster-field { padding: 10px; }
   .roster-field::before { inset: 7px; }
@@ -108,6 +121,11 @@
   .roster-list .roster-player-copy { width: auto; }
   .roster-list .roster-player-copy strong { font-size: .8rem; }
   .roster-list .roster-player-actions { flex-basis: 100%; justify-content: flex-end; }
+}
+@media (max-width: 480px) {
+  .squad-photo-editor { align-items: flex-start; }
+  .squad-photo-preview { width: 72px; height: 72px; flex-basis: 72px; }
+  .squad-photo-controls button { flex: 1 1 120px; }
 }
 @media (max-width: 380px) {
   .roster-panel { padding: 12px; }
