@@ -213,6 +213,7 @@ create publication supabase_realtime;
   assert.equal((await as('Wael',"update public.squad_players set position='SS' where owner='Omar' returning id")).length,1);
  });
  await t.test('eFootball positions allow only eleven active starters and preserve substitutes',async()=>{
+  await as('Abdul Qader',"update public.squad_players set lineup_role='substitute' where owner='Abdul Qader'");
   const valid=['GK','RB','LB','CB','RMF','LMF','CMF','AMF','DMF','LWF','RWF','SS','CF'];
   for(const [i,position] of valid.entries()) {
     const id=randomUUID();
@@ -225,8 +226,9 @@ create publication supabase_realtime;
     /EFL_STARTER_LIMIT/
   );
   await as('Abdul Qader',"insert into public.squad_players(owner,name,position,lineup_role) values('Abdul Qader','Reserve OK','CF','substitute')");
-  const detail=(await as('Abdul Qader',"select id from public.squad_players where owner='Abdul Qader' order by name limit 1"))[0].id;
+  const detail=(await as('Abdul Qader',"select id from public.squad_players where owner='Abdul Qader' and name like 'Detailed %' order by name limit 1"))[0].id;
   await assert.rejects(as('Abdul Qader',"update public.squad_players set position='DF' where id=$1",[detail]),/check constraint/i);
+  await db.query("delete from public.squad_players where owner='Abdul Qader' and (name like 'Detailed %' or name='Reserve OK')");
  });
  await t.test('squad presentation metadata persists with owner RLS, server timestamps and safe repeat migration',async()=>{
   const id=randomUUID();
