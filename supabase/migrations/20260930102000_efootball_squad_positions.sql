@@ -3,9 +3,10 @@ begin;
 
 -- Preserve inactive unknown legacy rows without inventing a football position.
 -- Active legacy broad positions get the neutral eFootball equivalent in their line.
-update public.squad_players set position='CB'  where active and position='DF';
-update public.squad_players set position='CMF' where active and position in ('MF','UNK');
-update public.squad_players set position='CF'  where active and position='FW';
+update public.squad_players set position='CB'  where position='DF';
+update public.squad_players set position='CMF' where position='MF';
+update public.squad_players set position='CMF' where active and position='UNK';
+update public.squad_players set position='CF'  where position='FW';
 
 -- Starter used to be the default for every row. For legacy squads above eleven,
 -- preserve all players and demote only the overflow to substitutes deterministically.
