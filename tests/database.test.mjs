@@ -214,21 +214,24 @@ create publication supabase_realtime;
  });
  await t.test('eFootball positions allow only eleven active starters and preserve substitutes',async()=>{
   await as('Abdul Qader',"update public.squad_players set lineup_role='substitute' where owner='Abdul Qader'");
-  const valid=['GK','RB','LB','CB','RMF','LMF','CMF','AMF','DMF','LWF','RWF','SS','CF'];
-  for(const [i,position] of valid.entries()) {
-    const id=randomUUID();
-    await as('Abdul Qader','insert into public.squad_players(id,owner,name,position,lineup_role) values($1,$2,$3,$4,$5)',
-      [id,'Abdul Qader',`Detailed ${i}`,position,i<11?'starter':'substitute']);
+  try {
+    const valid=['GK','RB','LB','CB','RMF','LMF','CMF','AMF','DMF','LWF','RWF','SS','CF'];
+    for(const [i,position] of valid.entries()) {
+      const id=randomUUID();
+      await as('Abdul Qader','insert into public.squad_players(id,owner,name,position,lineup_role) values($1,$2,$3,$4,$5)',
+        [id,'Abdul Qader',`Detailed ${i}`,position,i<11?'starter':'substitute']);
+    }
+    assert.equal((await as('Abdul Qader',"select count(*)::int as n from public.squad_players where owner='Abdul Qader' and active and lineup_role='starter'"))[0].n,11);
+    await assert.rejects(
+      as('Abdul Qader',"insert into public.squad_players(owner,name,position,lineup_role) values('Abdul Qader','Starter 12','CF','starter')"),
+      /EFL_STARTER_LIMIT/
+    );
+    await as('Abdul Qader',"insert into public.squad_players(owner,name,position,lineup_role) values('Abdul Qader','Reserve OK','CF','substitute')");
+    const detail=(await as('Abdul Qader',"select id from public.squad_players where owner='Abdul Qader' and name like 'Detailed %' order by name limit 1"))[0].id;
+    await assert.rejects(as('Abdul Qader',"update public.squad_players set position='DF' where id=$1",[detail]),/check constraint/i);
+  } finally {
+    await db.query("delete from public.squad_players where owner='Abdul Qader' and (name like 'Detailed %' or name in ('Reserve OK','Starter 12'))");
   }
-  assert.equal((await as('Abdul Qader',"select count(*)::int as n from public.squad_players where active and lineup_role='starter'"))[0].n,11);
-  await assert.rejects(
-    as('Abdul Qader',"insert into public.squad_players(owner,name,position,lineup_role) values('Abdul Qader','Starter 12','CF','starter')"),
-    /EFL_STARTER_LIMIT/
-  );
-  await as('Abdul Qader',"insert into public.squad_players(owner,name,position,lineup_role) values('Abdul Qader','Reserve OK','CF','substitute')");
-  const detail=(await as('Abdul Qader',"select id from public.squad_players where owner='Abdul Qader' and name like 'Detailed %' order by name limit 1"))[0].id;
-  await assert.rejects(as('Abdul Qader',"update public.squad_players set position='DF' where id=$1",[detail]),/check constraint/i);
-  await db.query("delete from public.squad_players where owner='Abdul Qader' and (name like 'Detailed %' or name='Reserve OK')");
  });
  await t.test('squad presentation metadata persists with owner RLS, server timestamps and safe repeat migration',async()=>{
   const id=randomUUID();
