@@ -50,3 +50,45 @@ test('add second keeper, reject duplicate, edit into midfield, archive and refet
   await page.screenshot({path:testInfo.outputPath('squad-edited.png'),fullPage:true});
   await page.goto('/league/index.html?fixture=squads#matchHistory');await expect(page.locator('.match-card')).toHaveCount(1);await expect(page.locator('.match-card')).toContainText('2');
 });
+
+
+test('upload, persist and remove a managed player image without using manual URLs',async({page})=>{
+  await page.goto('/league/index.html?fixture=squads#squads');
+  await expect(allPlayers(page)).toHaveCount(25);
+  await page.locator('#addSquadPlayer').click();
+  await page.locator('#squadPlayerName').fill('حارس بصورة');
+  await page.locator('#squadPlayerPosition').selectOption('GK');
+  await page.locator('#squadPlayerRole').selectOption('substitute');
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAQAAABFaP0WAAAADElEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC','base64');
+  await page.locator('#squadPlayerPhotoFile').setInputFiles({name:'keeper.png',mimeType:'image/png',buffer:png});
+  await expect(page.locator('#squadPhotoPreviewImage')).toHaveAttribute('src',/^blob:/);
+  await page.locator('#saveSquadPlayer').click();
+  await expect(page.locator('#squadPlayerModal')).toBeHidden();
+
+  const saved=await page.evaluate(()=>{
+    const client=window.EFLClient.get();
+    const player=client.db.squad_players.find(p=>p.name==='حارس بصورة');
+    return {player,calls:client.calls.filter(call=>call.storage)};
+  });
+  expect(saved.player.position).toBe('GK');
+  expect(saved.player.lineup_role).toBe('substitute');
+  expect(saved.player.photo_url).toContain('/squad-player-images/');
+  expect(saved.player.photo_path).toMatch(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.webp$/);
+  expect(saved.calls.some(call=>call.storage==='upload'&&call.type==='image/webp'&&call.size>0)).toBe(true);
+
+  await page.locator('#editSquad').click();
+  const card=allPlayers(page).filter({hasText:'حارس بصورة'});
+  await card.getByRole('button',{name:'تعديل حارس بصورة',exact:true}).click();
+  await page.locator('#removeSquadPhoto').click();
+  await page.locator('#saveSquadPlayer').click();
+  await expect(page.locator('#squadPlayerModal')).toBeHidden();
+
+  const removed=await page.evaluate(()=>{
+    const client=window.EFLClient.get();
+    const player=client.db.squad_players.find(p=>p.name==='حارس بصورة');
+    return {player,calls:client.calls.filter(call=>call.storage)};
+  });
+  expect(removed.player.photo_url).toBeNull();
+  expect(removed.player.photo_path).toBeNull();
+  expect(removed.calls.some(call=>call.storage==='remove')).toBe(true);
+});
