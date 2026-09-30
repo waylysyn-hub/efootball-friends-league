@@ -10,7 +10,7 @@ alter table public.squad_players
     photo_path is null
     or (
       char_length(photo_path) <= 512
-      and photo_path ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}/[0-9a-f-]{36}\.webp$'
+      and photo_path ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}/[0-9a-f-]{36}[.]webp$'
     )
   );
 
