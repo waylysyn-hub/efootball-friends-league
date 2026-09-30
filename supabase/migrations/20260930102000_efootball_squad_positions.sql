@@ -1,6 +1,9 @@
 -- eFootball-style detailed positions, exactly-11 starter cap, and safe squad deletion.
 begin;
 
+-- Replace the legacy broad-position constraint before converting rows.
+alter table public.squad_players drop constraint if exists squad_players_position_check;
+
 -- Preserve inactive unknown legacy rows without inventing a football position.
 -- Active legacy broad positions get the neutral eFootball equivalent in their line.
 update public.squad_players set position='CB'  where position='DF';
@@ -21,7 +24,6 @@ set lineup_role='substitute'
 from ranked r
 where s.id=r.id and r.rn>11;
 
-alter table public.squad_players drop constraint if exists squad_players_position_check;
 alter table public.squad_players
   add constraint squad_players_position_check
   check (
