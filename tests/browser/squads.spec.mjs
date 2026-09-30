@@ -53,6 +53,8 @@ test('add second keeper, reject duplicate, edit into midfield, archive and refet
 
 
 test('upload, persist and remove a managed player image without using manual URLs',async({page})=>{
+  const servedImage=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAFElEQVR4nGM8kWLEAANMDEgANwcARfYBZhhDpbAAAAAASUVORK5CYII=','base64');
+  await page.route('https://storage.example.test/**',route=>route.fulfill({status:200,contentType:'image/png',body:servedImage}));
   await page.goto('/league/index.html?fixture=squads#squads');
   await expect(allPlayers(page)).toHaveCount(25);
   await page.locator('#addSquadPlayer').click();
@@ -75,6 +77,11 @@ test('upload, persist and remove a managed player image without using manual URL
   expect(saved.player.photo_url).toContain('/squad-player-images/');
   expect(saved.player.photo_path).toMatch(/^[0-9a-f-]{36}\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.webp$/);
   expect(saved.calls.some(call=>call.storage==='upload'&&call.type==='image/webp'&&call.size>0)).toBe(true);
+
+  const savedCard=allPlayers(page).filter({hasText:'حارس بصورة'});
+  await expect(savedCard.locator('.roster-avatar img')).toHaveCount(1);
+  await expect(savedCard.locator('.roster-avatar')).toHaveClass(/has-photo/);
+  await expect(savedCard.locator('.roster-avatar img')).toHaveCSS('opacity','1');
 
   await page.locator('#editSquad').click();
   const card=allPlayers(page).filter({hasText:'حارس بصورة'});
