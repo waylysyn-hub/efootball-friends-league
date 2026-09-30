@@ -65,19 +65,19 @@ export async function prepareSquadPhoto(file) {
   return blob;
 }
 
-export function managedSquadPhotoPath(ownerPlayerId, memberId) {
-  return `${ownerPlayerId}/${memberId}/${crypto.randomUUID()}.webp`;
+export function managedSquadPhotoPath(ownerPlayerId, memberId, objectId = crypto.randomUUID()) {
+  return `${ownerPlayerId}/${memberId}/${objectId}.webp`;
 }
 
-export async function uploadSquadPhoto(sb, file, ownerPlayerId, memberId) {
+export async function uploadSquadPhoto(sb, file, ownerPlayerId, memberId, objectId) {
   const blob = await prepareSquadPhoto(file);
-  const path = managedSquadPhotoPath(ownerPlayerId, memberId);
+  const path = managedSquadPhotoPath(ownerPlayerId, memberId, objectId);
   const { error } = await sb.storage.from(BUCKET).upload(path, blob, {
     contentType: 'image/webp',
     cacheControl: '31536000',
     upsert: false,
   });
-  if (error) throw error;
+  if (error && error.statusCode !== '409' && error.status !== 409 && error.error !== 'Duplicate') throw error;
   const { data } = sb.storage.from(BUCKET).getPublicUrl(path);
   if (!data?.publicUrl) {
     await removeSquadPhotoObject(sb, path);
