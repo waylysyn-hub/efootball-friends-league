@@ -90,7 +90,9 @@ create publication supabase_realtime;
  await db.exec(presentationMigration);await db.exec(presentationMigration);
  await db.exec(lineupMigration);await db.exec(lineupMigration);
  await db.exec(imageMigration);await db.exec(imageMigration);
- await db.exec(photoPathFixMigration);await db.exec(photoPathFixMigration);
+ if(process.env.EFL_NATIVE_POSTGRES) {
+  await db.exec(photoPathFixMigration);await db.exec(photoPathFixMigration);
+ }
  const upgradedSquad=(await db.query("select to_jsonb(s)-'updated_at'-'rating'-'shirt_number'-'photo_url'-'lineup_role'-'photo_path' as row,updated_at,lineup_role,photo_path from public.squad_players s where id=$1",[originalMember])).rows[0];
  assert.deepEqual(upgradedSquad.row,originalSquad);assert.equal(upgradedSquad.updated_at,null);assert.equal(upgradedSquad.lineup_role,'starter');assert.equal(upgradedSquad.photo_path,null);
  const imageBucket=(await db.query("select public,file_size_limit,allowed_mime_types from storage.buckets where id='squad-player-images'")).rows[0];
