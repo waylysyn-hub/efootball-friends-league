@@ -4,6 +4,56 @@ const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 const MAX_EDGE = 512;
 const WEBP_QUALITY = 0.86;
 
+const GOOGLE_PAGE_HOSTS = new Set(['google.com', 'www.google.com']);
+
+export function normalizeExternalSquadPhotoUrl(value) {
+  if (!value) return '';
+  try {
+    let url = new URL(String(value).trim());
+    if (url.protocol !== 'https:' || url.username || url.password) return '';
+
+    const host = url.hostname.toLowerCase();
+    if (GOOGLE_PAGE_HOSTS.has(host) && url.pathname === '/imgres') {
+      const direct = url.searchParams.get('imgurl');
+      if (!direct) return '';
+      url = new URL(direct);
+      if (url.protocol !== 'https:' || url.username || url.password) return '';
+    } else if (
+      host === 'share.google' ||
+      (GOOGLE_PAGE_HOSTS.has(host) && ['/search', '/url', '/images'].some(path => url.pathname.startsWith(path)))
+    ) {
+      return '';
+    }
+    return url.href;
+  } catch {
+    return '';
+  }
+}
+
+export async function verifyExternalSquadPhotoUrl(value, timeoutMs = 8000) {
+  const url = normalizeExternalSquadPhotoUrl(value);
+  if (!url) throw new Error('استخدم رابط صورة مباشر يبدأ بـ https://، وليس رابط صفحة بحث أو مشاركة من Google.');
+  await new Promise((resolve, reject) => {
+    const image = new Image();
+    const timer = setTimeout(() => {
+      image.src = '';
+      reject(new Error('تعذّر تحميل الصورة من الرابط. جرّب رابط صورة مباشر أو ارفع الصورة من جهازك.'));
+    }, timeoutMs);
+    image.referrerPolicy = 'no-referrer';
+    image.onload = () => {
+      clearTimeout(timer);
+      if (image.naturalWidth > 0 && image.naturalHeight > 0) resolve();
+      else reject(new Error('الرابط لا يشير إلى صورة قابلة للعرض.'));
+    };
+    image.onerror = () => {
+      clearTimeout(timer);
+      reject(new Error('الرابط لا يشير إلى صورة مباشرة أو أن الموقع يمنع عرضها خارجيًا. استخدم رفع الصورة من جهازك.'));
+    };
+    image.src = url;
+  });
+  return url;
+}
+
 export function validateSquadPhotoFile(file) {
   if (!file) return 'اختر صورة أولًا.';
   if (!SOURCE_TYPES.has(file.type)) return 'استخدم صورة JPG أو PNG أو WebP.';
