@@ -178,10 +178,17 @@ export function clearSquadPhoto() {
 }
 export function previewSquadPhotoLink() {
   const editor = state.squadEditor;
-  if (!editor?.selectedPhotoFile) {
-    const url = safeSquadPhoto(document.getElementById('squadPlayerPhoto').value.trim());
-    renderSquadPhotoPreview(url, document.getElementById('squadPlayerName').value);
+  if (!editor) return;
+  const raw = document.getElementById('squadPlayerPhoto').value.trim();
+  if (raw && editor.selectedPhotoFile) {
+    if (editor.pendingUploadedPath) { removeSquadPhotoObject(sb, editor.pendingUploadedPath).catch(() => {}); editor.pendingUploadedPath = ''; }
+    revokeSquadPreview();
+    editor.selectedPhotoFile = null;
+    editor.photoObjectId = null;
+    document.getElementById('squadPlayerPhotoFile').value = '';
   }
+  editor.photoRemoved = !raw;
+  renderSquadPhotoPreview(safeSquadPhoto(raw), document.getElementById('squadPlayerName').value);
 }
 export function refreshSquadPhotoInitials() {
   const editor = state.squadEditor;
