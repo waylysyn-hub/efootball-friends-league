@@ -50,6 +50,16 @@
 .roster-group-code::after { content: '−'; font-size: 1rem; }
 .roster-group:not([open]) .roster-group-code::after { content: '+'; }
 .roster-players { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; padding: 10px 0; min-width: 0; }
+.roster-pitch-rows { display: grid; gap: 12px; padding: 10px 0 14px; direction: ltr; }
+.roster-pitch-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 1.15fr) minmax(0, 1fr); align-items: start; gap: 14px; min-width: 0; }
+.roster-pitch-slot { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 10px; min-width: 0; min-height: 8px; }
+.roster-pitch-slot.pitch-left { justify-content: flex-start; }
+.roster-pitch-slot.pitch-right { justify-content: flex-end; }
+.roster-pitch-slot.pitch-center { justify-content: center; }
+.roster-pitch-slot .roster-player { direction: rtl; }
+.roster-pitch-line.position-FW .roster-pitch-rows { gap: 18px; }
+.roster-pitch-line.position-MF .roster-pitch-rows { gap: 18px; }
+.roster-pitch-line.position-DF .roster-pitch-rows { gap: 14px; }
 .roster-player { position: relative; display: flex; flex-direction: column; align-items: center; gap: 9px; min-width: 0; flex: 0 1 126px; width: 126px; padding: 16px 10px 12px; border: 1px solid #8ba89938; border-top: 2px solid var(--position-color); border-radius: 10px; background: var(--surface); box-shadow: 0 3px 10px #0001; text-align: center; }
 .roster-avatar { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--position-color); font-weight: 700; font-size: .95rem; overflow: hidden; }
 .roster-avatar img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; opacity: 0; transition: opacity .15s ease; }
@@ -105,6 +115,12 @@
 #removeSquadPhoto { min-height: 44px; }
 [data-theme='light'] #page-squads { --roster-gold: #8d611c; --roster-blue: #32648d; --roster-green: #287353; --roster-red: #aa4c26; --roster-gray: #596675; }
 @media (max-width: 700px) {
+  .roster-pitch-row { grid-template-columns: minmax(0, 1fr) minmax(104px, 1.05fr) minmax(0, 1fr); gap: 8px; }
+  .roster-pitch-slot { gap: 8px; }
+  .roster-pitch-slot.pitch-left,
+  .roster-pitch-slot.pitch-right,
+  .roster-pitch-slot.pitch-center { justify-content: center; }
+  .roster-pitch-slot .roster-player { width: min(100%, 118px); flex-basis: 118px; }
   .roster-lineup-status { width: 100%; justify-content: center; }
   .roster-panel { padding: 16px; border-radius: 16px; }
   .roster-header { gap: 18px; }
@@ -138,6 +154,8 @@
   .squad-photo-controls button { flex: 1 1 120px; }
 }
 @media (max-width: 380px) {
+  .roster-pitch-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+  .roster-pitch-slot .roster-player { width: 100%; flex-basis: 100%; max-width: 108px; padding-inline: 6px; }
   .roster-panel { padding: 12px; }
   .roster-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .roster-field { padding: 8px; }
