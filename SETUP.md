@@ -20,6 +20,9 @@ Run these SQL files in order from **Supabase → SQL Editor**:
 7. `supabase/migrations/20260922115643_admin_evening_draw.sql` — admin-only attendance, persistent random pairings and evening history.
 8. `supabase/migrations/20260923055900_quick_match_entry.sql` — allows score-only match saves and later completion of goal details.
 9. `supabase/migrations/20260924064448_match_player_identifiers.sql` — adds stable player/squad UUIDs required by the current match-entry UI while preserving historical name snapshots.
+10. `supabase/migrations/20260930063126_squad_presentation.sql` — adds squad presentation metadata.
+11. `supabase/migrations/20260930070000_squad_lineup_role.sql` — separates football position from starter/substitute status.
+12. `supabase/migrations/20260930071000_squad_player_images.sql` — adds managed player-photo paths plus the WebP-only Supabase Storage bucket and RLS policies.
 
 Then create the first user in **Authentication → Users**. The frontend expects deterministic private-league addresses:
 
@@ -52,11 +55,14 @@ Do **not** run `supabase-schema.sql` against an existing populated database beca
 6. Apply `supabase/migrations/20260920075946_squad_goal_selection.sql`.
 7. Apply `supabase/migrations/20260922115643_admin_evening_draw.sql`.
 8. Apply `supabase/migrations/20260923055900_quick_match_entry.sql`.
-9. Apply `supabase/migrations/20260924064448_match_player_identifiers.sql` before deploying the current match-entry frontend.
-10. Create/link the remaining player Auth users.
-11. Verify normal users cannot mutate matches/seasons and the admin can.
-12. Rotate every password that ever appeared in this repository or Git history.
-13. Remove any legacy password column after migration:
+9. Apply `supabase/migrations/20260924064448_match_player_identifiers.sql`.
+10. Apply `supabase/migrations/20260930063126_squad_presentation.sql`.
+11. Apply `supabase/migrations/20260930070000_squad_lineup_role.sql`.
+12. Apply `supabase/migrations/20260930071000_squad_player_images.sql` before deploying the current squad UI.
+13. Create/link the remaining player Auth users.
+14. Verify normal users cannot mutate matches/seasons and the admin can.
+15. Rotate every password that ever appeared in this repository or Git history.
+16. Remove any legacy password column after migration:
 
 ```sql
 alter table public.players drop column if exists password;
