@@ -83,12 +83,16 @@ create publication supabase_realtime;
  const presentationMigration=await fs.readFile(new URL('../supabase/migrations/20260930063126_squad_presentation.sql',import.meta.url),'utf8');
  const lineupMigration=await fs.readFile(new URL('../supabase/migrations/20260930070000_squad_lineup_role.sql',import.meta.url),'utf8');
  const imageMigration=await fs.readFile(new URL('../supabase/migrations/20260930071000_squad_player_images.sql',import.meta.url),'utf8');
+ const photoPathFixMigration=await fs.readFile(new URL('../supabase/migrations/20260930074500_fix_squad_photo_path_constraint.sql',import.meta.url),'utf8');
  const originalMember=randomUUID();
  await db.query("insert into public.squad_players(id,owner,name,position) values($1,'Wael','Existing before presentation','DF')",[originalMember]);
  const originalSquad=(await db.query('select to_jsonb(s) as row from public.squad_players s where id=$1',[originalMember])).rows[0].row;
  await db.exec(presentationMigration);await db.exec(presentationMigration);
  await db.exec(lineupMigration);await db.exec(lineupMigration);
  await db.exec(imageMigration);await db.exec(imageMigration);
+ if(process.env.EFL_NATIVE_POSTGRES) {
+  await db.exec(photoPathFixMigration);await db.exec(photoPathFixMigration);
+ }
  const upgradedSquad=(await db.query("select to_jsonb(s)-'updated_at'-'rating'-'shirt_number'-'photo_url'-'lineup_role'-'photo_path' as row,updated_at,lineup_role,photo_path from public.squad_players s where id=$1",[originalMember])).rows[0];
  assert.deepEqual(upgradedSquad.row,originalSquad);assert.equal(upgradedSquad.updated_at,null);assert.equal(upgradedSquad.lineup_role,'starter');assert.equal(upgradedSquad.photo_path,null);
  const imageBucket=(await db.query("select public,file_size_limit,allowed_mime_types from storage.buckets where id='squad-player-images'")).rows[0];
@@ -224,6 +228,18 @@ create publication supabase_realtime;
   assert.deepEqual((await db.query('select * from public.matches order by id')).rows,beforeMatches);
   assert.deepEqual((await db.query('select * from public.match_goal_events order by id')).rows,beforeGoals);
   await db.query('delete from public.squad_players where id=$1',[id]);
+ });
+ await t.test('managed squad photo_path accepts UUID WebP paths and rejects malformed paths',async()=>{
+  const member=randomUUID(),object=randomUUID(),omarPlayer=(await db.query("select id from public.players where name='Omar'")).rows[0].id;
+  await as('Omar',"insert into public.squad_players(id,owner,name,position) values($1,'Omar','Photo path keeper','GK')",[member]);
+  const valid=`${omarPlayer}/${member}/${object}.webp`;
+  assert.equal((await as('Omar','update public.squad_players set photo_path=$1 where id=$2 returning photo_path',[valid,member]))[0].photo_path,valid);
+  for(const invalid of [
+    `${omarPlayer}/${member}/${object}xwebp`,
+    `${omarPlayer}/${member}/${object}.png`,
+    `bad/${member}/${object}.webp`,
+  ]) await assert.rejects(as('Omar','update public.squad_players set photo_path=$1 where id=$2',[invalid,member]),/check constraint/);
+  await db.query('delete from public.squad_players where id=$1',[member]);
  });
  await t.test('managed squad images enforce owner/admin Storage paths and WebP-only writes',async()=>{
   const member=randomUUID(),object=randomUUID(),omarPlayer=(await db.query("select id from public.players where name='Omar'")).rows[0].id;
