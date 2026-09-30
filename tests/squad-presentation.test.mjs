@@ -26,6 +26,26 @@ test('eFootball pitch keeps all identities and exactly eleven starters',async t=
   w.League.setSquadView('list');assert.deepEqual(ids(d).sort(),pitch.sort());
 });
 
+test('pitch keeps left/right literal and midfield depth AMF then CMF then DMF',async t=>{
+  const {document:d}=await setup(t);
+  const left=d.querySelector('[data-pitch-position="LWF"]');
+  const right=d.querySelector('[data-pitch-position="RWF"]');
+  assert.ok(left);assert.ok(right);
+  assert.ok(left.classList.contains('pitch-left'));
+  assert.ok(right.classList.contains('pitch-right'));
+
+  const mfRows=[...d.querySelectorAll('[data-squad-group="MF"] .roster-pitch-row')];
+  assert.equal(mfRows.length,3);
+  assert.ok(mfRows[0].querySelector('[data-pitch-position="AMF"]'));
+  assert.ok(mfRows[1].querySelector('[data-pitch-position="CMF"]'));
+  assert.ok(mfRows[2].querySelector('[data-pitch-position="DMF"]'));
+
+  const defRow=d.querySelector('[data-squad-group="DF"] .roster-pitch-row');
+  assert.ok(defRow.children[0].matches('[data-pitch-position="LB"]'));
+  assert.ok(defRow.children[1].matches('[data-pitch-position="CB"]'));
+  assert.ok(defRow.children[2].matches('[data-pitch-position="RB"]'));
+});
+
 test('detailed PES positions render and filter by exact code',async t=>{
   const {window:w,document:d}=await setup(t);
   assert.equal(d.querySelector('[data-squad-player="qa-roster-1"]').dataset.squadPosition,'LB');

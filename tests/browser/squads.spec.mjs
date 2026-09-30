@@ -28,8 +28,8 @@ test('large squad keeps every identity across field/list, filters, sorting and c
   await page.locator('#squadView-pitch').click();await expect(allPlayers(page)).toHaveCount(1);
   await page.locator('#squadSearch').fill('');await page.locator('#squadPositionFilter').selectOption('RB');await expect(allPlayers(page)).toHaveCount(2);
   await page.locator('#squadPositionFilter').selectOption('');await page.locator('[data-squad-group="DF"] summary').click();
-  await expect(page.locator('[data-squad-group="DF"] .roster-players')).toBeHidden();
-  await page.locator('[data-squad-group="DF"] summary').click();await expect(page.locator('[data-squad-group="DF"] .roster-players')).toBeVisible();
+  await expect(page.locator('[data-squad-group="DF"] .roster-pitch-rows')).toBeHidden();
+  await page.locator('[data-squad-group="DF"] summary').click();await expect(page.locator('[data-squad-group="DF"] .roster-pitch-rows')).toBeVisible();
   await page.locator('#squadView-list').click();await page.locator('#squadSort').selectOption('rating');
   const ratings=await allPlayers(page).evaluateAll(cards=>cards.map(card=>Number(card.querySelector('.roster-rating bdi')?.textContent??-1)));
   expect(ratings).toEqual([...ratings].sort((a,b)=>b-a));expect(errors).toEqual([]);
