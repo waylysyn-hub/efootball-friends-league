@@ -109,6 +109,7 @@ test('external photo links require a real image and Google imgres is normalized 
   await page.locator('#addSquadPlayer').click();
   await page.locator('#squadPlayerName').fill('لاعب برابط خارجي');
   await page.locator('#squadPlayerPosition').selectOption('FW');
+  await page.locator('.squad-photo-link summary').click();
   const googleResult='https://www.google.com/imgres?imgurl=https%3A%2F%2Fcdn.example.test%2Fplayer.jpg&imgrefurl=https%3A%2F%2Fexample.test';
   await page.locator('#squadPlayerPhoto').fill(googleResult);
   await page.locator('#saveSquadPlayer').click();
@@ -122,6 +123,7 @@ test('external photo links require a real image and Google imgres is normalized 
   await page.locator('#addSquadPlayer').click();
   await page.locator('#squadPlayerName').fill('رابط مشاركة');
   await page.locator('#squadPlayerPosition').selectOption('MF');
+  await page.locator('.squad-photo-link summary').click();
   await page.locator('#squadPlayerPhoto').fill('https://share.google/not-an-image');
   await page.locator('#saveSquadPlayer').click();
   await expect(page.locator('#squadPlayerError')).toContainText('رابط صورة مباشر');
