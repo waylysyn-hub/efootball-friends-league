@@ -23,6 +23,7 @@ Run these SQL files in order from **Supabase → SQL Editor**:
 10. `supabase/migrations/20260930063126_squad_presentation.sql` — adds squad presentation metadata.
 11. `supabase/migrations/20260930070000_squad_lineup_role.sql` — separates football position from starter/substitute status.
 12. `supabase/migrations/20260930071000_squad_player_images.sql` — adds managed player-photo paths plus the WebP-only Supabase Storage bucket and RLS policies.
+13. `supabase/migrations/20260930102000_efootball_squad_positions.sql` — adds detailed eFootball positions, the concurrency-safe 11-starter limit, legacy lineup normalization, and protected squad-player deletion.
 
 Then create the first user in **Authentication → Users**. The frontend expects deterministic private-league addresses:
 
@@ -58,11 +59,12 @@ Do **not** run `supabase-schema.sql` against an existing populated database beca
 9. Apply `supabase/migrations/20260924064448_match_player_identifiers.sql`.
 10. Apply `supabase/migrations/20260930063126_squad_presentation.sql`.
 11. Apply `supabase/migrations/20260930070000_squad_lineup_role.sql`.
-12. Apply `supabase/migrations/20260930071000_squad_player_images.sql` before deploying the current squad UI.
-13. Create/link the remaining player Auth users.
-14. Verify normal users cannot mutate matches/seasons and the admin can.
-15. Rotate every password that ever appeared in this repository or Git history.
-16. Remove any legacy password column after migration:
+12. Apply `supabase/migrations/20260930071000_squad_player_images.sql`.
+13. Apply `supabase/migrations/20260930102000_efootball_squad_positions.sql` before deploying the current squad UI.
+14. Create/link the remaining player Auth users.
+15. Verify normal users cannot mutate matches/seasons and the admin can.
+16. Rotate every password that ever appeared in this repository or Git history.
+17. Remove any legacy password column after migration:
 
 ```sql
 alter table public.players drop column if exists password;

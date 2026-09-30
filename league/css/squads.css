@@ -4,7 +4,8 @@
 #page-squads .position-DF { --position-color: var(--roster-blue); }
 #page-squads .position-MF { --position-color: var(--roster-green); }
 #page-squads .position-FW { --position-color: var(--roster-red); }
-#page-squads .position-UNK, #page-squads .role-substitute { --position-color: var(--roster-gray); }
+#page-squads .position-UNK, #page-squads .role-substitute, #page-squads .position-substitute { --position-color: var(--roster-gray); }
+#page-squads .position-starter { --position-color: var(--primary); }
 .roster-owner { max-width: 320px; margin-bottom: 24px; }
 .roster-panel { padding: 28px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow-sm); min-width: 0; }
 .roster-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
@@ -12,6 +13,9 @@
 .roster-eyebrow { display: block; color: var(--primary); font-size: .75rem; margin-bottom: 6px; }
 .roster-heading h3 { font-size: clamp(1.4rem, 2vw, 1.85rem); font-weight: 700; overflow-wrap: anywhere; margin: 0; }
 .roster-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 8px; color: var(--muted); font-size: .78rem; }
+.roster-lineup-status { display: inline-flex; align-items: center; min-height: 30px; margin-top: 10px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; font-size: .72rem; font-weight: 650; }
+.roster-lineup-status.is-complete { color: var(--success, #78c69a); background: color-mix(in srgb, var(--success, #78c69a) 10%, transparent); border-color: color-mix(in srgb, var(--success, #78c69a) 35%, var(--border)); }
+.roster-lineup-status.is-incomplete { color: var(--roster-gold); background: #dec08012; border-color: #dec08045; }
 .roster-tools { display: flex; flex-wrap: wrap; gap: 8px; }
 .roster-tools button { min-height: 44px; }
 .roster-tools [aria-pressed="true"] { border-color: var(--primary); color: var(--primary); }
@@ -55,6 +59,7 @@
 .roster-player-copy { min-width: 0; width: 100%; display: grid; gap: 4px; }
 .roster-player-copy strong { font-size: .8rem; line-height: 1.65; font-weight: 600; overflow-wrap: anywhere; }
 .roster-player-position { color: var(--muted); font-size: .68rem; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.roster-position-code { display: inline-grid; place-items: center; min-width: 31px; min-height: 22px; padding: 1px 6px; border: 1px solid color-mix(in srgb, var(--position-color) 45%, var(--border)); border-radius: 6px; background: color-mix(in srgb, var(--position-color) 10%, transparent); color: var(--position-color); font-size: .64rem; font-weight: 800; letter-spacing: .03em; }
 .roster-number { color: var(--position-color); }
 .roster-rating { font-size: .7rem; color: var(--primary); white-space: nowrap; }
 .roster-rating > span { font-size: .65rem; }
@@ -63,6 +68,8 @@
 .role-substitute { padding: 12px; margin-top: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
 .roster-player-actions { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; margin-top: auto; justify-content: center; }
 .roster-player-actions .btn-sm { font-size: .7rem; min-height: 44px; padding: 6px 8px; }
+.roster-player-actions .btn-danger { border-color: color-mix(in srgb, #d96060 45%, var(--border)); color: #e28787; background: #d960600d; }
+.roster-player-actions .btn-danger:hover { background: #d9606018; }
 .roster-group-empty { color: var(--muted); font-size: .75rem; text-align: center; padding: 6px; }
 .roster-pitch > .roster-group, .roster-list > .roster-group { padding: 12px; margin-top: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
 .roster-list > .roster-group:first-child { margin-top: 0; }
@@ -98,6 +105,7 @@
 #removeSquadPhoto { min-height: 44px; }
 [data-theme='light'] #page-squads { --roster-gold: #8d611c; --roster-blue: #32648d; --roster-green: #287353; --roster-red: #aa4c26; --roster-gray: #596675; }
 @media (max-width: 700px) {
+  .roster-lineup-status { width: 100%; justify-content: center; }
   .roster-panel { padding: 16px; border-radius: 16px; }
   .roster-header { gap: 18px; }
   .roster-tools { width: 100%; }

@@ -18,15 +18,15 @@ test('large squad keeps every identity across field/list, filters, sorting and c
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('/league/index.html?fixture=squads#squads');await expect(allPlayers(page)).toHaveCount(25);
   await expect(page.locator('[data-squad-group="GK"] [data-squad-player]')).toHaveCount(1);
-  await expect(page.locator('[data-squad-group="DF"] [data-squad-player]')).toHaveCount(9);
-  await expect(page.locator('[data-squad-group="MF"] [data-squad-player]')).toHaveCount(8);
+  await expect(page.locator('[data-squad-group="DF"] [data-squad-player]')).toHaveCount(4);
+  await expect(page.locator('[data-squad-group="MF"] [data-squad-player]')).toHaveCount(3);
   const pitch=await identities(page);expect(new Set(pitch).size).toBe(25);await safeLayout(page);
   await page.screenshot({path:testInfo.outputPath('squad-pitch.png'),fullPage:true});
   await page.locator('#squadView-list').click();expect(await identities(page)).toEqual(pitch);await safeLayout(page);
   await page.screenshot({path:testInfo.outputPath('squad-list.png'),fullPage:true});
   await page.locator('#squadSearch').fill('إبراهيموفيتش');await expect(allPlayers(page)).toHaveCount(1);
   await page.locator('#squadView-pitch').click();await expect(allPlayers(page)).toHaveCount(1);
-  await page.locator('#squadSearch').fill('');await page.locator('#squadPositionFilter').selectOption('UNK');await expect(allPlayers(page)).toHaveCount(1);
+  await page.locator('#squadSearch').fill('');await page.locator('#squadPositionFilter').selectOption('RB');await expect(allPlayers(page)).toHaveCount(2);
   await page.locator('#squadPositionFilter').selectOption('');await page.locator('[data-squad-group="DF"] summary').click();
   await expect(page.locator('[data-squad-group="DF"] .roster-players')).toBeHidden();
   await page.locator('[data-squad-group="DF"] summary').click();await expect(page.locator('[data-squad-group="DF"] .roster-players')).toBeVisible();
@@ -38,12 +38,12 @@ test('add second keeper, reject duplicate, edit into midfield, archive and refet
   await page.goto('/league/index.html?fixture=squads#squads');await expect(allPlayers(page)).toHaveCount(25);
   await page.locator('#addSquadPlayer').click();await page.locator('#squadPlayerName').fill('حارس اختبار ثانٍ باسم طويل');await page.locator('#squadPlayerPosition').selectOption('GK');await page.locator('#squadPlayerRole').selectOption('substitute');
   await page.locator('#squadPlayerNumber').fill('99');await page.locator('#squadPlayerRating').fill('105');await page.locator('#saveSquadPlayer').click();await expect(page.locator('#squadPlayerModal')).toBeHidden();
-  await expect(page.locator('[data-squad-player].position-GK')).toHaveCount(2);await expect(page.locator('.position-GK[data-squad-role="substitute"]')).toHaveCount(1);await safeLayout(page);
-  await page.reload();await expect(allPlayers(page)).toHaveCount(26);await expect(page.locator('[data-squad-player].position-GK')).toHaveCount(2);await expect(page.locator('.position-GK[data-squad-role="substitute"]')).toHaveCount(1);
+  await expect(page.locator('[data-squad-player].position-GK')).toHaveCount(3);await expect(page.locator('.position-GK[data-squad-role="substitute"]')).toHaveCount(2);await safeLayout(page);
+  await page.reload();await expect(allPlayers(page)).toHaveCount(26);await expect(page.locator('[data-squad-player].position-GK')).toHaveCount(3);await expect(page.locator('.position-GK[data-squad-role="substitute"]')).toHaveCount(2);
   await page.locator('#addSquadPlayer').click();await page.locator('#squadPlayerName').fill('حارس اختبار ثانٍ باسم طويل');await page.locator('#saveSquadPlayer').click();await expect(page.locator('#squadPlayerError')).toContainText('موجود');await page.keyboard.press('Escape');
   await page.locator('#editSquad').click();const keeper=allPlayers(page).filter({hasText:'حارس اختبار ثانٍ باسم طويل'});
-  await keeper.getByRole('button',{name:'تعديل حارس اختبار ثانٍ باسم طويل',exact:true}).click();await page.locator('#squadPlayerPosition').selectOption('MF');await page.locator('#squadPlayerRole').selectOption('starter');await page.locator('#saveSquadPlayer').click();await expect(page.locator('#squadPlayerModal')).toBeHidden();
-  await expect(page.locator('[data-squad-group="GK"] [data-squad-player]')).toHaveCount(1);await expect(page.locator('[data-squad-group="MF"] [data-squad-player]')).toHaveCount(9);
+  await keeper.getByRole('button',{name:'تعديل حارس اختبار ثانٍ باسم طويل',exact:true}).click();await page.locator('#squadPlayerPosition').selectOption('AMF');await page.locator('#saveSquadPlayer').click();await expect(page.locator('#squadPlayerModal')).toBeHidden();
+  await expect(keeper).toHaveAttribute('data-squad-position','AMF');
   await keeper.getByRole('button',{name:'إبعاد حارس اختبار ثانٍ باسم طويل',exact:true}).click();await expect(allPlayers(page)).toHaveCount(25);
   await page.reload();await expect(allPlayers(page)).toHaveCount(25);await page.locator('#squadArchive summary').click();await expect(page.locator('#squadArchivePlayers')).toContainText('حارس اختبار ثانٍ باسم طويل');
   await page.locator('#squadView-list').click();await expect(allPlayers(page)).toHaveCount(25);await safeLayout(page);
@@ -108,7 +108,7 @@ test('external photo links require a real image and Google imgres is normalized 
 
   await page.locator('#addSquadPlayer').click();
   await page.locator('#squadPlayerName').fill('لاعب برابط خارجي');
-  await page.locator('#squadPlayerPosition').selectOption('FW');
+  await page.locator('#squadPlayerPosition').selectOption('CF');
   await page.locator('.squad-photo-link').evaluate(el=>{el.open=true;});
   const googleResult='https://www.google.com/imgres?imgurl=https%3A%2F%2Fcdn.example.test%2Fplayer.jpg&imgrefurl=https%3A%2F%2Fexample.test';
   await page.locator('#squadPlayerPhoto').fill(googleResult);
@@ -122,10 +122,46 @@ test('external photo links require a real image and Google imgres is normalized 
 
   await page.locator('#addSquadPlayer').click();
   await page.locator('#squadPlayerName').fill('رابط مشاركة');
-  await page.locator('#squadPlayerPosition').selectOption('MF');
+  await page.locator('#squadPlayerPosition').selectOption('CMF');
   await page.locator('.squad-photo-link').evaluate(el=>{el.open=true;});
   await page.locator('#squadPlayerPhoto').fill('https://share.google/not-an-image');
   await page.locator('#saveSquadPlayer').click();
   await expect(page.locator('#squadPlayerError')).toContainText('رابط صورة مباشر');
   await expect(page.locator('#squadPlayerModal')).toBeVisible();
+});
+
+
+test('starting XI stays exactly eleven and unused players can be deleted',async({page})=>{
+  await page.goto('/league/index.html?fixture=squads#squads');
+  await expect(page.locator('#squadLineupStatus')).toContainText('11/11');
+
+  await page.locator('#addSquadPlayer').click();
+  await expect(page.locator('#squadPlayerRole option[value="starter"]')).toBeDisabled();
+  await expect(page.locator('#squadPlayerRole')).toHaveValue('substitute');
+  await page.keyboard.press('Escape');
+
+  await page.locator('#editSquad').click();
+  const messi=page.locator('[data-squad-player="qa-roster-10"]');
+  await messi.getByRole('button',{name:/تعديل/}).click();
+  await page.locator('#squadPlayerRole').selectOption('substitute');
+  await page.locator('#saveSquadPlayer').click();
+  await expect(page.locator('#squadLineupStatus')).toContainText('10/11');
+
+  await page.locator('#addSquadPlayer').click();
+  await page.locator('#squadPlayerName').fill('أساسي جديد');
+  await page.locator('#squadPlayerPosition').selectOption('SS');
+  await page.locator('#squadPlayerRole').selectOption('starter');
+  await page.locator('#saveSquadPlayer').click();
+  await expect(page.locator('#squadLineupStatus')).toContainText('11/11');
+
+  const added=allPlayers(page).filter({hasText:'أساسي جديد'});
+  await added.getByRole('button',{name:'حذف أساسي جديد',exact:true}).click();
+  await expect(page.locator('#confirmModal')).toBeVisible();
+  await page.locator('#confirmYes').click();
+  await expect(added).toHaveCount(0);
+  await expect(page.locator('#squadLineupStatus')).toContainText('10/11');
+
+  await page.locator('#editSquad').click();
+  await expect(page.locator('#editSquad')).toHaveAttribute('aria-pressed','true');
+  await expect(page.locator('#toast')).toContainText('11 لاعبًا أساسيًا');
 });

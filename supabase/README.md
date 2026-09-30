@@ -19,6 +19,7 @@ The existing root SQL filenames remain stable so bookmarked installation instruc
 | `migrations/20260930063126_squad_presentation.sql` | Squad presentation metadata | After stable identifiers |
 | `migrations/20260930070000_squad_lineup_role.sql` | Starter/substitute status independent from football position | After squad presentation |
 | `migrations/20260930071000_squad_player_images.sql` | Managed WebP player images, Storage bucket and owner/admin RLS | After lineup role |
+| `migrations/20260930102000_efootball_squad_positions.sql` | Detailed eFootball positions, exact-XI cap and safe squad deletion RPC | After player images |
 
 Installing the consistency migration is additive: it creates functions/triggers and does not invoke the reset/restore functions or remove existing rows. Those RPCs remain subject to caller identity and RLS. Its public functions use `security invoker`, an empty search path, explicit authenticated-only EXECUTE grants, and qualified object names.
 
@@ -40,3 +41,8 @@ Apply `migrations/20260922115643_admin_evening_draw.sql` next. `league_evenings`
 ## Squad presentation and player images
 
 The current squad UI requires the three 2026-09-30 migrations in timestamp order. Substitute status is stored in `lineup_role`; `SUB` is not a football position. Player images use the public `squad-player-images` bucket for public delivery, while insert/select-for-management/delete operations are restricted by Storage RLS to the mapped squad owner or league admin. Browser-selected images are normalized to WebP before upload; the bucket enforces WebP and a 2 MiB object limit.
+
+
+## Detailed eFootball squad model
+
+The final squad migration replaces broad active position codes with `GK`, `RB`, `LB`, `CB`, `RMF`, `LMF`, `CMF`, `AMF`, `DMF`, `LWF`, `RWF`, `SS`, and `CF`. Starter/substitute remains a separate field. A per-owner transaction lock plus trigger prevents concurrent requests from creating a twelfth active starter. Legacy overflow starters are retained as substitutes, not deleted. Permanent deletion is exposed only through `public.delete_squad_player(uuid)` and is refused when historical goal events still reference the player's UUID.

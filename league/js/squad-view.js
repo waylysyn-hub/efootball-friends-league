@@ -1,19 +1,40 @@
 import { normalizeExternalSquadPhotoUrl } from './squad-images.js';
 import { escapeHtml as esc } from '../../shared/ui.js';
 
-export const SQUAD_GROUPS = [
-  { key: 'GK', label: 'حراس المرمى', short: 'حارس', code: 'GK' },
-  { key: 'DF', label: 'الدفاع', short: 'دفاع', code: 'DF' },
-  { key: 'MF', label: 'الوسط', short: 'وسط', code: 'MF' },
-  { key: 'FW', label: 'الهجوم', short: 'هجوم', code: 'FW' },
-  { key: 'UNK', label: 'غير محدد المركز', short: 'غير محدد', code: '—' },
+export const SQUAD_LINES = [
+  { key: 'GK', label: 'حراسة المرمى', short: 'حارس', code: 'GK' },
+  { key: 'DF', label: 'الدفاع', short: 'دفاع', code: 'DEF' },
+  { key: 'MF', label: 'الوسط', short: 'وسط', code: 'MID' },
+  { key: 'FW', label: 'الهجوم', short: 'هجوم', code: 'ATT' },
 ];
+export const SQUAD_POSITIONS = [
+  { key: 'GK',  label: 'حارس مرمى', line: 'GK', order: 0 },
+  { key: 'LB',  label: 'ظهير أيسر', line: 'DF', order: 10 },
+  { key: 'CB',  label: 'قلب دفاع', line: 'DF', order: 20 },
+  { key: 'RB',  label: 'ظهير أيمن', line: 'DF', order: 30 },
+  { key: 'LMF', label: 'وسط أيسر', line: 'MF', order: 40 },
+  { key: 'DMF', label: 'وسط دفاعي', line: 'MF', order: 50 },
+  { key: 'CMF', label: 'وسط مركزي', line: 'MF', order: 60 },
+  { key: 'AMF', label: 'وسط هجومي', line: 'MF', order: 70 },
+  { key: 'RMF', label: 'وسط أيمن', line: 'MF', order: 80 },
+  { key: 'LWF', label: 'جناح أيسر', line: 'FW', order: 90 },
+  { key: 'SS',  label: 'مهاجم ثانٍ', line: 'FW', order: 100 },
+  { key: 'CF',  label: 'رأس حربة', line: 'FW', order: 110 },
+  { key: 'RWF', label: 'جناح أيمن', line: 'FW', order: 120 },
+];
+export const SQUAD_GROUPS = SQUAD_LINES;
 export const SQUAD_ROLES = [
   { key: 'starter', label: 'أساسي' },
   { key: 'substitute', label: 'احتياط' },
 ];
+const positionByKey = new Map(SQUAD_POSITIONS.map(position => [position.key, position]));
+const lineByKey = new Map(SQUAD_LINES.map(line => [line.key, line]));
 const nameOrder = new Intl.Collator('ar', { numeric: true, sensitivity: 'base' });
-export const squadPosition = player => SQUAD_GROUPS.some(g => g.key === player.position) ? player.position : 'UNK';
+
+const legacyPosition = { DF: 'CB', MF: 'CMF', FW: 'CF' };
+export const squadPosition = player => positionByKey.has(player.position) ? player.position : (legacyPosition[player.position] || 'UNK');
+export const squadPositionMeta = player => positionByKey.get(squadPosition(player)) || { key: 'UNK', label: 'غير محدد', line: 'UNK', order: 999 };
+export const squadLine = player => squadPositionMeta(player).line;
 export const squadRole = player => player.lineup_role === 'substitute' ? 'substitute' : 'starter';
 
 export function uniqueSquad(players) {
@@ -31,9 +52,12 @@ export function squadRating(player) {
 export function squadSummary(players) {
   const active = uniqueSquad(players).filter(p => p.active);
   const ratings = active.map(squadRating).filter(r => r !== null);
+  const starters = active.filter(p => squadRole(p) === 'starter');
   return {
     total: active.length,
-    counts: Object.fromEntries(SQUAD_GROUPS.map(g => [g.key, active.filter(p => squadPosition(p) === g.key).length])),
+    starters: starters.length,
+    complete: starters.length === 11,
+    counts: Object.fromEntries(SQUAD_LINES.map(line => [line.key, active.filter(p => squadLine(p) === line.key).length])),
     substitutes: active.filter(p => squadRole(p) === 'substitute').length,
     average: ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : null,
     rated: ratings.length,
@@ -47,9 +71,12 @@ export function filterSquadMembers(players, { search = '', position = '', role =
     (!role || squadRole(p) === role) &&
     searchable(p.name).includes(query)
   ).sort((a, b) => {
-    if (sort === 'rating') { const difference = (squadRating(b) ?? -1) - (squadRating(a) ?? -1); if (difference) return difference; }
+    if (sort === 'rating') {
+      const difference = (squadRating(b) ?? -1) - (squadRating(a) ?? -1);
+      if (difference) return difference;
+    }
     if (sort === 'position') {
-      const difference = SQUAD_GROUPS.findIndex(g => g.key === squadPosition(a)) - SQUAD_GROUPS.findIndex(g => g.key === squadPosition(b));
+      const difference = squadPositionMeta(a).order - squadPositionMeta(b).order;
       if (difference) return difference;
       const roleDifference = (squadRole(a) === 'substitute') - (squadRole(b) === 'substitute');
       if (roleDifference) return roleDifference;
@@ -62,41 +89,43 @@ export function squadInitials(name) {
   return words.slice(0, 2).map(word => Array.from(word)[0]).join('').toLocaleUpperCase('ar') || '؟';
 }
 export function safeSquadPhoto(value) { return normalizeExternalSquadPhotoUrl(value); }
+
 function playerCard(player, canEdit) {
-  const group = SQUAD_GROUPS.find(g => g.key === squadPosition(player));
+  const position = squadPositionMeta(player);
+  const line = lineByKey.get(position.line) || { key: 'UNK' };
   const role = squadRole(player);
   const photo = safeSquadPhoto(player.photo_url), rating = squadRating(player);
   const number = player.shirt_number;
   const hasNumber = number !== null && number !== undefined && number !== '' && Number.isInteger(Number(number)) && Number(number) >= 0 && Number(number) <= 99;
-  return `<article class="roster-player position-${group.key}${role === 'substitute' ? ' roster-player-substitute' : ''}${player.active ? '' : ' roster-player-archived'}" data-squad-player="${esc(player.id)}" data-squad-role="${role}">
+  return `<article class="roster-player position-${line.key} position-code-${position.key}${role === 'substitute' ? ' roster-player-substitute' : ''}${player.active ? '' : ' roster-player-archived'}" data-squad-player="${esc(player.id)}" data-squad-role="${role}" data-squad-position="${position.key}">
     <div class="roster-avatar"><span aria-hidden="true">${esc(squadInitials(player.name))}</span>${photo ? `<img src="${esc(photo)}" alt="" decoding="async" referrerpolicy="no-referrer">` : ''}</div>
-    <div class="roster-player-copy"><strong dir="auto">${esc(player.name)}</strong><span class="roster-player-position">${group.short}${hasNumber ? ` <bdi class="roster-number">#${Number(number)}</bdi>` : ''}</span></div>
+    <div class="roster-player-copy"><strong dir="auto">${esc(player.name)}</strong><span class="roster-player-position"><bdi class="roster-position-code">${position.key}</bdi><span>${esc(position.label)}</span>${hasNumber ? `<bdi class="roster-number">#${Number(number)}</bdi>` : ''}</span></div>
     ${role === 'substitute' ? '<span class="roster-role-badge">احتياط</span>' : ''}
     ${rating !== null ? `<span class="roster-rating" aria-label="التقييم ${rating}"><span aria-hidden="true">★</span> <bdi>${rating}</bdi></span>` : ''}
-    ${canEdit ? `<div class="roster-player-actions"><button class="btn-sm" data-squad-edit="${esc(player.id)}" type="button" aria-label="تعديل ${esc(player.name)}">تعديل</button><button class="btn-sm" data-squad-toggle="${esc(player.id)}" type="button" aria-label="${player.active ? 'إبعاد' : 'إعادة'} ${esc(player.name)}">${player.active ? 'إبعاد' : 'إعادة'}</button></div>` : ''}
+    ${canEdit ? `<div class="roster-player-actions"><button class="btn-sm" data-squad-edit="${esc(player.id)}" type="button" aria-label="تعديل ${esc(player.name)}">تعديل</button><button class="btn-sm" data-squad-toggle="${esc(player.id)}" type="button" aria-label="${player.active ? 'إبعاد' : 'إعادة'} ${esc(player.name)}">${player.active ? 'إبعاد' : 'إعادة'}</button><button class="btn-sm btn-danger" data-squad-delete="${esc(player.id)}" type="button" aria-label="حذف ${esc(player.name)}">حذف</button></div>` : ''}
   </article>`;
 }
-function positionSection(key, players, canEdit, collapsed) {
-  const group = SQUAD_GROUPS.find(g => g.key === key), members = players.filter(p => squadPosition(p) === key);
+function lineSection(key, players, canEdit, collapsed) {
+  const group = lineByKey.get(key);
+  const members = players.filter(p => squadLine(p) === key).sort((a,b)=>squadPositionMeta(a).order-squadPositionMeta(b).order || nameOrder.compare(a.name,b.name));
   return `<details class="roster-group position-${key}" data-squad-group="${key}" ${collapsed.has(key) ? '' : 'open'}>
     <summary><span class="roster-group-heading"><span class="roster-dot" aria-hidden="true"></span>${group.label}<span class="roster-group-count">${members.length}</span></span><span class="roster-group-code" aria-hidden="true">${group.code}</span></summary>
-    <div class="roster-players">${members.length ? members.map(p => playerCard(p, canEdit)).join('') : '<p class="roster-group-empty">لا يوجد لاعبون في هذا القسم</p>'}</div>
+    <div class="roster-players">${members.length ? members.map(p => playerCard(p, canEdit)).join('') : '<p class="roster-group-empty">لا يوجد لاعبون في هذا الخط</p>'}</div>
   </details>`;
 }
 export function squadPlayersHTML(players, { view = 'pitch', sort = 'position', canEdit = false, collapsed = new Set() } = {}) {
   if (view === 'list' && sort !== 'position') return `<div class="roster-players">${players.map(p => playerCard(p, canEdit)).join('')}</div>`;
-  if (view === 'list') return SQUAD_GROUPS.map(group => positionSection(group.key, players, canEdit, collapsed)).join('');
+  if (view === 'list') return SQUAD_LINES.map(line => lineSection(line.key, players, canEdit, collapsed)).join('');
 
   const starters = players.filter(p => squadRole(p) === 'starter');
   const substitutes = players.filter(p => squadRole(p) === 'substitute');
-  const field = ['FW', 'MF', 'DF', 'GK'].map(key => positionSection(key, starters, canEdit, collapsed)).join('');
-  const unknown = positionSection('UNK', starters, canEdit, collapsed);
+  const field = ['FW', 'MF', 'DF', 'GK'].map(key => lineSection(key, starters, canEdit, collapsed)).join('');
   const reserveKey = 'substitute';
   const reserve = `<details class="roster-group role-substitute" data-squad-role-group="substitute" ${collapsed.has(reserveKey) ? '' : 'open'}>
     <summary><span class="roster-group-heading"><span class="roster-dot" aria-hidden="true"></span>الاحتياط<span class="roster-group-count">${substitutes.length}</span></span><span class="roster-group-code" aria-hidden="true">SUB</span></summary>
-    <div class="roster-players">${substitutes.length ? substitutes.map(p => playerCard(p, canEdit)).join('') : '<p class="roster-group-empty">لا يوجد لاعبون احتياط</p>'}</div>
+    <div class="roster-players">${substitutes.length ? substitutes.sort((a,b)=>squadPositionMeta(a).order-squadPositionMeta(b).order).map(p => playerCard(p, canEdit)).join('') : '<p class="roster-group-empty">لا يوجد لاعبون احتياط</p>'}</div>
   </details>`;
-  return `<div class="roster-field" aria-label="ملعب التشكيلة">${field}</div>${unknown}${reserve}`;
+  return `<div class="roster-field" aria-label="ملعب التشكيلة">${field}</div>${reserve}`;
 }
 export function squadArchiveHTML(players, canEdit) {
   return players.map(p => playerCard(p, canEdit)).join('');
