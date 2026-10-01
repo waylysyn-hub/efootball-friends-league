@@ -3,6 +3,7 @@ import { applyAdminUI } from './admin.js';
 import { closeSidebar, navigateTo, showError } from './ui.js';
 import { closeDialog, errorMessage, withBusy } from '../../shared/ui.js';
 import { clearMatchEntry } from './match-entry.js';
+import { clearSquadSession } from './squads.js';
 import { sb, state } from './state.js';
 import { fetchAllData } from './api.js';
 import { stopRealtime, subscribeRealtime } from './realtime.js';
@@ -55,6 +56,7 @@ export async function handleLogout() {
 
 export function clearSession() {
   clearMatchEntry();
+  clearSquadSession();
   state.profile = null;
   state.user = null;
   state.questionId = null;

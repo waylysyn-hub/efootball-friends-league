@@ -7,7 +7,10 @@ async function safeLayout(page) {
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);
   const cards=await allPlayers(page).evaluateAll(elements=>elements.filter(el=>el.getClientRects().length).map(el=>{
     const box=el.getBoundingClientRect(),name=el.querySelector('strong');
-    return {x:box.x,y:box.y,right:box.right,bottom:box.bottom,clipped:name.scrollHeight>name.clientHeight+1||name.scrollWidth>name.clientWidth+1};
+    const escaped=[...el.querySelectorAll('.roster-avatar, .roster-rating, .roster-position-code, .roster-player-actions button')].some(child=>{
+      const b=child.getBoundingClientRect();return b.left<box.left-1||b.right>box.right+1;
+    });
+    return {x:box.x,y:box.y,right:box.right,bottom:box.bottom,clipped:escaped||name.scrollHeight>name.clientHeight+1||name.scrollWidth>name.clientWidth+1};
   }));
   expect(cards.every(card=>!card.clipped)).toBe(true);
   for(let i=0;i<cards.length;i++) for(let j=i+1;j<cards.length;j++) {
@@ -21,6 +24,12 @@ test('large squad keeps every identity across field/list, filters, sorting and c
   await expect(page.locator('[data-squad-group="DF"] [data-squad-player]')).toHaveCount(4);
   await expect(page.locator('[data-squad-group="MF"] [data-squad-player]')).toHaveCount(3);
   const pitch=await identities(page);expect(new Set(pitch).size).toBe(25);await safeLayout(page);
+  const bounds=async code=>page.locator(`[data-pitch-position="${code}"] [data-squad-player]`).first().boundingBox();
+  expect((await bounds('LWF')).x).toBeLessThan((await bounds('RWF')).x);
+  expect((await bounds('LB')).x).toBeLessThan((await bounds('RB')).x);
+  expect((await bounds('AMF')).y).toBeLessThan((await bounds('CMF')).y);
+  expect((await bounds('CMF')).y).toBeLessThan((await bounds('DMF')).y);
+  expect((await bounds('DMF')).y).toBeLessThan((await bounds('GK')).y);
   await page.screenshot({path:testInfo.outputPath('squad-pitch.png'),fullPage:true});
   await page.locator('#squadView-list').click();expect(await identities(page)).toEqual(pitch);await safeLayout(page);
   await page.screenshot({path:testInfo.outputPath('squad-list.png'),fullPage:true});
@@ -30,9 +39,29 @@ test('large squad keeps every identity across field/list, filters, sorting and c
   await page.locator('#squadPositionFilter').selectOption('');await page.locator('[data-squad-group="DF"] summary').click();
   await expect(page.locator('[data-squad-group="DF"] .roster-pitch-rows')).toBeHidden();
   await page.locator('[data-squad-group="DF"] summary').click();await expect(page.locator('[data-squad-group="DF"] .roster-pitch-rows')).toBeVisible();
+  await page.locator('[data-squad-role-group="substitute"] summary').click();
+  await expect(page.locator('[data-squad-role-group="substitute"] .roster-players')).toBeHidden();
+  await page.locator('#squadView-list').click();await page.locator('#squadView-pitch').click();
+  await expect(page.locator('[data-squad-role-group="substitute"] .roster-players')).toBeHidden();
+  await page.locator('[data-squad-role-group="substitute"] summary').click();
   await page.locator('#squadView-list').click();await page.locator('#squadSort').selectOption('rating');
   const ratings=await allPlayers(page).evaluateAll(cards=>cards.map(card=>Number(card.querySelector('.roster-rating bdi')?.textContent??-1)));
   expect(ratings).toEqual([...ratings].sort((a,b)=>b-a));expect(errors).toEqual([]);
+});
+
+test('editing controls, two starting keepers and light theme stay contained',async({page},testInfo)=>{
+  await page.goto('/league/index.html?fixture=squads#squads');await expect(allPlayers(page)).toHaveCount(25);
+  await page.evaluate(async()=>{
+    const client=window.EFLClient.get();
+    client.db.squad_players.find(p=>p.id==='qa-roster-10').lineup_role='substitute';
+    client.db.squad_players.find(p=>p.id==='qa-roster-11').lineup_role='starter';
+    await window.League.refresh();
+  });
+  await expect(page.locator('[data-pitch-position="GK"] [data-squad-player]')).toHaveCount(2);
+  await page.locator('#editSquad').click();await safeLayout(page);
+  await page.screenshot({path:testInfo.outputPath('squad-edit-controls.png'),fullPage:true});
+  await page.evaluate(()=>document.documentElement.setAttribute('data-theme','light'));
+  await safeLayout(page);await page.screenshot({path:testInfo.outputPath('squad-light.png'),fullPage:true});
 });
 test('add second keeper, reject duplicate, edit into midfield, archive and refetch without changing matches',async({page},testInfo)=>{
   await page.goto('/league/index.html?fixture=squads#squads');await expect(allPlayers(page)).toHaveCount(25);

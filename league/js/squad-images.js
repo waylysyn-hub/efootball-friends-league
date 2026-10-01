@@ -133,7 +133,15 @@ export async function uploadSquadPhoto(sb, file, ownerPlayerId, memberId, object
     await removeSquadPhotoObject(sb, path);
     throw new Error('تعذّر إنشاء رابط الصورة بعد الرفع.');
   }
-  return { path, url: `${data.publicUrl}?v=${Date.now()}` };
+  // The object UUID already versions immutable uploads; retries need the same URL.
+  return { path, url: data.publicUrl };
+}
+
+export async function removeUnusedSquadPhoto(sb, path) {
+  if (!path) return;
+  const { data, error } = await sb.from('squad_players').select('id').eq('photo_path', path).limit(1);
+  if (error || !data || data.length) return;
+  await removeSquadPhotoObject(sb, path);
 }
 
 export async function removeSquadPhotoObject(sb, path) {
