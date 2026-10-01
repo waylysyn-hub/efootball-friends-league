@@ -2,7 +2,7 @@
 -- Schema-only: no existing player, match, goal or image is changed.
 begin;
 
-create or replace function public.delete_squad_player(target uuid)
+create or replace function private.delete_squad_player(target uuid)
 returns text
 language plpgsql
 security definer
@@ -37,6 +37,16 @@ begin
   return member.photo_path;
 end;
 $$;
+revoke all on function private.delete_squad_player(uuid) from public,anon;
+grant execute on function private.delete_squad_player(uuid) to authenticated;
+
+-- Keep the public API invoker-only; privileged deletion lives outside REST.
+create or replace function public.delete_squad_player(target uuid)
+returns text
+language sql
+security invoker
+set search_path=''
+as $$ select private.delete_squad_player(target) $$;
 revoke all on function public.delete_squad_player(uuid) from public,anon;
 grant execute on function public.delete_squad_player(uuid) to authenticated;
 

@@ -102,6 +102,8 @@ create publication supabase_realtime;
  const beforeSafety=await safetySnapshot();
  await db.exec(squadSafetyMigration);await db.exec(squadSafetyMigration);
  assert.deepEqual(await safetySnapshot(),beforeSafety);
+ assert.equal((await db.query("select prosecdef from pg_proc where oid='public.delete_squad_player(uuid)'::regprocedure")).rows[0].prosecdef,false);
+ assert.equal((await db.query("select prosecdef from pg_proc where oid='private.delete_squad_player(uuid)'::regprocedure")).rows[0].prosecdef,true);
  const migratedPosition=(await db.query('select position,lineup_role from public.squad_players where id=$1',[originalMember])).rows[0];
  assert.equal(migratedPosition.position,'CB');assert.equal(migratedPosition.lineup_role,'starter');
  const imageBucket=(await db.query("select public,file_size_limit,allowed_mime_types from storage.buckets where id='squad-player-images'")).rows[0];
