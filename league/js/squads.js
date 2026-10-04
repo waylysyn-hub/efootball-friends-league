@@ -5,7 +5,7 @@ import { getPlayers } from './profiles.js';
 import { collectGoalEventsFromForm, renderGoalEventsForm } from './goal-events.js';
 import { closeDialog, errorMessage, escapeHtml as esc, isBusy, openDialog, showError, toast, withBusy } from '../../shared/ui.js';
 import { SQUAD_GROUPS, SQUAD_POSITIONS, SQUAD_ROLES, bindSquadPhotos, filterSquadMembers, safeSquadPhoto, squadArchiveHTML, squadInitials, squadPlayersHTML, squadSummary, uniqueSquad } from './squad-view.js';
-import { normalizeExternalSquadPhotoUrl, removeSquadPhotoObject, uploadSquadPhoto, validateSquadPhotoFile, verifyExternalSquadPhotoUrl } from './squad-images.js';
+import { normalizeExternalSquadPhotoUrl, removeUnusedSquadPhoto, uploadSquadPhoto, validateSquadPhotoFile, verifyExternalSquadPhotoUrl } from './squad-images.js';
 
 export const POSITIONS = Object.fromEntries(SQUAD_POSITIONS.map(position => [position.key, position.label]));
 const presentation = { view: 'pitch', search: '', position: '', role: '', sort: 'position', editing: false, collapsed: new Set() };
@@ -82,10 +82,11 @@ function renderSquadMembers(active = getSquad(state.selectedSquad), canEdit = ca
       : squadPlayersHTML(visible, { view: presentation.view, sort: presentation.sort, canEdit: canEdit && presentation.editing, collapsed: presentation.collapsed });
   container.querySelector('[data-squad-add]')?.addEventListener('click', () => openSquadPlayer());
   container.querySelector('[data-squad-reset]')?.addEventListener('click', resetSquadFilters);
-  container.querySelectorAll('[data-squad-group]').forEach(group => {
+  container.querySelectorAll('[data-squad-group], [data-squad-role-group]').forEach(group => {
     group.addEventListener('toggle', () => {
       if (!group.isConnected) return;
-      if (group.open) presentation.collapsed.delete(group.dataset.squadGroup); else presentation.collapsed.add(group.dataset.squadGroup);
+      const key = group.dataset.squadGroup || group.dataset.squadRoleGroup;
+      if (group.open) presentation.collapsed.delete(key); else presentation.collapsed.add(key);
     });
   });
   bindMemberActions(container, state.selectedSquad);
@@ -120,13 +121,14 @@ export function selectSquad(owner) {
   renderSquads();
 }
 export function openSquadPlayer(owner = state.selectedSquad || state.user, id = null) {
+  if (isBusy('save-squad-player')) return;
   if (!state.squadsReady) return toast('تعذّر تحميل التشكيلات. حدّث الصفحة وحاول مجددًا.', 'error');
   if (!canManageSquad(owner)) return toast('تعديل التشكيلة متاح لصاحبها ومدير الدوري فقط.', 'error');
   const member = id ? state.db.squads.find(p => p.id === id && p.owner === owner) : null;
   if (id && !member) return;
   state.squadEditor = {
     owner, id, pendingId: crypto.randomUUID(),
-    selectedPhotoFile: null, photoObjectId: null, photoRemoved: false, previewUrl: '', pendingUploadedPath: '',
+    selectedPhotoFile: null, photoObjectId: null, photoRemoved: false, previewUrl: '', pendingUploadedPath: '', pendingUploadedPhoto: null, writeAttempted: false,
     originalPhotoUrl: member?.photo_url || '', originalPhotoPath: member?.photo_path || null,
   };
   document.getElementById('squadPlayerTitle').textContent = `${member ? 'تعديل لاعب' : 'إضافة لاعب'} · ${displayName(owner)}`;
@@ -135,7 +137,7 @@ export function openSquadPlayer(owner = state.selectedSquad || state.user, id = 
   const roleSelect = document.getElementById('squadPlayerRole');
   const starterOption = roleSelect.querySelector('option[value="starter"]');
   const starterCount = state.db.squads.filter(p => p.owner === owner && p.active && p.lineup_role !== 'substitute').length;
-  starterOption.disabled = starterCount >= 11 && member?.lineup_role !== 'starter';
+  starterOption.disabled = member?.active !== false && starterCount >= 11 && member?.lineup_role !== 'starter';
   roleSelect.value = member?.lineup_role === 'substitute' || starterOption.disabled ? 'substitute' : 'starter';
   document.getElementById('squadPlayerNumber').value = member?.shirt_number ?? '';
   document.getElementById('squadPlayerRating').value = member?.rating ?? '';
@@ -155,9 +157,10 @@ function renderSquadPhotoPreview(url = '', name = document.getElementById('squad
   const image = document.getElementById('squadPhotoPreviewImage');
   const initials = document.getElementById('squadPhotoInitials');
   initials.textContent = squadInitials(name);
+  initials.hidden = false;
   image.hidden = true;
   image.removeAttribute('src');
-  if (!url) { initials.hidden = false; return; }
+  if (!url) return;
   image.onload = () => { image.hidden = false; initials.hidden = true; };
   image.onerror = () => { image.hidden = true; initials.hidden = false; };
   image.src = url;
@@ -165,13 +168,13 @@ function renderSquadPhotoPreview(url = '', name = document.getElementById('squad
 export function selectSquadPhoto(event) {
   const editor = state.squadEditor;
   const file = event?.target?.files?.[0];
-  if (!editor || !file) return;
+  if (!editor || !file || isBusy('save-squad-player')) return;
   const validation = validateSquadPhotoFile(file);
   if (validation) {
     event.target.value = '';
     return showError(document.getElementById('squadPlayerError'), validation);
   }
-  if (editor.pendingUploadedPath) { removeSquadPhotoObject(sb, editor.pendingUploadedPath).catch(() => {}); editor.pendingUploadedPath = ''; }
+  discardPendingPhoto(editor);
   revokeSquadPreview();
   editor.selectedPhotoFile = file;
   editor.photoObjectId = crypto.randomUUID();
@@ -183,8 +186,8 @@ export function selectSquadPhoto(event) {
 }
 export function clearSquadPhoto() {
   const editor = state.squadEditor;
-  if (!editor) return;
-  if (editor.pendingUploadedPath) { removeSquadPhotoObject(sb, editor.pendingUploadedPath).catch(() => {}); editor.pendingUploadedPath = ''; }
+  if (!editor || isBusy('save-squad-player')) return;
+  discardPendingPhoto(editor);
   revokeSquadPreview();
   editor.selectedPhotoFile = null;
   editor.photoObjectId = null;
@@ -195,10 +198,10 @@ export function clearSquadPhoto() {
 }
 export function previewSquadPhotoLink() {
   const editor = state.squadEditor;
-  if (!editor) return;
+  if (!editor || isBusy('save-squad-player')) return;
   const raw = document.getElementById('squadPlayerPhoto').value.trim();
   if (raw && editor.selectedPhotoFile) {
-    if (editor.pendingUploadedPath) { removeSquadPhotoObject(sb, editor.pendingUploadedPath).catch(() => {}); editor.pendingUploadedPath = ''; }
+    discardPendingPhoto(editor);
     revokeSquadPreview();
     editor.selectedPhotoFile = null;
     editor.photoObjectId = null;
@@ -215,13 +218,31 @@ export function refreshSquadPhotoInitials() {
 export function closeSquadPlayer() {
   if (isBusy('save-squad-player')) return;
   const editor = state.squadEditor;
-  if (editor?.pendingUploadedPath) removeSquadPhotoObject(sb, editor.pendingUploadedPath).catch(() => {});
+  if (editor) discardPendingPhoto(editor);
   revokeSquadPreview();
+  state.squadEditor = null;
   closeDialog('squadPlayerModal');
 }
 
+function discardPendingPhoto(editor) {
+  // A lost response does not prove the write failed. Keep its object until a
+  // confirmed save can safely retire it; never remove an uncertain upload.
+  if (editor.pendingUploadedPath && !editor.writeAttempted) removeUnusedSquadPhoto(sb, editor.pendingUploadedPath).catch(() => {});
+  editor.pendingUploadedPath = '';
+  editor.pendingUploadedPhoto = null;
+}
+
+export function clearSquadSession() {
+  revokeSquadPreview();
+  state.squadEditor = null;
+  presentation.editing = false;
+  presentation.collapsed.clear();
+}
+
 async function reloadSquads() {
+  const session = state.profile;
   const { data, error } = await sb.from('squad_players').select('*');
+  if (!session || state.profile !== session) return;
   if (error) throw error;
   state.db.squads = data || [];
   if (state.page === 'squads') renderSquads();
@@ -230,7 +251,9 @@ async function reloadSquads() {
 
 export async function saveSquadPlayer() {
   const editor = state.squadEditor;
-  if (!editor || !canManageSquad(editor.owner)) return;
+  if (!editor || !canManageSquad(editor.owner) || isBusy('save-squad-player')) return;
+  const session = state.profile;
+  const isCurrent = () => state.profile === session && state.squadEditor === editor && canManageSquad(editor.owner);
   const errorElement = document.getElementById('squadPlayerError');
   const name = document.getElementById('squadPlayerName').value.trim();
   const position = document.getElementById('squadPlayerPosition').value;
@@ -245,26 +268,32 @@ export async function saveSquadPlayer() {
   if (!SQUAD_ROLES.some(role => role.key === lineupRole)) return showError(errorElement, 'اختر حالة صحيحة للاعب.');
   if (numberText && (!Number.isInteger(Number(numberText)) || Number(numberText) < 0 || Number(numberText) > 99)) return showError(errorElement, 'رقم القميص عدد صحيح بين 0 و99.');
   if (ratingText && (!Number.isFinite(Number(ratingText)) || Number(ratingText) < 0 || Number(ratingText) > 120)) return showError(errorElement, 'أدخل تقييمًا بين 0 و120.');
-  if (photo && (photo.length > 2048 || !normalizedPhoto)) return showError(errorElement, 'استخدم رابط صورة مباشر يبدأ بـ https://، وليس رابط صفحة بحث أو مشاركة.');
+  const photoChanged = photo !== editor.originalPhotoUrl;
+  if (photoChanged && photo && (photo.length > 2048 || !normalizedPhoto)) return showError(errorElement, 'استخدم رابط صورة مباشر يبدأ بـ https://، وليس رابط صفحة بحث أو مشاركة.');
   if (selectedPhotoFile) { const photoError = validateSquadPhotoFile(selectedPhotoFile); if (photoError) return showError(errorElement, photoError); }
-  const startersWithoutCurrent = state.db.squads.filter(p => p.owner === editor.owner && p.active && p.id !== editor.id && p.lineup_role !== 'substitute').length;
-  if (lineupRole === 'starter' && startersWithoutCurrent >= 11) return showError(errorElement, 'التشكيلة الأساسية مكتملة 11/11. حوّل لاعبًا أساسيًا إلى احتياط أولًا.');
-  const duplicate = state.db.squads.find(p => p.owner === editor.owner && p.id !== editor.id && p.name.toLowerCase() === name.toLowerCase());
+  const id = editor.id || editor.pendingId;
+  const existing = state.db.squads.find(p => p.id === id);
+  const startersWithoutCurrent = state.db.squads.filter(p => p.owner === editor.owner && p.active && p.id !== id && p.lineup_role !== 'substitute').length;
+  if (existing?.active !== false && lineupRole === 'starter' && startersWithoutCurrent >= 11) return showError(errorElement, 'التشكيلة الأساسية مكتملة 11/11. حوّل لاعبًا أساسيًا إلى احتياط أولًا.');
+  const duplicate = state.db.squads.find(p => p.owner === editor.owner && p.id !== id && p.name.toLowerCase() === name.toLowerCase());
   if (duplicate) return showError(errorElement, duplicate.active ? 'هذا اللاعب موجود في التشكيلة بالفعل.' : 'هذا اللاعب موجود خارج التشكيلة. استخدم «إعادة» بدل إضافته مجددًا.');
   return withBusy('save-squad-player', document.getElementById('saveSquadPlayer'), async () => {
     errorElement.classList.add('hidden');
     try {
-      const id = editor.id || editor.pendingId;
-      const existing = state.db.squads.find(p => p.id === editor.id);
       const ownerPlayerId = state.db.accounts[editor.owner]?.id;
-      let uploadedPhoto = null;
-      let verifiedPhoto = normalizedPhoto;
-      if (photo && !selectedPhotoFile) verifiedPhoto = await verifyExternalSquadPhotoUrl(photo);
-      let photoUrl = editor.photoRemoved ? null : (verifiedPhoto || editor.originalPhotoUrl || null);
-      let photoPath = editor.photoRemoved ? null : (verifiedPhoto && verifiedPhoto !== editor.originalPhotoUrl ? null : editor.originalPhotoPath);
+      let verifiedPhoto = photoChanged ? normalizedPhoto : editor.originalPhotoUrl;
+      if (photoChanged && photo && !selectedPhotoFile) {
+        try { verifiedPhoto = await verifyExternalSquadPhotoUrl(photo); }
+        catch { if (isCurrent()) showError(errorElement, 'تعذّر عرض الصورة من الرابط. استخدم رابط صورة مباشر أو ارفع الصورة من جهازك.'); return; }
+        if (!isCurrent()) return;
+      }
+      let photoUrl = editor.photoRemoved || (photoChanged && !photo && !selectedPhotoFile) ? null : (verifiedPhoto || null);
+      let photoPath = photoUrl && !photoChanged ? editor.originalPhotoPath : null;
       if (selectedPhotoFile) {
         if (!ownerPlayerId) throw new Error('تعذّر تحديد صاحب التشكيلة لرفع الصورة.');
-        uploadedPhoto = await uploadSquadPhoto(sb, selectedPhotoFile, ownerPlayerId, id, editor.photoObjectId);
+        const uploadedPhoto = editor.pendingUploadedPhoto || await uploadSquadPhoto(sb, selectedPhotoFile, ownerPlayerId, id, editor.photoObjectId);
+        if (!isCurrent()) return;
+        editor.pendingUploadedPhoto = uploadedPhoto;
         editor.pendingUploadedPath = uploadedPhoto.path;
         photoUrl = uploadedPhoto.url;
         photoPath = uploadedPhoto.path;
@@ -276,25 +305,49 @@ export async function saveSquadPlayer() {
         photo_path: photoPath,
       };
       const values = { name, position, lineup_role: lineupRole, ...metadata };
-      const query = editor.id
-        ? sb.from('squad_players').update(values).eq('id', id).eq('owner', editor.owner)
-        : sb.from('squad_players').insert({ id, owner: editor.owner, ...values, active: true });
-      const { data, error } = await query.select('*');
-      if (error?.code === '23505' && !editor.id) {
+      const matches = row => row?.owner === editor.owner && Object.entries(values).every(([key, value]) => row[key] === value);
+      let saved = false;
+      const oldManagedPaths = new Set([editor.originalPhotoPath]);
+      if (editor.writeAttempted) {
         const previous = await sb.from('squad_players').select('*').eq('id', id).maybeSingle();
-        if (previous.error || previous.data?.owner !== editor.owner || Object.entries(values).some(([key, value]) => previous.data?.[key] !== value)) throw error;
-      } else if (error) throw error;
-      else if (!data?.length) throw { code: '42501' };
-      const oldManagedPath = editor.originalPhotoPath;
+        if (!isCurrent()) return;
+        if (previous.error) throw previous.error;
+        if (previous.data) {
+          if (previous.data.owner !== editor.owner) throw { code: '42501' };
+          editor.id = id;
+          oldManagedPaths.add(previous.data.photo_path);
+          saved = matches(previous.data);
+        }
+      }
+      if (!saved) {
+        editor.writeAttempted = true;
+        const query = editor.id
+          ? sb.from('squad_players').update(values).eq('id', id).eq('owner', editor.owner)
+          : sb.from('squad_players').insert({ id, owner: editor.owner, ...values, active: true });
+        try {
+          const { data, error } = await query.select('*');
+          if (error) throw error;
+          if (!data?.length) throw { code: '42501' };
+        } catch (failure) {
+          if (!isCurrent()) return;
+          // Reconcile a committed write whose response was lost before retrying.
+          const previous = await sb.from('squad_players').select('*').eq('id', id).maybeSingle();
+          if (previous.error || !matches(previous.data)) throw failure;
+        }
+      }
+      if (!isCurrent()) return;
+      editor.writeAttempted = false;
       editor.pendingUploadedPath = '';
       revokeSquadPreview();
+      state.squadEditor = null;
       closeDialog('squadPlayerModal');
-      if (oldManagedPath && oldManagedPath !== metadata.photo_path) {
-        removeSquadPhotoObject(sb, oldManagedPath).catch(() => {});
+      for (const path of oldManagedPaths) {
+        if (path && path !== metadata.photo_path) removeUnusedSquadPhoto(sb, path).catch(() => {});
       }
-      try { await reloadSquads(); toast(selectedPhotoFile ? 'تم حفظ اللاعب ورفع صورته.' : 'تم حفظ اللاعب في التشكيلة.'); }
-      catch { toast('تم حفظ اللاعب، لكن تعذّر تحديث القائمة. اضغط تحديث قبل تسجيل المباراة.', 'error'); }
+      try { await reloadSquads(); if (state.profile === session) toast(selectedPhotoFile ? 'تم حفظ اللاعب ورفع صورته.' : 'تم حفظ اللاعب في التشكيلة.'); }
+      catch { if (state.profile === session) toast('تم حفظ اللاعب، لكن تعذّر تحديث القائمة. اضغط تحديث قبل تسجيل المباراة.', 'error'); }
     } catch (error) {
+      if (!isCurrent()) return;
       const rawMessage = String(error?.message || '');
       const message = /EFL_STARTER_LIMIT/.test(rawMessage)
         ? 'لا يمكن إضافة أكثر من 11 لاعبًا أساسيًا. حوّل لاعبًا أساسيًا إلى احتياط أولًا.'
@@ -348,7 +401,7 @@ export function requestDeleteSquadPlayer(id, button) {
         throw error;
       }
       closeDialog('confirmModal');
-      if (data) removeSquadPhotoObject(sb, data).catch(() => {});
+      if (data) removeUnusedSquadPhoto(sb, data).catch(() => {});
       try { await reloadSquads(); toast('تم حذف اللاعب نهائيًا.'); }
       catch { toast('تم الحذف، لكن تعذّر تحديث القائمة. اضغط تحديث.', 'error'); }
     }, 'جارٍ الحذف…');

@@ -150,3 +150,105 @@ test('unsafe photos are rejected and broken images fall back to initials',async 
   assert.equal(d.querySelector('#squadPlayers img'),null);assert.ok(d.querySelector('.roster-avatar span').textContent);
   assert.deepEqual(app.errors,[]);
 });
+
+test('unknown legacy positions and duplicate input retain field/list identity parity',async t=>{
+  const app=await setup(t),{window:w,document:d,client}=app;
+  client.db.squad_players.push(
+    {id:'unknown-starter',owner:'Wael',name:'مركز قديم',position:'UNKNOWN',active:true,lineup_role:'starter'},
+    {id:'unknown-reserve',owner:'Wael',name:'احتياط قديم',position:null,active:true,lineup_role:'substitute'}
+  );
+  client.db.squad_players.push({...client.db.squad_players[0]});
+  await w.League.refresh();
+  const pitch=ids(d);assert.equal(pitch.length,27);assert.equal(new Set(pitch).size,27);
+  assert.ok(d.querySelector('[data-squad-group="UNK"] [data-squad-player="unknown-starter"]'));
+  w.League.setSquadView('list');assert.deepEqual(ids(d).sort(),pitch.sort());
+  d.getElementById('squadPositionFilter').value='UNK';w.League.filterSquad();assert.equal(ids(d).length,2);
+});
+
+test('an unavailable unchanged photo never blocks editing a player',async t=>{
+  const {window:w,document:d,client}=await setup(t);
+  client.db.squad_players[0].photo_url='https://images.example.test/offline.webp';
+  client.db.squad_players[0].photo_path='unchanged-managed-path';await w.League.refresh();
+  let verifications=0;w.Image=class {constructor(){verifications++;throw new Error('offline');}};
+  w.League.openSquadPlayer('Wael','qa-roster-0');d.getElementById('squadPlayerRating').value='106';
+  await w.League.saveSquadPlayer();
+  assert.equal(client.db.squad_players[0].rating,106);assert.equal(verifications,0);
+  assert.equal(client.db.squad_players[0].photo_path,'unchanged-managed-path');
+  assert.equal(d.getElementById('squadPlayerModal').classList.contains('hidden'),true);
+});
+
+test('an archived former starter remains editable when the active XI is full',async t=>{
+  const {window:w,document:d,client}=await setup(t);
+  client.db.squad_players.push({id:'archived-starter',owner:'Wael',name:'أساسي سابق',position:'GK',active:false,lineup_role:'starter'});
+  await w.League.refresh();w.League.openSquadPlayer('Wael','archived-starter');
+  d.getElementById('squadPlayerName').value='اسم مؤرشف معدل';await w.League.saveSquadPlayer();
+  const saved=client.db.squad_players.find(p=>p.id==='archived-starter');assert.equal(saved.name,'اسم مؤرشف معدل');assert.equal(saved.active,false);
+  assert.equal(client.db.squad_players.filter(p=>p.active&&p.lineup_role==='starter').length,11);
+});
+
+function preparePhoto(app) {
+  const {window:w,document:d}=app;
+  w.URL.createObjectURL=()=> 'blob:qa-photo';w.URL.revokeObjectURL=()=>{};
+  w.createImageBitmap=async()=>({width:4,height:4,close(){}});
+  w.HTMLCanvasElement.prototype.getContext=()=>({drawImage(){}});
+  w.HTMLCanvasElement.prototype.toBlob=function(callback){callback(new w.Blob(['compressed'],{type:'image/webp'}));};
+  w.League.openSquadPlayer('Wael');d.getElementById('squadPlayerName').value='صورة استجابة مفقودة';
+  d.getElementById('squadPlayerRole').value='substitute';
+  w.League.selectSquadPhoto({target:{files:[new w.File(['image'],'photo.png',{type:'image/png'})]}});
+}
+
+test('lost insert response and failed read reuse one player and upload on retry',async t=>{
+  const app=await setup(t),{window:w,document:d,client}=app;preparePhoto(app);
+  let lost=false;
+  client.after=async({table,operation})=>{
+    if(table==='squad_players'&&operation==='insert'&&!lost){lost=true;client.fail='squad_players';throw new Error('Failed to fetch');}
+  };
+  await w.League.saveSquadPlayer();assert.equal(d.getElementById('squadPlayerModal').classList.contains('hidden'),false);
+  const saved=client.db.squad_players.find(p=>p.name==='صورة استجابة مفقودة');assert.ok(saved.photo_path);
+  client.fail=null;await w.League.refresh();await w.League.saveSquadPlayer();
+  assert.equal(d.getElementById('squadPlayerModal').classList.contains('hidden'),true);
+  assert.equal(client.db.squad_players.filter(p=>p.name===saved.name).length,1);
+  assert.equal(client.calls.filter(c=>c.storage==='upload').length,1);
+  assert.equal(client.calls.filter(c=>c.table==='squad_players'&&c.operation==='insert').length,1);
+  assert.equal(client.calls.filter(c=>c.storage==='remove').length,0);
+  assert.equal(client.db.squad_players.find(p=>p.id===saved.id).photo_url,saved.photo_url);
+});
+
+test('cancel after an unconfirmed save preserves the potentially referenced photo',async t=>{
+  const app=await setup(t),{window:w,client}=app;preparePhoto(app);
+  client.after=async({table,operation})=>{
+    if(table==='squad_players'&&operation==='insert'){client.fail='squad_players';throw new Error('Failed to fetch');}
+  };
+  await w.League.saveSquadPlayer();w.League.closeSquadPlayer();
+  assert.equal(client.calls.filter(c=>c.storage==='remove').length,0);
+  assert.ok(client.db.squad_players.find(p=>p.name==='صورة استجابة مفقودة').photo_path);
+});
+
+test('logout during photo upload cannot submit or reopen an old squad editor',async t=>{
+  const app=await setup(t),{window:w,document:d,client}=app;preparePhoto(app);
+  const from=client.storage.from;let release,started;
+  const uploading=new Promise(resolve=>{started=resolve;});
+  client.storage.from=bucket=>{
+    const storage=from(bucket),upload=storage.upload;
+    storage.upload=async(...args)=>{started();await new Promise(resolve=>{release=resolve;});return upload(...args);};return storage;
+  };
+  const saving=w.League.saveSquadPlayer();await uploading;
+  app.module('league/js/auth-ui.js').clearSession();release();await saving;
+  assert.equal(client.calls.filter(c=>c.table==='squad_players'&&c.operation==='insert').length,0);
+  assert.equal(app.module('league/js/state.js').state.squadEditor,null);
+  assert.equal(d.getElementById('squadPlayerModal').classList.contains('hidden'),true);
+});
+
+test('immutable photo upload retries return the same public URL and referenced photos survive cleanup',async t=>{
+  const app=await setup(t),{window:w,client}=app;preparePhoto(app);
+  const images=app.module('league/js/squad-images.js');
+  const file=new w.File(['image'],'photo.png',{type:'image/png'});
+  const first=await images.uploadSquadPhoto(client,file,'owner','member','object');
+  const second=await images.uploadSquadPhoto(client,file,'owner','member','object');
+  assert.equal(first.url,second.url);assert.equal(first.path,second.path);
+  client.db.squad_players[0].photo_path=first.path;
+  await images.removeUnusedSquadPhoto(client,first.path);assert.equal(client.calls.filter(c=>c.storage==='remove').length,0);
+  client.db.squad_players[0].photo_path=null;client.fail='squad_players';
+  await images.removeUnusedSquadPhoto(client,first.path);assert.equal(client.calls.filter(c=>c.storage==='remove').length,0);
+  client.fail=null;await images.removeUnusedSquadPhoto(client,first.path);assert.equal(client.calls.filter(c=>c.storage==='remove').length,1);
+});

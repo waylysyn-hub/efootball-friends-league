@@ -77,6 +77,7 @@ export function fixtureClient({ profile = null, empty = false, overlappingSquads
             if(table==='chat_group_members' && columns.includes('chat_groups')) rows=rows.map(row=>({...row,chat_groups:db.chat_groups.find(group=>group.id===row.group_id)}));
             for(const [key,ascending] of orders.reverse()) rows.sort((a,b)=>(String(a[key]).localeCompare(String(b[key])))*(ascending?1:-1));
             rows=rows.slice(0,max);
+            if(client.after) await client.after({table,operation,rows});
             resolve({data:one ? rows[0] || null : rows.map(row=>({...row})),error:null});
           }catch(e){reject(e);}
         },

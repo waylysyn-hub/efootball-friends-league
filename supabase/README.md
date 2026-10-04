@@ -19,6 +19,7 @@ The existing root SQL filenames remain stable so bookmarked installation instruc
 | `migrations/20260930063126_squad_presentation.sql` | Squad presentation metadata | After stable identifiers |
 | `migrations/20260930070000_squad_lineup_role.sql` | Starter/substitute status independent from football position | After squad presentation |
 | `migrations/20260930071000_squad_player_images.sql` | Managed WebP player images, Storage bucket and owner/admin RLS | After lineup role |
+| `migrations/20261001062141_squad_safety_review.sql` | Fail-closed squad deletion, legacy history and referenced-image protection | After detailed positions |
 | `migrations/20260930102000_efootball_squad_positions.sql` | Detailed eFootball positions, exact-XI cap and safe squad deletion RPC | After player images |
 
 Installing the consistency migration is additive: it creates functions/triggers and does not invoke the reset/restore functions or remove existing rows. Those RPCs remain subject to caller identity and RLS. Its public functions use `security invoker`, an empty search path, explicit authenticated-only EXECUTE grants, and qualified object names.
@@ -46,3 +47,7 @@ The current squad UI requires the three 2026-09-30 migrations in timestamp order
 ## Detailed eFootball squad model
 
 The final squad migration replaces broad active position codes with `GK`, `RB`, `LB`, `CB`, `RMF`, `LMF`, `CMF`, `AMF`, `DMF`, `LWF`, `RWF`, `SS`, and `CF`. Starter/substitute remains a separate field. A per-owner transaction lock plus trigger prevents concurrent requests from creating a twelfth active starter. Legacy overflow starters are retained as substitutes, not deleted. Permanent deletion is exposed only through `public.delete_squad_player(uuid)` and is refused when historical goal events still reference the player's UUID.
+
+## Squad safety review
+
+Apply `migrations/20261001062141_squad_safety_review.sql` after the detailed-position migration. It changes only the deletion function and adds a restrictive Storage DELETE policy; no application rows or stored objects are modified. Unmapped or expired sessions cannot delete a squad player. Historical UUID references and unresolved same-owner name snapshots block deletion. Referenced photo objects cannot be removed by owner/admin cleanup. The frontend keeps immutable photo URLs and reconciles ambiguous saves using the original player UUID; canceling an unconfirmed write retains the uploaded object rather than risking a broken saved photo. A complete XI still requires eleven active starters; individual edits remain saved as an explicitly incomplete squad until that count is reached.

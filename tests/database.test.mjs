@@ -97,6 +97,13 @@ create publication supabase_realtime;
  const upgradedSquad=(await db.query("select to_jsonb(s)-'updated_at'-'rating'-'shirt_number'-'photo_url'-'lineup_role'-'photo_path' as row,updated_at,lineup_role,photo_path from public.squad_players s where id=$1",[originalMember])).rows[0];
  assert.deepEqual(upgradedSquad.row,originalSquad);assert.equal(upgradedSquad.updated_at,null);assert.equal(upgradedSquad.lineup_role,'starter');assert.equal(upgradedSquad.photo_path,null);
  await db.exec(efootballMigration);await db.exec(efootballMigration);
+ const squadSafetyMigration=await fs.readFile(new URL('../supabase/migrations/20261001062141_squad_safety_review.sql',import.meta.url),'utf8');
+ const safetySnapshot=async()=>(await db.query("select jsonb_build_object('squads',(select jsonb_agg(to_jsonb(s) order by id) from public.squad_players s),'matches',(select jsonb_agg(to_jsonb(m) order by id) from public.matches m),'goals',(select jsonb_agg(to_jsonb(e) order by id) from public.match_goal_events e)) as data")).rows[0].data;
+ const beforeSafety=await safetySnapshot();
+ await db.exec(squadSafetyMigration);await db.exec(squadSafetyMigration);
+ assert.deepEqual(await safetySnapshot(),beforeSafety);
+ assert.equal((await db.query("select prosecdef from pg_proc where oid='public.delete_squad_player(uuid)'::regprocedure")).rows[0].prosecdef,false);
+ assert.equal((await db.query("select prosecdef from pg_proc where oid='private.delete_squad_player(uuid)'::regprocedure")).rows[0].prosecdef,true);
  const migratedPosition=(await db.query('select position,lineup_role from public.squad_players where id=$1',[originalMember])).rows[0];
  assert.equal(migratedPosition.position,'CB');assert.equal(migratedPosition.lineup_role,'starter');
  const imageBucket=(await db.query("select public,file_size_limit,allowed_mime_types from storage.buckets where id='squad-player-images'")).rows[0];
@@ -248,7 +255,7 @@ create publication supabase_realtime;
   await assert.rejects(as('Omar',"update public.squad_players set updated_at=now() where id=$1",[id]),/permission denied/);
   await assert.rejects(as('Omar',"update public.squad_players set owner='Mustafa' where id=$1",[id]),/permission denied/);
   await assert.rejects(as('Omar','delete from public.squad_players where id=$1',[id]),/permission denied/);
-  const before=await read();await db.exec(efootballMigration);assert.deepEqual(await read(),before);
+  const before=await read();await db.exec(efootballMigration);await db.exec(squadSafetyMigration);assert.deepEqual(await read(),before);
   await as('Omar','update public.squad_players set active=false where id=$1',[id]);assert.equal((await read()).active,false);
   assert.deepEqual((await db.query('select * from public.matches order by id')).rows,beforeMatches);
   assert.deepEqual((await db.query('select * from public.match_goal_events order by id')).rows,beforeGoals);
@@ -275,6 +282,10 @@ create publication supabase_realtime;
   await assert.rejects(as('Omar',"insert into storage.objects(bucket_id,name) values('squad-player-images',$1)",[`${omarPlayer}/${member}/${randomUUID()}.png`]),/row-level security/);
   const adminPath=`${omarPlayer}/${member}/${randomUUID()}.webp`;
   assert.equal((await as('Wael',"insert into storage.objects(bucket_id,name) values('squad-player-images',$1) returning name",[adminPath]))[0].name,adminPath);
+  await as('Omar','update public.squad_players set photo_path=$1 where id=$2',[ownPath,member]);
+  assert.equal((await as('Omar',"delete from storage.objects where name=$1 returning name",[ownPath])).length,0);
+  assert.equal((await as('Wael',"delete from storage.objects where name=$1 returning name",[ownPath])).length,0);
+  await as('Omar','update public.squad_players set photo_path=null where id=$1',[member]);
   assert.equal((await as('Omar',"delete from storage.objects where name=$1 returning name",[ownPath])).length,1);
   await db.query("delete from storage.objects where bucket_id='squad-player-images'");
   await db.query('delete from public.squad_players where id=$1',[member]);
@@ -292,12 +303,28 @@ create publication supabase_realtime;
  });
  await t.test('safe squad deletion removes unused rows but protects historical goal references',async()=>{
   const unused=(await as('Wael',"insert into public.squad_players(owner,name,position,lineup_role) values('Wael','Unused delete','SS','substitute') returning id"))[0].id;
+  accounts.Unmapped=randomUUID();
+  for(const caller of [null,'Unmapped','Expired','Omar']) {
+   await assert.rejects(as(caller,'select public.delete_squad_player($1)',[unused]),/insufficient_privilege|permission denied/i);
+  }
+  delete accounts.Unmapped;
+  assert.equal((await as('Wael','select id from public.squad_players where id=$1',[unused])).length,1);
   assert.equal((await as('Wael','select public.delete_squad_player($1) as path',[unused]))[0].path,null);
   assert.equal((await as('Wael','select id from public.squad_players where id=$1',[unused])).length,0);
 
   const scorer=(await as('Wael',"select id from public.squad_players where owner='Wael' and name='Zlatan'"))[0].id;
   await assert.rejects(as('Wael','select public.delete_squad_player($1)',[scorer]),/EFL_SQUAD_PLAYER_HISTORY/);
   await assert.rejects(as('Omar','select public.delete_squad_player($1)',[scorer]),/insufficient_privilege|permission denied/i);
+ });
+ await t.test('unresolved historical scorer and assist names block deletion only for their owner',async()=>{
+  const old=randomUUID();
+  await as('Wael',"insert into public.matches(id,player1,player2,goals1,goals2,date,season_id) values($1,'Wael','Omar',1,0,current_date,$2)",[old,season]);
+  await as('Wael',"insert into public.match_goal_events(match_id,owner,scorer,assist,minute) values($1,'Wael','Legacy scorer','Legacy assist',5)",[old]);
+  const members=await as('Wael',"insert into public.squad_players(owner,name,position,lineup_role) values('Wael','Legacy scorer','CF','substitute'),('Wael','Legacy assist','AMF','substitute'),('Omar','Legacy scorer','CF','substitute') returning id,owner");
+  for(const member of members.filter(p=>p.owner==='Wael')) await assert.rejects(as('Wael','select public.delete_squad_player($1)',[member.id]),/EFL_SQUAD_PLAYER_HISTORY/);
+  await as('Omar','select public.delete_squad_player($1)',[members.find(p=>p.owner==='Omar').id]);
+  await as('Wael','delete from public.matches where id=$1',[old]);
+  for(const member of members.filter(p=>p.owner==='Wael')) await as('Wael','select public.delete_squad_player($1)',[member.id]);
  });
  await t.test('quick scores update standings and later details replace the same match atomically',async()=>{
   const id=randomUUID();

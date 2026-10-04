@@ -29,6 +29,7 @@ export const SQUAD_ROLES = [
 ];
 const positionByKey = new Map(SQUAD_POSITIONS.map(position => [position.key, position]));
 const lineByKey = new Map(SQUAD_LINES.map(line => [line.key, line]));
+lineByKey.set('UNK', { key: 'UNK', label: 'غير محدد المركز', code: '—' });
 const nameOrder = new Intl.Collator('ar', { numeric: true, sensitivity: 'base' });
 
 const legacyPosition = { DF: 'CB', MF: 'CMF', FW: 'CF' };
@@ -132,10 +133,10 @@ function pitchSlot(position, players, canEdit, side) {
 function pitchLineSection(key, players, canEdit, collapsed) {
   const group = lineByKey.get(key);
   const members = players.filter(p => squadLine(p) === key);
-  const rows = PITCH_LAYOUT[key] || [];
+  const rows = (PITCH_LAYOUT[key] || []).filter(row => row.some(position => members.some(p => squadPosition(p) === position)));
   return `<details class="roster-group roster-pitch-line position-${key}" data-squad-group="${key}" ${collapsed.has(key) ? '' : 'open'}>
     <summary><span class="roster-group-heading"><span class="roster-dot" aria-hidden="true"></span>${group.label}<span class="roster-group-count">${members.length}</span></span><span class="roster-group-code" aria-hidden="true">${group.code}</span></summary>
-    <div class="roster-pitch-rows">${rows.map(row => `<div class="roster-pitch-row">${pitchSlot(row[0], members, canEdit, 'left')}${pitchSlot(row[1], members, canEdit, 'center')}${pitchSlot(row[2], members, canEdit, 'right')}</div>`).join('')}</div>
+    <div class="roster-pitch-rows">${rows.length ? rows.map(row => `<div class="roster-pitch-row">${pitchSlot(row[0], members, canEdit, 'left')}${pitchSlot(row[1], members, canEdit, 'center')}${pitchSlot(row[2], members, canEdit, 'right')}</div>`).join('') : '<p class="roster-group-empty">لا يوجد لاعبون في هذا الخط</p>'}</div>
   </details>`;
 }
 
@@ -148,8 +149,10 @@ function lineSection(key, players, canEdit, collapsed) {
   </details>`;
 }
 export function squadPlayersHTML(players, { view = 'pitch', sort = 'position', canEdit = false, collapsed = new Set() } = {}) {
+  players = uniqueSquad(players);
   if (view === 'list' && sort !== 'position') return `<div class="roster-players">${players.map(p => playerCard(p, canEdit)).join('')}</div>`;
-  if (view === 'list') return SQUAD_LINES.map(line => lineSection(line.key, players, canEdit, collapsed)).join('');
+  const unknown = players.filter(p => squadLine(p) === 'UNK');
+  if (view === 'list') return [...SQUAD_LINES.map(line => line.key), ...(unknown.length ? ['UNK'] : [])].map(key => lineSection(key, players, canEdit, collapsed)).join('');
 
   const starters = players.filter(p => squadRole(p) === 'starter');
   const substitutes = players.filter(p => squadRole(p) === 'substitute');
@@ -159,7 +162,8 @@ export function squadPlayersHTML(players, { view = 'pitch', sort = 'position', c
     <summary><span class="roster-group-heading"><span class="roster-dot" aria-hidden="true"></span>الاحتياط<span class="roster-group-count">${substitutes.length}</span></span><span class="roster-group-code" aria-hidden="true">SUB</span></summary>
     <div class="roster-players">${substitutes.length ? substitutes.sort((a,b)=>squadPositionMeta(a).order-squadPositionMeta(b).order).map(p => playerCard(p, canEdit)).join('') : '<p class="roster-group-empty">لا يوجد لاعبون احتياط</p>'}</div>
   </details>`;
-  return `<div class="roster-field" aria-label="ملعب التشكيلة">${field}</div>${reserve}`;
+  const unknownStarters = unknown.filter(p => squadRole(p) === 'starter');
+  return `<div class="roster-field" aria-label="ملعب التشكيلة">${field}</div>${unknownStarters.length ? lineSection('UNK', unknownStarters, canEdit, collapsed) : ''}${reserve}`;
 }
 export function squadArchiveHTML(players, canEdit) {
   return players.map(p => playerCard(p, canEdit)).join('');
