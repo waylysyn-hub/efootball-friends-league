@@ -7,10 +7,11 @@ async function safeLayout(page) {
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);
   const cards=await allPlayers(page).evaluateAll(elements=>elements.filter(el=>el.getClientRects().length).map(el=>{
     const box=el.getBoundingClientRect(),name=el.querySelector('strong');
-    const escaped=[...el.querySelectorAll('.roster-avatar, .roster-rating, .roster-position-code, .roster-player-actions button')].some(child=>{
-      const b=child.getBoundingClientRect();return b.left<box.left-1||b.right>box.right+1;
-    });
-    return {x:box.x,y:box.y,right:box.right,bottom:box.bottom,clipped:escaped||name.scrollHeight>name.clientHeight+1||name.scrollWidth>name.clientWidth+1};
+    const parts=[...el.querySelectorAll('strong, .roster-avatar, .roster-rating, .roster-number, .roster-position-code, .roster-role-badge, .roster-player-actions button')]
+      .filter(child=>child.getClientRects().length).map(child=>child.getBoundingClientRect());
+    const escaped=parts.some(b=>b.left<box.left-1||b.right>box.right+1||b.top<box.top-1||b.bottom>box.bottom+1);
+    const overlap=parts.some((a,i)=>parts.slice(i+1).some(b=>a.right>b.left+1&&b.right>a.left+1&&a.bottom>b.top+1&&b.bottom>a.top+1));
+    return {x:box.x,y:box.y,right:box.right,bottom:box.bottom,clipped:escaped||overlap||name.scrollHeight>name.clientHeight+1||name.scrollWidth>name.clientWidth+1};
   }));
   expect(cards.every(card=>!card.clipped)).toBe(true);
   for(let i=0;i<cards.length;i++) for(let j=i+1;j<cards.length;j++) {
@@ -55,6 +56,7 @@ test('editing controls, two starting keepers and light theme stay contained',asy
     const client=window.EFLClient.get();
     client.db.squad_players.find(p=>p.id==='qa-roster-10').lineup_role='substitute';
     client.db.squad_players.find(p=>p.id==='qa-roster-11').lineup_role='starter';
+    Object.assign(client.db.squad_players.find(p=>p.id==='qa-roster-0'),{rating:103.5,shirt_number:99});
     await window.League.refresh();
   });
   await expect(page.locator('[data-pitch-position="GK"] [data-squad-player]')).toHaveCount(2);
