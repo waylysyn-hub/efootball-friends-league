@@ -11,7 +11,7 @@ async function safeLayout(page) {
       .filter(child=>child.getClientRects().length).map(child=>({label:child.className||child.tagName,...child.getBoundingClientRect().toJSON()}));
     const escaped=parts.filter(b=>b.left<box.left-1||b.right>box.right+1||b.top<box.top-1||b.bottom>box.bottom+1).map(b=>b.label);
     const overlap=parts.flatMap((a,i)=>parts.slice(i+1).filter(b=>a.right>b.left+1&&b.right>a.left+1&&a.bottom>b.top+1&&b.bottom>a.top+1).map(b=>[a.label,b.label]));
-    return {id:el.dataset.squadPlayer,x:box.x,y:box.y,right:box.right,bottom:box.bottom,escaped,overlap,clipped:escaped.length>0||overlap.length>0||name.scrollHeight>name.clientHeight+1||name.scrollWidth>name.clientWidth+1};
+    return {id:el.dataset.squadPlayer,x:box.x,y:box.y,right:box.right,bottom:box.bottom,escaped,overlap,nameSize:[name.clientWidth,name.scrollWidth,name.clientHeight,name.scrollHeight],clipped:escaped.length>0||overlap.length>0||name.scrollHeight>name.clientHeight+1||name.scrollWidth>name.clientWidth+1};
   }));
   const clipped=cards.filter(card=>card.clipped);
   if(clipped.length) await page.screenshot({path:test.info().outputPath('squad-layout.png'),fullPage:true});

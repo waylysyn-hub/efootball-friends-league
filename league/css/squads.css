@@ -79,7 +79,7 @@
 .roster-avatar.has-photo > span { visibility: hidden; }
 .roster-avatar [hidden] { display: none; }
 .roster-player-copy { min-width: 0; width: 100%; display: grid; gap: 5px; }
-.roster-player-copy strong { color: var(--text); font-size: .85rem; line-height: 1.6; font-weight: 700; overflow-wrap: anywhere; }
+.roster-player-copy strong { color: var(--text); font-size: .85rem; line-height: 1.85; font-weight: 700; overflow-wrap: anywhere; }
 .roster-player-position { color: var(--muted); font-size: .65rem; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; justify-content: center; line-height: 1.6; }
 .roster-position-code { display: inline-grid; place-items: center; min-width: 30px; min-height: 22px; padding: 1px 5px; border: 1px solid color-mix(in srgb, var(--position-color) 30%, var(--border)); border-radius: 5px; background: color-mix(in srgb, var(--position-color) 10%, transparent); color: var(--position-color); font-size: .63rem; font-weight: 800; letter-spacing: .03em; }
 .roster-number { grid-column: 3; grid-row: 1; color: var(--muted); font-size: .64rem; font-weight: 650; white-space: nowrap; }
