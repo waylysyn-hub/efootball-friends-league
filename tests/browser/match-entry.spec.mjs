@@ -16,7 +16,7 @@ async function fit(page, selector) {
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);
   const box=await page.locator(selector).boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x+box.width).toBeLessThanOrEqual(page.viewportSize().width+1);
-  expect(await page.locator(selector+' button:visible').evaluateAll(buttons=>buttons.every(button=>button.getBoundingClientRect().height>=44))).toBe(true);
+  expect(await page.locator(selector+' button:visible').evaluateAll(buttons=>buttons.filter(button=>button.getBoundingClientRect().height<44).map(button=>({label:button.textContent,height:button.getBoundingClientRect().height,layoutHeight:button.offsetHeight})))).toEqual([]);
 }
 test('quick result review, success, history and later edit fit at every entry viewport',async({page},info)=>{
   const errors=[];page.on('pageerror',error=>errors.push(error.message));

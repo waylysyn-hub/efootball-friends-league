@@ -8,12 +8,14 @@ async function safeLayout(page) {
   const cards=await allPlayers(page).evaluateAll(elements=>elements.filter(el=>el.getClientRects().length).map(el=>{
     const box=el.getBoundingClientRect(),name=el.querySelector('strong');
     const parts=[...el.querySelectorAll('strong, .roster-avatar, .roster-rating, .roster-number, .roster-position-code, .roster-role-badge, .roster-player-actions button')]
-      .filter(child=>child.getClientRects().length).map(child=>child.getBoundingClientRect());
-    const escaped=parts.some(b=>b.left<box.left-1||b.right>box.right+1||b.top<box.top-1||b.bottom>box.bottom+1);
-    const overlap=parts.some((a,i)=>parts.slice(i+1).some(b=>a.right>b.left+1&&b.right>a.left+1&&a.bottom>b.top+1&&b.bottom>a.top+1));
-    return {x:box.x,y:box.y,right:box.right,bottom:box.bottom,clipped:escaped||overlap||name.scrollHeight>name.clientHeight+1||name.scrollWidth>name.clientWidth+1};
+      .filter(child=>child.getClientRects().length).map(child=>({label:child.className||child.tagName,...child.getBoundingClientRect().toJSON()}));
+    const escaped=parts.filter(b=>b.left<box.left-1||b.right>box.right+1||b.top<box.top-1||b.bottom>box.bottom+1).map(b=>b.label);
+    const overlap=parts.flatMap((a,i)=>parts.slice(i+1).filter(b=>a.right>b.left+1&&b.right>a.left+1&&a.bottom>b.top+1&&b.bottom>a.top+1).map(b=>[a.label,b.label]));
+    return {id:el.dataset.squadPlayer,x:box.x,y:box.y,right:box.right,bottom:box.bottom,escaped,overlap,clipped:escaped.length>0||overlap.length>0||name.scrollHeight>name.clientHeight+1||name.scrollWidth>name.clientWidth+1};
   }));
-  expect(cards.every(card=>!card.clipped)).toBe(true);
+  const clipped=cards.filter(card=>card.clipped);
+  if(clipped.length) await page.screenshot({path:test.info().outputPath('squad-layout.png'),fullPage:true});
+  expect(clipped).toEqual([]);
   for(let i=0;i<cards.length;i++) for(let j=i+1;j<cards.length;j++) {
     const a=cards[i],b=cards[j];expect(a.right<=b.x+1||b.right<=a.x+1||a.bottom<=b.y+1||b.bottom<=a.y+1).toBe(true);
   }
