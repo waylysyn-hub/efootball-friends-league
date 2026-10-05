@@ -57,6 +57,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          name: squad-screenshots
+          path: test-results/squads-*/**/*.png
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
           name: browser-checks
           path: |
             playwright-report/
