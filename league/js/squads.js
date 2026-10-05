@@ -4,7 +4,7 @@ import { isAdmin } from './admin.js';
 import { getPlayers } from './profiles.js';
 import { collectGoalEventsFromForm, renderGoalEventsForm } from './goal-events.js';
 import { closeDialog, errorMessage, escapeHtml as esc, isBusy, openDialog, showError, toast, withBusy } from '../../shared/ui.js';
-import { SQUAD_GROUPS, SQUAD_POSITIONS, SQUAD_ROLES, bindSquadPhotos, filterSquadMembers, safeSquadPhoto, squadArchiveHTML, squadInitials, squadPlayersHTML, squadSummary, uniqueSquad } from './squad-view.js';
+import { SQUAD_GROUPS, SQUAD_POSITIONS, SQUAD_ROLES, bindSquadPhotos, filterSquadMembers, safeSquadPhoto, squadArchiveHTML, squadInitials, squadLine, squadPlayersHTML, squadRole, squadSummary, uniqueSquad } from './squad-view.js';
 import { normalizeExternalSquadPhotoUrl, removeUnusedSquadPhoto, uploadSquadPhoto, validateSquadPhotoFile, verifyExternalSquadPhotoUrl } from './squad-images.js';
 
 export const POSITIONS = Object.fromEntries(SQUAD_POSITIONS.map(position => [position.key, position.label]));
@@ -28,7 +28,7 @@ export function renderSquads() {
   document.getElementById('editSquad').textContent = presentation.editing && canEdit ? 'إنهاء التعديل' : 'تعديل التشكيلة';
   document.getElementById('squadTitle').textContent = `تشكيلة ${displayName(owner || '')}`;
   document.getElementById('squadPermission').textContent = canEdit
-    ? 'اختر 11 لاعبًا أساسيًا بالضبط، وأضف أي عدد من الاحتياط. إبعاد لاعب لا يغيّر المباريات السابقة.'
+    ? 'استخدم «إلى الاحتياط» لإبقاء اللاعب على الدكة، و«خارج التشكيلة» لاستبعاده من الأساسي والاحتياط. اختر 11 أساسيًا بالضبط؛ السجل السابق محفوظ.'
     : 'يمكنك مشاهدة هذه التشكيلة. تعديلها متاح لصاحبها ومدير الدوري.';
   const container = document.getElementById('squadPlayers');
   document.getElementById('squadSummary').hidden = !state.squadsReady;
@@ -70,6 +70,7 @@ export function renderSquads() {
 function bindMemberActions(container, owner) {
   container.querySelectorAll('[data-squad-edit]').forEach(button => { button.onclick = () => openSquadPlayer(owner, button.dataset.squadEdit); });
   container.querySelectorAll('[data-squad-toggle]').forEach(button => { button.onclick = () => toggleSquadPlayer(button.dataset.squadToggle, button); });
+  container.querySelectorAll('[data-squad-lineup]').forEach(button => { button.onclick = () => setSquadPlayerRole(button.dataset.squadLineup, button.dataset.lineupRole, button); });
   container.querySelectorAll('[data-squad-delete]').forEach(button => { button.onclick = () => requestDeleteSquadPlayer(button.dataset.squadDelete, button); });
   bindSquadPhotos(container);
 }
@@ -79,9 +80,15 @@ function renderSquadMembers(active = getSquad(state.selectedSquad), canEdit = ca
   document.getElementById('squadResults').textContent = `${visible.length} من ${active.length} لاعب`;
   container.innerHTML = !active.length ? `<div class="roster-empty"><span aria-hidden="true">＋</span><h3>لم تتم إضافة لاعبين بعد</h3><p>ابدأ ببناء فريقك، وسيأخذ كل لاعب مكانه هنا.</p>${canEdit ? '<button class="btn-primary" type="button" data-squad-add>إضافة لاعب</button>' : ''}</div>`
     : !visible.length ? '<div class="roster-empty"><h3>لا يوجد لاعب يطابق البحث</h3><button class="btn-secondary" type="button" data-squad-reset>مسح البحث والفلترة</button></div>'
-      : squadPlayersHTML(visible, { view: presentation.view, sort: presentation.sort, canEdit: canEdit && presentation.editing, collapsed: presentation.collapsed });
+      : squadPlayersHTML(visible, { view: presentation.view, sort: presentation.sort, canEdit: canEdit && presentation.editing, canManage: canEdit, hasArchived: state.db.squads.some(p => p.owner === state.selectedSquad && !p.active), collapsed: presentation.collapsed });
   container.querySelector('[data-squad-add]')?.addEventListener('click', () => openSquadPlayer());
   container.querySelector('[data-squad-reset]')?.addEventListener('click', resetSquadFilters);
+  container.querySelector('[data-squad-show-archive]')?.addEventListener('click', () => {
+    const archive = document.getElementById('squadArchive');
+    archive.open = true;
+    archive.querySelector('summary').focus();
+    archive.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  });
   container.querySelectorAll('[data-squad-group], [data-squad-role-group]').forEach(group => {
     group.addEventListener('toggle', () => {
       if (!group.isConnected) return;
@@ -359,6 +366,50 @@ export async function saveSquadPlayer() {
   }, 'جارٍ الحفظ…');
 }
 
+export async function setSquadPlayerRole(id, lineupRole, button) {
+  if (isBusy('save-squad-player')) return;
+  const member = state.db.squads.find(p => p.id === id);
+  if (!member || !state.squadsReady || !canManageSquad(member.owner) || !SQUAD_ROLES.some(role => role.key === lineupRole)) return;
+  if (!POSITIONS[member.position]) {
+    openSquadPlayer(member.owner, id);
+    document.getElementById('squadPlayerRole').value = lineupRole;
+    return toast('حدّد مركز اللاعب واحفظه، ثم انقله إلى الأساسي أو الاحتياط.', 'error');
+  }
+  const starters = state.db.squads.filter(p => p.owner === member.owner && p.active && p.id !== id && squadRole(p) === 'starter').length;
+  if (lineupRole === 'starter' && starters >= 11) return toast('الأساسيون مكتملون 11/11. انقل لاعبًا إلى الاحتياط أولًا.', 'error');
+  const session = state.profile;
+  const targetLabel = lineupRole === 'substitute' ? 'الاحتياط' : 'التشكيلة الأساسية';
+  const isCurrent = () => !!session && state.profile === session && canManageSquad(member.owner);
+  return withBusy('squad-player-' + id, button, async () => {
+    try {
+      // A bench player remains active. Update the same identity without touching photos or history.
+      const { data, error } = await sb.from('squad_players').update({ lineup_role: lineupRole, active: true }).eq('id', id).eq('owner', member.owner).select('*');
+      if (!isCurrent()) return;
+      if (error) throw error;
+      if (!data?.length) throw { code: '42501' };
+      try {
+        await reloadSquads();
+        if (!isCurrent()) return;
+        if (state.page === 'squads' && state.selectedSquad === member.owner) {
+          presentation.collapsed.delete('substitute');
+          presentation.collapsed.delete(squadLine(member));
+          resetSquadFilters();
+          const card = [...document.querySelectorAll('#squadPlayers [data-squad-player]')].find(el => el.dataset.squadPlayer === id);
+          card?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+        }
+        toast(`تم نقل «${member.name}» إلى ${targetLabel}.`);
+      } catch {
+        if (isCurrent()) toast(`تم النقل إلى ${targetLabel}، لكن تعذّر تحديث القائمة. حدّث الصفحة لعرض التغيير.`, 'error');
+      }
+    } catch (error) {
+      if (!isCurrent()) return;
+      toast(/EFL_STARTER_LIMIT/.test(String(error?.message || ''))
+        ? 'الأساسيون مكتملون 11/11. انقل لاعبًا إلى الاحتياط أولًا.'
+        : errorMessage(error, 'تعذّر نقل اللاعب. حاول مجددًا.'), 'error');
+    }
+  }, 'جارٍ النقل…');
+}
+
 export async function toggleSquadPlayer(id, button) {
   const member = state.db.squads.find(p => p.id === id);
   if (!member || !canManageSquad(member.owner)) return;
@@ -377,7 +428,7 @@ export async function toggleSquadPlayer(id, button) {
       throw error;
     }
     if (!data?.length) throw { code: '42501' };
-    try { await reloadSquads(); toast(member.active ? 'تم إبعاد اللاعب. سجله السابق محفوظ.' : 'تمت إعادة اللاعب للتشكيلة.'); }
+    try { await reloadSquads(); toast(member.active ? 'تم نقل اللاعب خارج التشكيلة؛ لن يظهر ضمن الأساسي أو الاحتياط. سجله السابق محفوظ.' : 'تمت إعادة اللاعب للتشكيلة.'); }
     catch { toast('تم حفظ التغيير. اضغط تحديث لتحميل التشكيلة الجديدة.', 'error'); }
   }, 'جارٍ الحفظ…');
 }

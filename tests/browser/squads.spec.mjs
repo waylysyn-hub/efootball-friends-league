@@ -77,7 +77,7 @@ test('add second keeper, reject duplicate, edit into midfield, archive and refet
   await page.locator('#editSquad').click();const keeper=allPlayers(page).filter({hasText:'حارس اختبار ثانٍ باسم طويل'});
   await keeper.getByRole('button',{name:'تعديل حارس اختبار ثانٍ باسم طويل',exact:true}).click();await page.locator('#squadPlayerPosition').selectOption('AMF');await page.locator('#saveSquadPlayer').click();await expect(page.locator('#squadPlayerModal')).toBeHidden();
   await expect(keeper).toHaveAttribute('data-squad-position','AMF');
-  await keeper.getByRole('button',{name:'إبعاد حارس اختبار ثانٍ باسم طويل',exact:true}).click();await expect(allPlayers(page)).toHaveCount(25);
+  await keeper.getByRole('button',{name:'نقل حارس اختبار ثانٍ باسم طويل خارج التشكيلة',exact:true}).click();await expect(allPlayers(page)).toHaveCount(25);
   await page.reload();await expect(allPlayers(page)).toHaveCount(25);await page.locator('#squadArchive summary').click();await expect(page.locator('#squadArchivePlayers')).toContainText('حارس اختبار ثانٍ باسم طويل');
   await page.locator('#squadView-list').click();await expect(allPlayers(page)).toHaveCount(25);await safeLayout(page);
   await page.screenshot({path:testInfo.outputPath('squad-edited.png'),fullPage:true});
@@ -197,4 +197,40 @@ test('starting XI stays exactly eleven and unused players can be deleted',async(
   await page.locator('#editSquad').click();
   await expect(page.locator('#editSquad')).toHaveAttribute('aria-pressed','true');
   await expect(page.locator('#toast')).toContainText('11 لاعبًا أساسيًا');
+});
+
+test('bench controls restore archived players, swap starters and persist the same identities',async({page},testInfo)=>{
+  await page.goto('/league/index.html?fixture=squads#squads');await expect(allPlayers(page)).toHaveCount(25);
+  await page.evaluate(async()=>{
+    const client=window.EFLClient.get();
+    client.db.squad_players.filter(p=>p.lineup_role==='substitute').forEach(p=>{p.active=false;});
+    client.db.squad_players.find(p=>p.id==='qa-roster-11').lineup_role='starter';
+    await window.League.refresh();
+  });
+  const bench=page.locator('[data-squad-role-group="substitute"]');
+  await expect(bench.locator('[data-squad-player]')).toHaveCount(0);
+  await page.getByRole('button',{name:'اختيار من خارج التشكيلة'}).click();
+  const archived=page.locator('#squadArchivePlayers [data-squad-player="qa-roster-11"]');
+  await archived.locator('[data-lineup-role="substitute"]').click();
+  await expect(bench.locator('[data-squad-player="qa-roster-11"]')).toHaveCount(1);
+  await expect(page.locator('[data-squad-stat="starter"] strong')).toHaveText('11/11');
+  await expect(allPlayers(page)).toHaveCount(12);await expect(archived).toHaveCount(0);
+  await page.reload();await expect(allPlayers(page)).toHaveCount(12);
+  await expect(bench.locator('[data-squad-player="qa-roster-11"]')).toHaveCount(1);
+  await page.locator('#editSquad').click();
+  await bench.locator('[data-squad-lineup="qa-roster-11"]').click();
+  await expect(page.locator('#toast')).toContainText('11/11');
+  await expect(page.locator('[data-squad-stat="starter"] strong')).toHaveText('11/11');
+  await page.locator('#squadPlayers [data-squad-lineup="qa-roster-0"]').click();
+  await expect(bench.locator('[data-squad-player]')).toHaveCount(2);
+  await bench.locator('[data-squad-lineup="qa-roster-11"]').click();
+  await expect(page.locator('[data-pitch-position="GK"] [data-squad-player="qa-roster-11"]')).toHaveCount(1);
+  await expect(bench.locator('[data-squad-player="qa-roster-0"]')).toHaveCount(1);
+  await expect(page.locator('[data-squad-stat="starter"] strong')).toHaveText('11/11');
+  const pitch=await identities(page);expect(new Set(pitch).size).toBe(12);await safeLayout(page);
+  await page.screenshot({path:testInfo.outputPath('squad-bench-transfer.png'),fullPage:true});
+  await page.locator('#squadView-list').click();expect(await identities(page)).toEqual(pitch);await safeLayout(page);
+  await page.reload();await expect(allPlayers(page)).toHaveCount(12);
+  await expect(page.locator('[data-squad-player="qa-roster-0"]')).toHaveAttribute('data-squad-role','substitute');
+  await expect(page.locator('[data-squad-player="qa-roster-11"]')).toHaveAttribute('data-squad-role','starter');
 });

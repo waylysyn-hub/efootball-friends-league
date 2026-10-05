@@ -98,6 +98,7 @@ function playerCard(player, canEdit) {
   const photo = safeSquadPhoto(player.photo_url), rating = squadRating(player);
   const number = player.shirt_number;
   const hasNumber = number !== null && number !== undefined && number !== '' && Number.isInteger(Number(number)) && Number(number) >= 0 && Number(number) <= 99;
+  const roleAction = target => `<button class="btn-sm" data-squad-lineup="${esc(player.id)}" data-lineup-role="${target}" type="button" aria-label="نقل ${esc(player.name)} إلى ${target === 'substitute' ? 'الاحتياط' : 'الأساسي'}">إلى ${target === 'substitute' ? 'الاحتياط' : 'الأساسي'}</button>`;
   return `<article class="roster-player position-${line.key} position-code-${position.key}${role === 'substitute' ? ' roster-player-substitute' : ''}${player.active ? '' : ' roster-player-archived'}" data-squad-player="${esc(player.id)}" data-squad-role="${role}" data-squad-position="${position.key}">
     <div class="roster-player-top">
       <div class="roster-avatar"><span aria-hidden="true">${esc(squadInitials(player.name))}</span>${photo ? `<img src="${esc(photo)}" alt="" decoding="async" referrerpolicy="no-referrer">` : ''}</div>
@@ -105,8 +106,8 @@ function playerCard(player, canEdit) {
       ${rating !== null ? `<span class="roster-rating" aria-label="التقييم ${rating}"><span aria-hidden="true">★</span><bdi>${rating}</bdi></span>` : ''}
     </div>
     <div class="roster-player-copy"><strong dir="auto">${esc(player.name)}</strong><span class="roster-player-position"><bdi class="roster-position-code">${position.key}</bdi><span>${esc(position.label)}</span></span></div>
-    ${role === 'substitute' ? '<span class="roster-role-badge">احتياط</span>' : ''}
-    ${canEdit ? `<div class="roster-player-actions"><button class="btn-sm" data-squad-edit="${esc(player.id)}" type="button" aria-label="تعديل ${esc(player.name)}">تعديل</button><button class="btn-sm" data-squad-toggle="${esc(player.id)}" type="button" aria-label="${player.active ? 'إبعاد' : 'إعادة'} ${esc(player.name)}">${player.active ? 'إبعاد' : 'إعادة'}</button><button class="btn-sm btn-danger" data-squad-delete="${esc(player.id)}" type="button" aria-label="حذف ${esc(player.name)}">حذف</button></div>` : ''}
+    ${!player.active ? '<span class="roster-role-badge">خارج التشكيلة</span>' : role === 'substitute' ? '<span class="roster-role-badge">احتياط</span>' : ''}
+    ${canEdit ? `<div class="roster-player-actions">${roleAction(player.active && role === 'substitute' ? 'starter' : 'substitute')}<button class="btn-sm" data-squad-edit="${esc(player.id)}" type="button" aria-label="تعديل ${esc(player.name)}">تعديل</button>${player.active ? `<button class="btn-sm" data-squad-toggle="${esc(player.id)}" type="button" aria-label="نقل ${esc(player.name)} خارج التشكيلة" title="إخراج اللاعب من الأساسي والاحتياط مع حفظ سجله">خارج التشكيلة</button>` : roleAction('starter')}<button class="btn-sm btn-danger" data-squad-delete="${esc(player.id)}" type="button" aria-label="حذف ${esc(player.name)}">حذف</button></div>` : ''}
   </article>`;
 }
 const PITCH_LAYOUT = {
@@ -151,7 +152,7 @@ function lineSection(key, players, canEdit, collapsed) {
     <div class="roster-players">${members.length ? members.map(p => playerCard(p, canEdit)).join('') : '<p class="roster-group-empty">لا يوجد لاعبون في هذا الخط</p>'}</div>
   </details>`;
 }
-export function squadPlayersHTML(players, { view = 'pitch', sort = 'position', canEdit = false, collapsed = new Set() } = {}) {
+export function squadPlayersHTML(players, { view = 'pitch', sort = 'position', canEdit = false, canManage = canEdit, hasArchived = false, collapsed = new Set() } = {}) {
   players = uniqueSquad(players);
   if (view === 'list' && sort !== 'position') return `<div class="roster-players">${players.map(p => playerCard(p, canEdit)).join('')}</div>`;
   const unknown = players.filter(p => squadLine(p) === 'UNK');
@@ -163,7 +164,7 @@ export function squadPlayersHTML(players, { view = 'pitch', sort = 'position', c
   const reserveKey = 'substitute';
   const reserve = `<details class="roster-group role-substitute" data-squad-role-group="substitute" ${collapsed.has(reserveKey) ? '' : 'open'}>
     <summary><span class="roster-group-heading"><span class="roster-dot" aria-hidden="true"></span>الاحتياط<span class="roster-group-count">${substitutes.length}</span></span><span class="roster-group-code" aria-hidden="true">SUB</span></summary>
-    <div class="roster-players">${substitutes.length ? substitutes.sort((a,b)=>squadPositionMeta(a).order-squadPositionMeta(b).order).map(p => playerCard(p, canEdit)).join('') : '<p class="roster-group-empty">لا يوجد لاعبون احتياط</p>'}</div>
+    <div class="roster-players">${substitutes.length ? substitutes.sort((a,b)=>squadPositionMeta(a).order-squadPositionMeta(b).order).map(p => playerCard(p, canEdit)).join('') : `<div class="roster-bench-empty"><p>لا يوجد لاعبون احتياط</p>${canManage ? '<small>استخدم «إلى الاحتياط» من بطاقة اللاعب في وضع تعديل التشكيلة.</small>' : ''}${canManage && hasArchived ? '<button class="btn-secondary" type="button" data-squad-show-archive>اختيار من خارج التشكيلة</button>' : ''}</div>`}</div>
   </details>`;
   const unknownStarters = unknown.filter(p => squadRole(p) === 'starter');
   return `<div class="roster-pitch-layout"><section class="roster-starters" aria-label="اللاعبون الأساسيون">
