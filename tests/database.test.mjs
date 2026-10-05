@@ -235,6 +235,12 @@ create publication supabase_realtime;
     );
     await as('Abdul Qader',"insert into public.squad_players(owner,name,position,lineup_role) values('Abdul Qader','Reserve OK','CF','substitute')");
     const detail=(await as('Abdul Qader',"select id from public.squad_players where owner='Abdul Qader' and name like 'Detailed %' order by name limit 1"))[0].id;
+    const reserve=(await as('Abdul Qader',"select id from public.squad_players where owner='Abdul Qader' and name='Reserve OK'"))[0].id;
+    await as('Abdul Qader',"update public.squad_players set active=false,lineup_role='starter' where id=$1",[reserve]);
+    await as('Abdul Qader',"update public.squad_players set active=true,lineup_role='substitute' where id=$1",[reserve]);
+    assert.equal((await as('Abdul Qader','select active from public.squad_players where id=$1',[reserve]))[0].active,true);
+    assert.deepEqual(await as('Mustafa',"update public.squad_players set active=true,lineup_role='substitute' where id=$1 returning id",[reserve]),[]);
+    await assert.rejects(as('Abdul Qader',"update public.squad_players set active=true,lineup_role='starter' where id=$1",[reserve]),/EFL_STARTER_LIMIT/);
     await assert.rejects(as('Abdul Qader',"update public.squad_players set position='DF' where id=$1",[detail]),/check constraint/i);
   } finally {
     await db.query("delete from public.squad_players where owner='Abdul Qader' and (name like 'Detailed %' or name in ('Reserve OK','Starter 12'))");

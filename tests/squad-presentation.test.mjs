@@ -252,3 +252,69 @@ test('immutable photo upload retries return the same public URL and referenced p
   await images.removeUnusedSquadPhoto(client,first.path);assert.equal(client.calls.filter(c=>c.storage==='remove').length,0);
   client.fail=null;await images.removeUnusedSquadPhoto(client,first.path);assert.equal(client.calls.filter(c=>c.storage==='remove').length,1);
 });
+
+test('bench transfer keeps the same active player and reveals the destination after filtering',async t=>{
+  const {window:w,document:d,client}=await setup(t);
+  const before=structuredClone(client.db.squad_players.find(p=>p.id==='qa-roster-0'));
+  const history=JSON.stringify([client.db.matches,client.db.match_goal_events]);
+  w.League.editSquad();
+  const bench=d.querySelector('[data-squad-role-group="substitute"]');bench.open=false;bench.dispatchEvent(new w.Event('toggle'));
+  d.getElementById('squadRoleFilter').value='starter';w.League.filterSquad();
+  const button=d.querySelector('[data-squad-lineup="qa-roster-0"]');
+  assert.equal(button.dataset.lineupRole,'substitute');await button.onclick();
+  const saved=client.db.squad_players.find(p=>p.id===before.id);
+  assert.equal(saved.active,true);assert.equal(saved.lineup_role,'substitute');
+  for(const key of ['id','owner','name','position','shirt_number','rating','photo_url'])assert.equal(saved[key],before[key]);
+  assert.equal(client.db.squad_players.length,25);
+  assert.equal(d.getElementById('squadRoleFilter').value,'');
+  assert.equal(d.querySelector('[data-squad-role-group="substitute"]').open,true);
+  assert.ok(d.querySelector('[data-squad-role-group="substitute"] [data-squad-player="qa-roster-0"]'));
+  assert.equal(d.querySelector('[data-squad-stat="starter"] strong').textContent,'10/11');
+  await w.League.setSquadPlayerRole(before.id,'starter');
+  assert.equal(d.querySelector('[data-squad-stat="starter"] strong').textContent,'11/11');
+  assert.ok(d.querySelector('[data-pitch-position="GK"] [data-squad-player="qa-roster-0"]'));
+  await w.League.refresh();assert.equal(ids(d).filter(id=>id===before.id).length,1);
+  assert.equal(JSON.stringify([client.db.matches,client.db.match_goal_events]),history);
+});
+
+test('an empty bench offers archived players and restores them without exceeding eleven starters',async t=>{
+  const {window:w,document:d,client}=await setup(t);
+  client.db.squad_players.filter(p=>p.lineup_role==='substitute').forEach(p=>{p.active=false;});
+  client.db.squad_players.find(p=>p.id==='qa-roster-11').lineup_role='starter';
+  await w.League.refresh();
+  assert.equal(d.querySelector('[data-squad-stat="substitute"] strong').textContent,'0');
+  d.querySelector('[data-squad-show-archive]').click();assert.equal(d.getElementById('squadArchive').open,true);
+  const button=d.querySelector('#squadArchivePlayers [data-squad-lineup="qa-roster-11"][data-lineup-role="substitute"]');
+  await button.onclick();
+  assert.equal(d.querySelector('[data-squad-stat="starter"] strong').textContent,'11/11');
+  assert.equal(d.querySelector('[data-squad-stat="substitute"] strong').textContent,'1');
+  assert.equal(d.querySelectorAll('#squadArchivePlayers [data-squad-player="qa-roster-11"]').length,0);
+  assert.equal(client.db.squad_players.find(p=>p.id==='qa-roster-11').active,true);
+  await w.League.setSquadPlayerRole('qa-roster-11','starter');
+  assert.match(d.getElementById('toast').textContent,/11\/11/);
+  assert.equal(client.db.squad_players.find(p=>p.id==='qa-roster-11').lineup_role,'substitute');
+  await w.League.refresh();w.League.setSquadView('list');
+  assert.equal(ids(d).filter(id=>id==='qa-roster-11').length,1);
+});
+
+test('bench transfers reject unauthorized changes and recover from errors without duplicate writes',async t=>{
+  const app=await setup(t),{window:w,document:d,client}=app;
+  const updates=()=>client.calls.filter(c=>c.table==='squad_players'&&c.operation==='update');
+  client.fail='update';await w.League.setSquadPlayerRole('qa-roster-0','substitute');
+  assert.equal(client.db.squad_players[0].lineup_role,'starter');
+  assert.match(d.getElementById('toast').textContent,/الخادم/);
+  client.fail=null;let release,started;
+  const waiting=new Promise(resolve=>{started=resolve;});
+  client.hold=async call=>{if(call.table==='squad_players'&&call.operation==='update'){started();await new Promise(resolve=>{release=resolve;});}};
+  const before=updates().length;
+  const saving=w.League.setSquadPlayerRole('qa-roster-0','substitute');await waiting;
+  await w.League.setSquadPlayerRole('qa-roster-0','substitute');
+  assert.equal(updates().length,before+1);release();await saving;
+  assert.equal(client.db.squad_players[0].active,true);assert.equal(client.db.squad_players[0].lineup_role,'substitute');
+  client.hold=null;
+  app.module('league/js/state.js').state.user='Omar';
+  app.module('league/js/state.js').state.profile={name:'Omar'};
+  const denied=updates().length;await w.League.setSquadPlayerRole('qa-roster-0','starter');
+  assert.equal(updates().length,denied);
+  assert.equal(client.calls.some(c=>c.table==='squad_players'&&c.operation==='insert'),false);
+});

@@ -88,8 +88,12 @@
 .roster-role-badge { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2); color: var(--muted); font-size: .65rem; }
 #page-squads .roster-player-substitute { --position-color: var(--roster-gray); }
 .role-substitute { padding: 10px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-2); }
-.roster-player-actions { display: flex; flex-wrap: wrap; gap: 5px; width: 100%; margin-top: auto; justify-content: center; padding-top: 8px; border-top: 1px solid var(--border); }
-.roster-player-actions .btn-sm { font-size: .7rem; min-height: 44px; padding: 6px 7px; }
+.roster-player-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; width: 100%; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border); }
+.roster-player-actions .btn-sm { font-size: .7rem; min-height: 44px; padding: 6px 4px; overflow-wrap: anywhere; }
+.roster-player-actions [data-squad-lineup] { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); background: var(--primary-soft); }
+.roster-bench-empty { grid-column: 1 / -1; padding: 8px; text-align: center; color: var(--muted); font-size: .78rem; line-height: 1.9; }
+.roster-bench-empty small { display: block; margin-top: 8px; font-size: .7rem; }
+.roster-bench-empty button { width: 100%; margin-top: 12px; font-size: .72rem; }
 .roster-player-actions .btn-danger { border-color: color-mix(in srgb, #d96060 45%, var(--border)); color: var(--danger); background: #d960600d; }
 .roster-player-actions .btn-danger:hover { background: #d9606018; }
 .roster-group-empty { color: var(--muted); font-size: .75rem; text-align: center; padding: 6px; }
