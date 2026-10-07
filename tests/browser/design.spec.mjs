@@ -10,6 +10,8 @@ async function fits(page) {
 }
 async function picture(page, info, name) {
   if ([1366, 390, 320].includes(page.viewportSize().width)) {
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    await fits(page);
     await page.screenshot({ path: info.outputPath(name + '.png'), fullPage: true });
   }
 }
@@ -24,8 +26,15 @@ async function contrast(page, foreground, background) {
       });
       return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722;
     };
-    const a = luminance(color(foreground, 'color')), b = luminance(color(background, 'backgroundColor'));
-    return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+    const a = luminance(color(foreground, 'color'));
+    // A gradient has a transparent backgroundColor. Measure its visible color
+    // stops instead of treating that transparency as a black painted surface.
+    const style = getComputedStyle(document.querySelector(background));
+    const paints = style.backgroundImage.match(/(?:rgba?|color)\([^)]*\)/g) || [style.backgroundColor];
+    return Math.min(...paints.map(paint => {
+      const b = luminance(paint);
+      return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+    }));
   }, { foreground, background });
 }
 
