@@ -176,7 +176,7 @@ function renderTabs(seasons, currentId) {
   tabsEl.innerHTML = seasons
     .map(
       (s) => `
-    <button class="hub-tab${s.id === currentId ? ' active' : ''}" type="button" data-season-id="${s.id}">
+    <button class="hub-tab${s.id === currentId ? ' active' : ''}" aria-pressed="${s.id === currentId}" type="button" data-season-id="${s.id}">
       <div class="hub-tab-icon ${s.active ? 'gold' : 'blue'}">${s.active ? '🏆' : '📅'}</div>
       <div class="hub-tab-label">${esc(displaySeason(s.name))}</div>
       <span class="hub-tab-label-ar">${s.active ? 'الموسم النشط' : 'موسم'}</span>
@@ -227,6 +227,7 @@ function renderStandings(tournament, standings) {
       <div><h2 class="hub-card-title">ترتيب ${esc(tournament.name)}</h2>
       <div class="hub-card-subtitle">${subtitle}</div></div>
     </div>
+    <p class="table-scroll-hint hub-table-hint">اسحب الجدول أفقيًا لعرض جميع الإحصائيات</p>
     <div class="table-scroll" tabindex="0" role="region" aria-label="ترتيب الدوري"><table class="hub-standings">
       <thead><tr>
         <th>#</th><th>الفريق</th><th>لعب</th><th>فوز</th><th>تعادل</th><th>خسارة</th><th>له</th><th>عليه</th><th>الفارق</th><th>النقاط</th>
@@ -351,7 +352,7 @@ function renderHub(data) {
   const stats = computeQuickStats(fixtures);
 
   hasContent = true;
-  $('#hubSeasonSummary').textContent = `${tournament.season_name} · عدد اللاعبين: ${teams.length} · المباريات: ${stats.total_matches}`;
+  $('#hubSeasonSummary').innerHTML = `<span class="hub-summary-item"><span>الموسم</span><strong>${esc(tournament.season_name)}</strong></span><span class="hub-summary-item"><strong>${teams.length}</strong><span>لاعبين</span></span><span class="hub-summary-item"><strong>${stats.total_matches}</strong><span>مباراة</span></span>`;
   renderTabs(seasons, activeSeasonId);
   renderStandings(tournament, standings);
   renderAside(tournament, teams, stats);

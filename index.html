@@ -13,16 +13,11 @@
 <div class="hub-overlay" id="overlay"></div>
 <aside class="hub-sidebar" id="sidebar">
 <div class="hub-brand">
-<svg class="hub-brand-shield" fill="none" viewbox="0 0 80 88" xmlns="http://www.w3.org/2000/svg">
-<path d="M40 4L8 18v28c0 20 14 36 32 42 18-6 32-22 32-42V18L40 4z" fill="#141820" stroke="#d4af37" stroke-width="2"></path>
-<text fill="#d4af37" font-size="18" font-weight="800" text-anchor="middle" x="40" y="38">♛</text>
-<circle cx="40" cy="58" fill="#1a1f2a" r="12" stroke="#d4af37" stroke-width="1.5"></circle>
-<text fill="#d4af37" font-size="12" text-anchor="middle" x="40" y="62">⚽</text>
-</svg>
+<svg aria-hidden="true" class="hub-brand-shield" fill="none" viewBox="0 0 48 56"><path d="M24 2 44 9v19c0 12-9 21-20 26C13 49 4 40 4 28V9L24 2Z"/><path d="M24 7 39 12v16c0 9-6 16-15 21-9-5-15-12-15-21V12L24 7Z"/><path d="m15 21 5 5 4-9 4 9 5-5-3 13H18l-3-13Zm3 17h12"/></svg>
 <div class="hub-brand-name">مجلس الكبار</div>
 <div class="hub-brand-sub">إي فوتبول</div>
 </div>
-<nav class="hub-nav" id="nav">
+<nav class="hub-nav" id="nav" aria-label="أقسام مركز البطولات">
 <button class="hub-nav-link active" data-page="tournaments" type="button">
 <svg class="hub-nav-icon" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
           البطولات
@@ -64,9 +59,10 @@
 <div class="hub-topbar-community-icon">⚽</div>
 <div class="hub-topbar-community-text">
 <strong>مجلس الكبار</strong>
-            مجتمع نخبة لاعبي إي فوتبول
+            <span>مجتمع نخبة لاعبي إي فوتبول</span>
           </div>
 </div>
+<a class="btn-secondary hub-entry-link" href="league/latest.html">دخول الدوري <span aria-hidden="true">←</span></a>
 </div>
 <header class="hub-page-header" id="hubTop">
 <div class="hub-page-title"><div><p class="eyebrow">مجلس الكبار · إي فوتبول</p><h1>مركز البطولات</h1></div><span class="hub-title-ar" dir="rtl" lang="ar">مجلس الكبار</span></div>
@@ -75,7 +71,7 @@
 <div class="hub-error" hidden="" id="hubError" role="alert"><p id="hubErrorText"></p><button class="btn btn-secondary" id="retryHub" type="button">إعادة المحاولة</button></div><div class="hub-loading" id="loading" role="status">جارٍ تحميل الدوري…</div>
 <div class="hub-empty-state hidden" id="emptyState"><div aria-hidden="true" class="hub-empty-icon">◇</div><h2>موسم جديد في الطريق</h2><p>سيظهر الموسم الجديد هنا بعد أن ينشئه مدير الدوري.</p></div>
 <div class="hidden" id="hubContent">
-<div class="hub-tabs" id="tabs"></div>
+<div class="hub-tabs" id="tabs" role="group" aria-label="اختيار الموسم"></div>
 <div class="hub-content">
 <div class="hub-content-main">
 <div class="hub-card hub-section" id="standingsCard"></div>

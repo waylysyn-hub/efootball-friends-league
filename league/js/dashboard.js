@@ -3,7 +3,8 @@ import { getActiveSeason } from './seasons.js';
 import { computeLeagueTable, computePlayerStats } from './standings.js';
 import { state } from './state.js';
 import { getPlayers } from './profiles.js';
-import { esc } from './ui.js';
+import { esc, formatDate } from './ui.js';
+import { openMatchDetails } from './match-details.js';
 
 export function renderDashboard() {
   const activeSeason = getActiveSeason();
@@ -49,10 +50,16 @@ export function renderDashboard() {
   if (recent.length === 0) {
     recentEl.innerHTML = "<div class=\"empty-state\">لا توجد مباريات بعد</div>";
   } else {
-    recentEl.innerHTML = recent.map(m => `
-      <div class="recent-match-mini">
-        <span>${esc(displayName(m.player1))} <span class="recent-match-score"><bdi>${m.goals1}</bdi> — <bdi>${m.goals2}</bdi></span> ${esc(displayName(m.player2))}</span>
-      </div>`).join('');
+    recentEl.innerHTML = recent.map(m => {
+      const season = state.db.seasons.find(s => s.id === m.season);
+      return `<button type="button" class="recent-match-mini" data-recent-match="${esc(m.id)}" aria-label="عرض مباراة ${esc(displayName(m.player1))} ضد ${esc(displayName(m.player2))}، النتيجة ${m.goals1} مقابل ${m.goals2}، ${esc(formatDate(m.date))}">
+        <span class="recent-match-meta"><time datetime="${esc(m.date || '')}">${esc(formatDate(m.date))}</time><span>${esc(season ? displaySeason(season.name) : 'موسم سابق')}</span></span>
+        <span class="recent-match-result"><span class="recent-team">${esc(displayName(m.player1))}</span><span class="recent-match-score"><bdi>${m.goals1}</bdi><span aria-hidden="true">—</span><bdi>${m.goals2}</bdi></span><span class="recent-team">${esc(displayName(m.player2))}</span></span>
+      </button>`;
+    }).join('');
+    recentEl.querySelectorAll('[data-recent-match]').forEach(button => {
+      button.addEventListener('click', () => openMatchDetails(button.dataset.recentMatch));
+    });
   }
 
   // Mini standings
@@ -63,7 +70,7 @@ export function renderDashboard() {
     standingsEl.innerHTML = table.map((r, i) => `
       <div class="mini-standings-row">
         <span class="mini-rank">${i + 1}</span>
-        <span class="mini-name">${esc(displayName(r.player))}</span>
+        <span class="mini-name">${esc(displayName(r.player))}<span class="mini-played">${r.played} مباراة</span></span>
         <span class="mini-pts">${r.points} نقطة</span>
       </div>`).join('');
   }

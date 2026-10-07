@@ -67,7 +67,13 @@ body:not(.is-admin) .admin-only { display: none !important; }
 .modal-footer { border-top: 1px solid var(--border); justify-content: flex-end; position: sticky; bottom: 0; background: var(--surface); }
 .modal-close, .back-btn, .icon-button, .mobile-menu-btn, .sidebar-toggle, .hub-mobile-toggle { width: 44px; height: 44px; flex: none; display: grid; place-items: center; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 1.125rem; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
-.table-container, .table-scroll { max-width: 100%; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.table-container, .table-scroll { max-width: 100%; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); scrollbar-color: var(--border-strong) var(--surface); scrollbar-width: thin; overscroll-behavior-inline: contain; }
+.table-scroll-hint { display: none; color: var(--muted); font-size: .8125rem; margin-bottom: 12px; }
+/* Keep the player's identity in view while statistics scroll on a narrow screen. */
+:is(.league-table, .hub-standings) :is(th, td):nth-child(2) { position: sticky; inset-inline-start: 0; z-index: 1; background: var(--surface); border-inline-end: 1px solid var(--border); }
+:is(.league-table, .hub-standings) th:nth-child(2) { z-index: 2; background: var(--surface-2); }
+:is(.league-table, .hub-standings) .rank-1 td:nth-child(2) { background: var(--primary-soft); }
+:is(.league-table, .hub-standings) tbody tr:hover td:nth-child(2) { background: var(--surface-2); }
 table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 th { position: sticky; top: 0; background: var(--surface-2); font-size: .875rem; font-weight: 500; color: var(--muted); }
 td { font-size: 1rem; }
@@ -80,6 +86,7 @@ tbody tr:hover { background: var(--surface-2); }
 @keyframes shimmer { to { background-position: -200% 0; } }
 @keyframes appear { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 600px) {
+  .table-scroll-hint { display: block; }
   .toast { inset-inline-end: 16px; bottom: 16px; }
   .modal-overlay, .chat-modal { padding: 12px; }
   .modal, .modal-box { max-height: calc(100dvh - 24px); border-radius: var(--radius); }
