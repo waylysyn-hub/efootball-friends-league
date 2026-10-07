@@ -76,13 +76,13 @@
 <aside class="sidebar" id="sidebar">
 <div class="sidebar-header">
 <div class="sidebar-logo">
-<span class="brand-mark">♛</span>
+<svg aria-hidden="true" class="sidebar-crest" fill="none" viewBox="0 0 48 56"><path d="M24 2 44 9v19c0 12-9 21-20 26C13 49 4 40 4 28V9L24 2Z"/><path d="M24 7 39 12v16c0 9-6 16-15 21-9-5-15-12-15-21V12L24 7Z"/><path d="m15 21 5 5 4-9 4 9 5-5-3 13H18l-3-13Zm3 17h12"/></svg>
 <div>
 <div class="sidebar-title">مجلس الكبار</div>
 <div class="sidebar-subtitle">دوري الأصدقاء</div>
 </div>
 </div>
-<button aria-controls="sidebar" aria-expanded="false" aria-label="فتح القائمة" class="sidebar-toggle" id="sidebarToggle" onclick="League.toggleSidebar()" type="button">☰</button>
+<button aria-controls="sidebar" aria-expanded="false" aria-label="إغلاق القائمة" class="sidebar-toggle" id="sidebarToggle" onclick="League.toggleSidebar()" type="button"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
 </div>
 <div class="sidebar-player">
 <div class="player-avatar" id="sidebarAvatar">—</div>
@@ -92,33 +92,42 @@
 <div class="player-rank" id="sidebarPlayerRank">—</div>
 </div>
 </div>
-<nav class="sidebar-nav">
+<nav class="sidebar-nav" aria-label="أقسام الدوري">
 <a class="nav-item nav-external" href="../index.html">
-<span class="nav-icon">🏛️</span><span class="nav-label">مركز البطولات</span>
+<span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8 9-5 9 5H3Zm3 3v7m6-7v7m6-7v7M3 21h18"/></svg></span><span class="nav-label">مركز البطولات</span>
 </a>
+<span class="nav-group-label">الدوري</span>
 <a class="nav-item active" data-page="dashboard" href="#dashboard">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M3 10 12 3l9 7M5 9v12h5v-6h4v6h5V9"></path></svg></span><span class="nav-label">الرئيسية</span>
 </a>
 <a class="nav-item admin-only" data-page="recordMatch" href="#recordMatch">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 7h16v14H4V7Zm4 0V3m8 4V3m-8 9h8m-8 4h5"></path></svg></span><span class="nav-label">تسجيل مباراة</span>
 </a>
-<a class="nav-item admin-only hidden" data-page="evenings" href="#evenings"><span class="nav-icon" aria-hidden="true">🎲</span><span class="nav-label">سهرة اللعب</span></a>
+<a class="nav-item admin-only hidden" data-page="evenings" href="#evenings"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM8 8h.01M16 8h.01M12 12h.01M8 16h.01M16 16h.01"/></svg></span><span class="nav-label">سهرة اللعب</span></a>
 <a class="nav-item" data-page="matchHistory" href="#matchHistory">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 5h16v16H4V5Zm3-3v6m10-6v6M4 11h16"></path></svg></span><span class="nav-label">سجل المباريات</span>
-</a>
-<a class="nav-item" data-page="squads" href="#squads"><span class="nav-icon" aria-hidden="true">♟</span><span class="nav-label">التشكيلات</span></a>
-<a class="nav-item" data-page="footballStats" href="#footballStats">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"></path></svg></span><span class="nav-label">أداء لاعبي كرة القدم</span>
 </a>
 <a class="nav-item" data-page="leagueTable" href="#leagueTable">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></span><span class="nav-label">جدول الدوري</span>
 </a>
+<a class="nav-item" data-page="squads" href="#squads"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16v18H4zM4 12h16M8 3v4h8V3M8 21v-4h8v4"/></svg></span><span class="nav-label">التشكيلات</span></a>
+<span class="nav-group-label">اللاعبون والتحليل</span>
 <a class="nav-item" data-page="playerProfile" href="#playerProfile">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m16-13a4 4 0 0 1 0 8m4 5v-2a4 4 0 0 0-3-3.9M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"></path></svg></span><span class="nav-label">ملفات اللاعبين</span>
+</a>
+<a class="nav-item" data-page="footballStats" href="#footballStats">
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"></path></svg></span><span class="nav-label">أداء لاعبي كرة القدم</span>
+</a>
+<a class="nav-item" data-page="statistics" href="#statistics">
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></span><span class="nav-label">الإحصائيات</span>
 </a>
 <a class="nav-item" data-page="headToHead" href="#headToHead">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m16-13a4 4 0 0 1 0 8m4 5v-2a4 4 0 0 0-3-3.9M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"></path></svg></span><span class="nav-label">المواجهات المباشرة</span>
 </a>
+<a class="nav-item" data-page="rivalries" href="#rivalries">
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"></path></svg></span><span class="nav-label">المنافسات</span>
+</a>
+<span class="nav-group-label">سجل المنافسة</span>
 <a class="nav-item" data-page="seasons" href="#seasons">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 5h16v16H4V5Zm3-3v6m10-6v6M4 11h16"></path></svg></span><span class="nav-label">المواسم</span>
 </a>
@@ -128,19 +137,15 @@
 <a class="nav-item" data-page="achievements" href="#achievements">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 2v6m-4 2h8"></path></svg></span><span class="nav-label">الإنجازات</span>
 </a>
-<a class="nav-item" data-page="rivalries" href="#rivalries">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"></path></svg></span><span class="nav-label">المنافسات</span>
-</a>
-<a class="nav-item" data-page="statistics" href="#statistics">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></span><span class="nav-label">الإحصائيات</span>
-</a>
+<span class="nav-group-label">مجتمع الدوري</span>
 <a class="nav-item" data-page="questions" href="#questions">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 4h16v12H9l-5 4V4Zm4 5h8m-8 3h5"></path></svg></span><span class="nav-label">أسئلة الدوري</span>
 </a>
 <a class="nav-item" data-page="settings" href="#settings">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1M5.6 18.4l2.1-2.1m8.6-8.6 2.1-2.1M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"></path></svg></span><span class="nav-label">الإعدادات</span>
 </a>
-<a class="nav-item nav-external" href="../groups-chat/index.html"><span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 4h16v12H9l-5 4V4Zm4 5h8m-8 3h5"></path></svg></span><span>دردشة الدوري</span></a></nav>
+<a class="nav-item nav-external" href="../groups-chat/index.html"><span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 4h16v12H9l-5 4V4Zm4 5h8m-8 3h5"></path></svg></span><span>دردشة الدوري</span></a>
+</nav>
 <div class="sidebar-footer">
 <button class="btn-logout btn-ghost" id="logoutButton" onclick="League.handleLogout()" type="button">تسجيل الخروج</button>
 </div>
@@ -151,9 +156,9 @@
 <main class="main-content" id="mainContent">
 <!-- TOPBAR -->
 <div class="topbar">
-<button aria-controls="sidebar" aria-expanded="false" aria-label="فتح القائمة" class="mobile-menu-btn" onclick="League.toggleSidebar()" type="button">☰</button>
-<div class="topbar-title" id="topbarTitle">الرئيسية</div>
-<div class="topbar-right"><button aria-label="تحديث النتائج" class="btn-ghost" onclick="League.refresh()" type="button">↻</button>
+<button aria-controls="sidebar" aria-expanded="false" aria-label="فتح القائمة" class="mobile-menu-btn" onclick="League.toggleSidebar()" type="button"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M5 12h14M5 17h14"/></svg></button>
+<div class="topbar-context"><span>دوري الأصدقاء</span><div class="topbar-title" id="topbarTitle">الرئيسية</div></div>
+<div class="topbar-right"><button aria-label="تحديث النتائج" class="btn-ghost topbar-refresh" onclick="League.refresh()" type="button"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5M4 17v-5h5M6.1 6.1A8 8 0 0 1 20 12M4 12a8 8 0 0 0 13.9 5.9"/></svg></button>
 <div class="viewer-badge hidden" id="viewerBadge">اللاعب</div>
 <div class="season-badge" id="topbarSeason">الموسم الأول</div>
 <div class="topbar-player" id="topbarPlayer">—</div>
@@ -163,9 +168,9 @@
 <!-- PAGES -->
 <!-- DASHBOARD PAGE -->
 <div class="page active" id="page-dashboard">
-<div class="page-header">
-<h2 class="page-title">الرئيسية</h2>
-<div class="page-subtitle" id="dashCurrentSeason">الموسم الأول — نشط</div>
+<div class="page-header dashboard-heading">
+<div><p class="eyebrow">مجلس الكبار · دوري الأصدقاء</p><h2 class="page-title">الرئيسية</h2><p class="page-subtitle">نتائج الأصدقاء، ترتيبهم، وأبرز أرقام الدوري.</p><div class="dashboard-season" id="dashCurrentSeason">جارٍ تحميل الموسم…</div></div>
+<nav class="dashboard-shortcuts" aria-label="اختصارات الدوري"><a class="btn-primary admin-only" href="#recordMatch"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>تسجيل مباراة</a><a class="btn-secondary" href="#squads"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16v18H4zM4 12h16M8 3v4h8V3M8 21v-4h8v4"/></svg>التشكيلات</a></nav>
 </div>
 <div class="stat-cards-grid" id="dashStatCards">
 <div class="stat-card" id="sc-leader">
@@ -175,19 +180,19 @@
 <div class="stat-card-sub" id="sc-leader-sub">0 نقطة</div>
 </div>
 <div class="stat-card" id="sc-scorer">
-<div class="stat-card-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></div>
+<div class="stat-card-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 5 4 3-1.5 5h-5L8 11l4-3Z"/></svg></div>
 <div class="stat-card-label">الهداف</div>
 <div class="stat-card-value" id="sc-scorer-val">—</div>
 <div class="stat-card-sub" id="sc-scorer-sub">0 هدف</div>
 </div>
 <div class="stat-card" id="sc-defense">
-<div class="stat-card-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></div>
+<div class="stat-card-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 8 3v6c0 5-4 8-8 10-4-2-8-5-8-10V6l8-3ZM8 12l3 3 5-6"/></svg></div>
 <div class="stat-card-label">أفضل دفاع</div>
 <div class="stat-card-value" id="sc-defense-val">—</div>
 <div class="stat-card-sub" id="sc-defense-sub">0 هدف مستقبَل</div>
 </div>
 <div class="stat-card" id="sc-attack">
-<div class="stat-card-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></div>
+<div class="stat-card-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 18 6-6 4 3 6-10M14 5h6v6"/></svg></div>
 <div class="stat-card-label">أفضل هجوم</div>
 <div class="stat-card-value" id="sc-attack-val">—</div>
 <div class="stat-card-sub" id="sc-attack-sub">0 هدف مسجّل</div>
@@ -199,7 +204,7 @@
 <div class="stat-card-sub" id="sc-wins-sub">0 فوز</div>
 </div>
 <div class="stat-card" id="sc-matches">
-<div class="stat-card-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></div>
+<div class="stat-card-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v17H5V4ZM8 2v4m8-4v4M5 10h14m-10 4h6m-6 3h3"/></svg></div>
 <div class="stat-card-label">إجمالي المباريات</div>
 <div class="stat-card-value" id="sc-matches-val">0</div>
 <div class="stat-card-sub" id="sc-matches-sub">هذا الموسم</div>
@@ -207,13 +212,13 @@
 </div>
 <div class="dashboard-grid">
 <div class="panel">
-<div class="panel-header">⚡ أحدث المباريات</div>
+<div class="panel-header"><h3>أحدث المباريات</h3><a href="#matchHistory">كل المباريات <span aria-hidden="true">←</span></a></div>
 <div class="panel-body" id="dashRecentMatches">
 <div class="empty-state">لم تُسجّل مباريات بعد</div>
 </div>
 </div>
 <div class="panel">
-<div class="panel-header">📊 الترتيب المختصر</div>
+<div class="panel-header"><h3>الترتيب المختصر</h3><a href="#leagueTable">الترتيب الكامل <span aria-hidden="true">←</span></a></div>
 <div class="panel-body" id="dashMiniStandings">
 <div class="empty-state">لا توجد بيانات بعد</div>
 </div>
@@ -318,7 +323,8 @@
 <option value="all">كل المواسم</option>
 </select>
 </div>
-<div class="table-container">
+<p class="table-scroll-hint">اسحب الجدول أفقيًا لعرض جميع الإحصائيات</p>
+<div class="table-container standings-scroll" tabindex="0" role="region" aria-label="جدول ترتيب الدوري">
 <table class="league-table" id="leagueTable">
 <thead>
 <tr>
