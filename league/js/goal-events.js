@@ -186,7 +186,7 @@ export function goalEventsSummaryHTML(containerId, events) {
   if (!events.length && g1 + g2 > 0 && canKeepLegacyScore(editingMatchId(containerId), p1, p2, g1, g2)) return '<div class="ms-total-line">مباراة سابقة دون تفاصيل أهداف. يمكنك حفظ التعديلات مع إبقاء النتيجة كما هي.</div>';
   const { c1, c2 } = countGoalsByOwner(events, p1, p2);
   const ok = c1 === g1 && c2 === g2 && events.every(e => e.scorer);
-  return `<div class="ms-total-line ${ok ? 'ok' : 'bad'}"><span>${ok ? '✓ الأهداف مكتملة' : 'أكمل تفاصيل الأهداف'}</span><strong dir="auto">${esc(displayName(p1) || 'الفريق الأول')} ${c1} / ${g1}</strong><strong dir="auto">${esc(displayName(p2) || 'الفريق الثاني')} ${c2} / ${g2}</strong></div>`;
+  return `<div class="ms-total-line ${ok ? 'ok' : 'bad'}"><span>${ok ? '✓ الأهداف مكتملة' : 'أكمل تفاصيل الأهداف'}</span><strong dir="auto">${esc(displayName(p1) || 'اللاعب الأول')} ${c1} / ${g1}</strong><strong dir="auto">${esc(displayName(p2) || 'اللاعب الثاني')} ${c2} / ${g2}</strong></div>`;
 }
 export function updateGoalEventsUI(containerId) {
   const events = collectGoalEventsFromForm(containerId);

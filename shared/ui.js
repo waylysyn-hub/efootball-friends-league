@@ -14,7 +14,7 @@ export function debounce(callback, delay = 250) {
 export function errorMessage(error, fallback = 'تعذّر تنفيذ العملية. حاول مجددًا؛ وإذا تكرر الخطأ حدّث الصفحة.') {
   const message = String(error?.message || '');
   const known = {
-    EFL_DIFFERENT_PLAYERS: 'يجب اختيار لاعبين أو فريقين مختلفين للمباراة.',
+    EFL_DIFFERENT_PLAYERS: 'اختر لاعبين مختلفين للمتابعة.',
     EFL_EVENING_TITLE: 'أدخل اسمًا للسهرة من حرف واحد إلى 80 حرفًا.',
     EFL_EVENING_ATTENDEES: 'اختر لاعبين مختلفين على الأقل من قائمة لاعبي الدوري.',
     EFL_EVENING_ACTIVE: 'توجد سهرة جارية بالفعل. اضغط تحديث لعرضها، ثم أنهِها قبل بدء سهرة جديدة.',
@@ -52,6 +52,27 @@ export function showError(element, message) {
   element.hidden = false;
   element.classList.remove('hidden');
   element.setAttribute('role', 'alert');
+}
+
+export function fieldError(input, message, summary = null) {
+  if (typeof input === 'string') input = document.getElementById(input);
+  if (!input) return;
+  const id = input.id + 'Error';
+  let error = document.getElementById(id);
+  if (!error) { error = document.createElement('span'); error.id = id; error.className = 'entry-field-error'; input.after(error); }
+  error.textContent = message; error.hidden = false;
+  input.setAttribute('aria-invalid', 'true');
+  input.setAttribute('aria-describedby', [...new Set([...(input.getAttribute('aria-describedby') || '').split(' ').filter(Boolean), id])].join(' '));
+  const details = input.closest('details'); if (details) details.open = true;
+  if (summary) showError(summary, message);
+  if (input.hidden) input.parentElement.querySelector('button')?.focus();
+  else input.focus();
+}
+export function clearFieldErrors(root) {
+  root?.querySelectorAll('[aria-invalid="true"]').forEach(input => {
+    input.removeAttribute('aria-invalid');
+    const error = document.getElementById(input.id + 'Error'); if (error?.classList.contains('entry-field-error')) error.textContent = '';
+  });
 }
 
 export function toast(message, kind = 'success') {
@@ -97,9 +118,10 @@ export function openDialog(id, onClose) {
   if (heading) { heading.id ||= `${id}Title`; modal.setAttribute('aria-labelledby', heading.id); }
   const selectors = 'button:not(:disabled), a[href], input:not([type="hidden"]):not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]';
   const keydown = event => {
-    if (event.key === 'Escape') { event.preventDefault(); onClose?.(); }
+    if ([...dialogs.keys()].at(-1) !== id) return;
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose?.(); }
     if (event.key !== 'Tab') return;
-    const focusable = [...modal.querySelectorAll(selectors)].filter(el => !el.closest('.hidden'));
+    const focusable = [...modal.querySelectorAll(selectors)].filter(el => !el.closest('.hidden,[hidden],[inert]') && !el.closest('details:not([open])'));
     const first = focusable[0], last = focusable.at(-1);
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
@@ -119,7 +141,7 @@ export function closeDialog(id) {
   if (saved) {
     modal.removeEventListener('keydown', saved.keydown);
     modal.removeEventListener('click', saved.outside);
-    saved.previous?.focus();
+    if (!saved.previous?.closest('.hidden,[hidden],[inert]')) saved.previous?.focus();
     dialogs.delete(id);
   }
   if (!dialogs.size) document.body.classList.remove('dialog-open');
@@ -163,7 +185,7 @@ export function setupDrawer({ sidebar, overlay, toggles, onClose, listen = true 
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape') close();
     if (event.key !== 'Tab' || !media.matches || !sidebar.classList.contains('open')) return;
-    const items = [...sidebar.querySelectorAll('a[href],button:not(:disabled)')].filter(el => !el.closest('.hidden,[hidden]') && getComputedStyle(el).display !== 'none');
+    const items = [...sidebar.querySelectorAll('a[href],button:not(:disabled),summary')].filter(el => !el.closest('.hidden,[hidden]') && (el.matches('summary') || !el.closest('details:not([open])')) && getComputedStyle(el).display !== 'none');
     const first = items[0], last = items.at(-1);
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }

@@ -1,3 +1,5 @@
+import { fieldError, clearFieldErrors } from '../../shared/ui.js';
+import { emptyCompetition, stateHTML } from './view-states.js';
 import { displayName } from '../../shared/locale.js';
 import { sb, state } from './state.js';
 import { isAdmin } from './admin.js';
@@ -41,7 +43,7 @@ export function renderSquads() {
     const lineupStatus = document.getElementById('squadLineupStatus');
     lineupStatus.textContent = 'حالة التشكيلة الأساسية غير متاحة';
     lineupStatus.className = 'roster-lineup-status is-incomplete';
-    container.innerHTML = '<div class="empty-state">التشكيلات غير متاحة حاليًا. حدّث الصفحة أو تواصل مع مدير الدوري لإكمال الإعداد.</div>';
+    container.innerHTML = stateHTML({ kind: 'error', title: 'تعذر تحميل التشكيلات.', description: 'أعد المحاولة أو تواصل مع مدير الدوري لإكمال الإعداد.' });
     return;
   }
   const members = uniqueSquad(state.db.squads.filter(p => p.owner === owner));
@@ -78,8 +80,8 @@ function renderSquadMembers(active = getSquad(state.selectedSquad), canEdit = ca
   const container = document.getElementById('squadPlayers'), visible = filterSquadMembers(active, presentation);
   container.className = `roster-${presentation.view}`;
   document.getElementById('squadResults').textContent = `${visible.length} من ${active.length} لاعب`;
-  container.innerHTML = !active.length ? `<div class="roster-empty"><span aria-hidden="true">＋</span><h3>لم تتم إضافة لاعبين بعد</h3><p>ابدأ ببناء فريقك، وسيأخذ كل لاعب مكانه هنا.</p>${canEdit ? '<button class="btn-primary" type="button" data-squad-add>إضافة لاعب</button>' : ''}</div>`
-    : !visible.length ? '<div class="roster-empty"><h3>لا يوجد لاعب يطابق البحث</h3><button class="btn-secondary" type="button" data-squad-reset>مسح البحث والفلترة</button></div>'
+  container.innerHTML = !active.length ? stateHTML({ title: 'لم تتم إضافة لاعبين بعد', description: 'ابدأ ببناء فريقك، وسيأخذ كل لاعب مكانه هنا.', ...(canEdit ? { action: 'squad-add', label: 'إضافة لاعب' } : {}) }).replace('data-state-action="squad-add"', 'data-squad-add')
+    : !visible.length ? stateHTML({ kind: 'filtered', action: 'squad-reset', label: 'مسح الفلاتر' }).replace('data-state-action="squad-reset"', 'data-squad-reset')
       : squadPlayersHTML(visible, { view: presentation.view, sort: presentation.sort, canEdit: canEdit && presentation.editing, canManage: canEdit, hasArchived: state.db.squads.some(p => p.owner === state.selectedSquad && !p.active), collapsed: presentation.collapsed });
   container.querySelector('[data-squad-add]')?.addEventListener('click', () => openSquadPlayer());
   container.querySelector('[data-squad-reset]')?.addEventListener('click', resetSquadFilters);
@@ -262,6 +264,8 @@ export async function saveSquadPlayer() {
   const session = state.profile;
   const isCurrent = () => state.profile === session && state.squadEditor === editor && canManageSquad(editor.owner);
   const errorElement = document.getElementById('squadPlayerError');
+  clearFieldErrors(document.getElementById('squadPlayerForm'));
+  const invalid = (id, message) => fieldError(id, message, errorElement);
   const name = document.getElementById('squadPlayerName').value.trim();
   const position = document.getElementById('squadPlayerPosition').value;
   const lineupRole = document.getElementById('squadPlayerRole').value;
@@ -270,20 +274,20 @@ export async function saveSquadPlayer() {
   const photo = document.getElementById('squadPlayerPhoto').value.trim();
   const normalizedPhoto = photo ? normalizeExternalSquadPhotoUrl(photo) : '';
   const selectedPhotoFile = editor.selectedPhotoFile;
-  if (!name || name.length > 100) return showError(errorElement, 'أدخل اسم اللاعب من حرف واحد إلى 100 حرف.');
-  if (!POSITIONS[position]) return showError(errorElement, 'اختر مركزًا صحيحًا للاعب.');
-  if (!SQUAD_ROLES.some(role => role.key === lineupRole)) return showError(errorElement, 'اختر حالة صحيحة للاعب.');
-  if (numberText && (!Number.isInteger(Number(numberText)) || Number(numberText) < 0 || Number(numberText) > 99)) return showError(errorElement, 'رقم القميص عدد صحيح بين 0 و99.');
-  if (ratingText && (!Number.isFinite(Number(ratingText)) || Number(ratingText) < 0 || Number(ratingText) > 120)) return showError(errorElement, 'أدخل تقييمًا بين 0 و120.');
+  if (!name || name.length > 100) return invalid('squadPlayerName', 'أدخل اسم اللاعب من حرف واحد إلى 100 حرف.');
+  if (!POSITIONS[position]) return invalid('squadPlayerPosition', 'اختر مركزًا صحيحًا للاعب.');
+  if (!SQUAD_ROLES.some(role => role.key === lineupRole)) return invalid('squadPlayerRole', 'اختر حالة صحيحة للاعب.');
+  if (numberText && (!Number.isInteger(Number(numberText)) || Number(numberText) < 0 || Number(numberText) > 99)) return invalid('squadPlayerNumber', 'رقم القميص عدد صحيح بين 0 و99.');
+  if (ratingText && (!Number.isFinite(Number(ratingText)) || Number(ratingText) < 0 || Number(ratingText) > 120)) return invalid('squadPlayerRating', 'أدخل تقييمًا بين 0 و120.');
   const photoChanged = photo !== editor.originalPhotoUrl;
-  if (photoChanged && photo && (photo.length > 2048 || !normalizedPhoto)) return showError(errorElement, 'استخدم رابط صورة مباشر يبدأ بـ https://، وليس رابط صفحة بحث أو مشاركة.');
-  if (selectedPhotoFile) { const photoError = validateSquadPhotoFile(selectedPhotoFile); if (photoError) return showError(errorElement, photoError); }
+  if (photoChanged && photo && (photo.length > 2048 || !normalizedPhoto)) return invalid('squadPlayerPhoto', 'استخدم رابط صورة مباشر يبدأ بـ https://، وليس رابط صفحة بحث أو مشاركة.');
+  if (selectedPhotoFile) { const photoError = validateSquadPhotoFile(selectedPhotoFile); if (photoError) return invalid('squadPlayerPhotoFile', photoError); }
   const id = editor.id || editor.pendingId;
   const existing = state.db.squads.find(p => p.id === id);
   const startersWithoutCurrent = state.db.squads.filter(p => p.owner === editor.owner && p.active && p.id !== id && p.lineup_role !== 'substitute').length;
-  if (existing?.active !== false && lineupRole === 'starter' && startersWithoutCurrent >= 11) return showError(errorElement, 'التشكيلة الأساسية مكتملة 11/11. حوّل لاعبًا أساسيًا إلى احتياط أولًا.');
+  if (existing?.active !== false && lineupRole === 'starter' && startersWithoutCurrent >= 11) return invalid('squadPlayerRole', 'التشكيلة الأساسية مكتملة 11/11. حوّل لاعبًا أساسيًا إلى احتياط أولًا.');
   const duplicate = state.db.squads.find(p => p.owner === editor.owner && p.id !== id && p.name.toLowerCase() === name.toLowerCase());
-  if (duplicate) return showError(errorElement, duplicate.active ? 'هذا اللاعب موجود في التشكيلة بالفعل.' : 'هذا اللاعب موجود خارج التشكيلة. استخدم «إعادة» بدل إضافته مجددًا.');
+  if (duplicate) return invalid('squadPlayerName', duplicate.active ? 'هذا اللاعب موجود في التشكيلة بالفعل.' : 'هذا اللاعب موجود خارج التشكيلة. استخدم «إعادة» بدل إضافته مجددًا.');
   return withBusy('save-squad-player', document.getElementById('saveSquadPlayer'), async () => {
     errorElement.classList.add('hidden');
     try {

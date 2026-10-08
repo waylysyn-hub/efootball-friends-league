@@ -1,3 +1,4 @@
+import { emptyCompetition, stateHTML } from './view-states.js';
 import { displayName, playerInitials } from '../../shared/locale.js';
 import { NICKNAMES, state } from './state.js';
 import { esc, formatDate } from './ui.js';
@@ -111,6 +112,7 @@ export function selectProfilePlayer(name, btn) {
         <div class="profile-rank">نسبة الفوز: ${s.winRate}% · النقاط: ${s.points}</div>
       </div>
     </div>
+    ${matches.length ? '' : emptyCompetition('لا توجد مباريات لهذا اللاعب بعد.')}
     <div class="profile-stats-grid">
       ${statItem("المباريات", s.played)}
       ${statItem("الانتصارات", s.wins, 'neon')}

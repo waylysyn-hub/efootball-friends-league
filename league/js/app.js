@@ -58,6 +58,10 @@ document.getElementById('loginPasswordToggle').addEventListener('click', event =
   event.currentTarget.setAttribute('aria-pressed', String(visible));
 });
 document.addEventListener('click', event => {
+  const action = event.target.closest('[data-state-action]')?.dataset.stateAction;
+  if (action === 'refresh') refreshFromRemote();
+  if (action === 'clear-history') matches.clearHistoryFilters();
+  if (action === 'clear-football') statistics.clearFootballFilters();
   const link = event.target.closest('.nav-item[data-page]');
   if (link) { event.preventDefault(); ui.navigateTo(link.dataset.page, link); }
   const row = event.target.closest('[data-football-player]');
@@ -70,6 +74,7 @@ document.addEventListener('keydown', event => {
   }
 });
 window.addEventListener('hashchange', () => {
+  if (history.state?.matchId) state.matchId = history.state.matchId;
   if (state.user) ui.navigateTo(location.hash.slice(1) || 'dashboard');
 });
 setupConnectivity(refreshFromRemote);

@@ -1,3 +1,4 @@
+import { emptyCompetition, stateHTML } from './view-states.js';
 import { displayName } from '../../shared/locale.js';
 import { populateSeasonDropdowns } from './seasons.js';
 import { computeLeagueTable, computePlayerStats } from './standings.js';
@@ -14,6 +15,7 @@ export function renderAwards() {
 
   const table = computeLeagueTable(filter);
   const hasData = table.some(t => t.played > 0);
+  if (!hasData) { cont.innerHTML = emptyCompetition(); return; }
 
   const scorers = getPlayers().map(p => ({ player: p, goals: computePlayerStats(p, filter).goalsFor }))
                          .sort((a, b) => b.goals - a.goals);
@@ -52,8 +54,8 @@ export function renderAwards() {
         <span class="award-icon">${a.icon}</span>
         <div class="award-title">${a.title}</div>
         ${a.footballWinners
-          ? a.footballWinners.map(p => `<div class="award-winner"><bdi>${esc(p.name)}</bdi><span class="fb-owner">فريق ${esc(displayName(p.owner))}</span></div>`).join('') || '<div class="award-winner">—</div>'
-          : `<div class="award-winner">${a.winner ? esc(displayName(a.winner)) : '—'}</div>`}
+          ? a.footballWinners.map(p => `<div class="award-winner"><bdi>${esc(p.name)}</bdi><span class="fb-owner">فريق ${esc(displayName(p.owner))}</span></div>`).join('') || '<div class="award-winner">لم يُحسم بعد</div>'
+          : `<div class="award-winner">${a.winner ? esc(displayName(a.winner)) : 'لم يُحسم بعد'}</div>`}
         <div class="award-desc">${a.desc}</div>
       </div>`).join('')}
   </div>`;
@@ -69,11 +71,12 @@ export function selectAchievementsPlayer(name, btn) {
   const unlockedIds = state.db.achievements.filter(row => row.player === name).map(row => row.achievement_id);
 
   document.getElementById('achievementsContent').innerHTML = `
+    ${unlockedIds.length ? '' : stateHTML({ title: 'لا توجد إنجازات محققة بعد.', description: 'هذه الأهداف متاحة للاعب. تظهر الإنجازات المحققة بعد تسجيل النتائج.' })}
     <div class="achievements-grid">
       ${ACHIEVEMENT_DEFS.map(a => {
         const isUnlocked = unlockedIds.includes(a.id);
         return `<div class="achievement-badge ${isUnlocked ? 'unlocked' : 'locked'}">
-          ${isUnlocked ? '<span class="unlocked-stamp">✓</span>' : ''}
+          ${isUnlocked ? '<span class="unlocked-stamp">✓ محقق</span>' : '<span class="achievement-state">غير محقق بعد</span>'}
           <span class="achievement-icon">${a.icon}</span>
           <div class="achievement-name">${a.name}</div>
           <div class="achievement-desc">${a.desc}</div>

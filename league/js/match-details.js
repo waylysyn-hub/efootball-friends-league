@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { esc, navigateTo } from './ui.js';
 import { getMatchGoalEvents, goalEventTimelineHTML, matchAwardsHTML, hasMissingGoalDetails } from './goal-events.js';
 import { isAdmin } from './admin.js';
+import { stateHTML } from './view-states.js';
 
 export function openMatchDetails(matchId) {
   state.matchId = matchId;
@@ -22,8 +23,8 @@ export function renderMatchDetails() {
 
   const m = state.db.matches.find(x => x.id === state.matchId);
   if (!m) {
-    if (sub) sub.textContent = '—';
-    cont.innerHTML = "<div class=\"empty-state\">المباراة غير موجودة.</div>";
+    if (sub) sub.textContent = 'اختر مباراة لعرض تفاصيلها';
+    cont.innerHTML = stateHTML({ title: state.matchId ? 'المباراة غير موجودة.' : 'اختر مباراة من السجل.', href: '#matchHistory', label: 'سجل المباريات' });
     return;
   }
 

@@ -24,7 +24,7 @@ test('quick result review, success, history and later edit fit at every entry vi
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await ready(page);await expect(page.locator('#matchQuickTab')).toHaveAttribute('aria-pressed','true');
   await expect(page.locator('#matchDetailsPanel')).toBeHidden();
-  await page.getByRole('button',{name:'زيادة أهداف الفريق الأول',exact:true}).click();
+  await page.getByRole('button',{name:'زيادة أهداف اللاعب الأول',exact:true}).click();
   await expect(page.locator('#matchGoals1')).toHaveValue('1');await fit(page,'#matchEntryForm');
   if([320,375,414,1366].includes(page.viewportSize().width))await page.screenshot({path:info.outputPath('quick-entry.png'),fullPage:true});
   await page.locator('#saveMatchButton').click();await expect(page.locator('#matchReviewModal')).toBeVisible();
@@ -70,7 +70,7 @@ test('opponents are excluded both ways and malformed numeric input cannot reach 
   await minute.fill('-1');await page.locator('#saveMatchButton').click();await expect(minute).toHaveAttribute('aria-invalid','true');
   await minute.fill('12');await page.locator('#saveMatchButton').click();await expect(page.locator('#matchReviewSummary')).toContainText('هدف واحد مسجّل');
   await page.getByRole('button',{name:'تعديل البيانات',exact:true}).click();await expect(minute).toHaveValue('12');
-  await page.locator('#newMatchButton').click();await expect(page.locator('#confirmMessage')).toContainText('ستفقد المعلومات');await page.keyboard.press('Escape');
+  await page.locator('#newMatchButton').click();await expect(page.locator('#confirmMessage')).toContainText('لديك بيانات غير محفوظة');await page.keyboard.press('Escape');
   await expect(minute).toHaveValue('12');expect(errors).toEqual([]);
 });
 
@@ -86,7 +86,7 @@ test('Abdul Qader cannot be selected twice and forced duplicate values are rejec
     document.getElementById('matchPlayer2').value = 'Abdul Qader';
   });
   await page.locator('#saveMatchButton').click();
-  await expect(page.locator('#matchPlayer2Error')).toHaveText('يجب اختيار لاعبين أو فريقين مختلفين للمباراة.');
+  await expect(page.locator('#matchPlayer2Error')).toHaveText('يجب اختيار اختر لاعبين مختلفين للمباراة.');
   await expect(page.locator('#matchReviewModal')).toBeHidden();
 });
 

@@ -58,7 +58,9 @@ jobs:
         if: always()
         with:
           name: design-review
-          path: test-results/design-*/**/*.png
+          path: |
+            test-results/design-*/**/*.png
+            test-results/ux-*/**/*.png
           retention-days: 7
       - uses: actions/upload-artifact@v4
         if: always()

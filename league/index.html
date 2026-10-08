@@ -19,6 +19,7 @@
 <link href="css/login.css" rel="stylesheet"/>
 <link href="css/match-entry.css" rel="stylesheet"/>
 <link href="css/squads.css" rel="stylesheet"/>
+<link href="css/ux.css" rel="stylesheet"/>
 </head>
 <body>
 <a class="skip-link" href="#loginForm">انتقل إلى المحتوى</a>
@@ -42,7 +43,7 @@
 <div class="login-story-signature"><span aria-hidden="true" class="login-signature-line"></span><p dir="rtl" lang="ar">المنافسة تجمعنا.<br/><strong>والملعب يحكي قصتنا.</strong></p></div>
 </section>
 <div class="login-entry">
-<form aria-labelledby="loginTitle" class="login-form-box" data-busy-region="" id="loginForm" tabindex="-1">
+<form aria-labelledby="loginTitle" class="login-form-box" data-busy-region="" id="loginForm" novalidate tabindex="-1">
 <div class="login-card-label"><svg aria-hidden="true" fill="none" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-4 8-8 10-4-2-8-5-8-10V6l8-3Z"/><path d="m8 12 3 3 5-6"/></svg>دخول اللاعبين<span aria-hidden="true" class="login-card-rule"></span></div>
 <h2 id="loginTitle">أهلًا بعودتك.</h2>
 <p class="login-form-description">مباراتك القادمة تبدأ من هنا.</p>
@@ -96,27 +97,33 @@
 <a class="nav-item nav-external" href="../index.html">
 <span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8 9-5 9 5H3Zm3 3v7m6-7v7m6-7v7M3 21h18"/></svg></span><span class="nav-label">مركز البطولات</span>
 </a>
-<span class="nav-group-label">الدوري</span>
+<details class="nav-group" open><summary>الرئيسية</summary><div class="nav-group-links">
 <a class="nav-item active" data-page="dashboard" href="#dashboard">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M3 10 12 3l9 7M5 9v12h5v-6h4v6h5V9"></path></svg></span><span class="nav-label">الرئيسية</span>
 </a>
-<a class="nav-item admin-only" data-page="recordMatch" href="#recordMatch">
+</div></details>
+<details class="nav-group" open><summary>المباريات</summary><div class="nav-group-links">
+<a class="nav-item nav-primary admin-only" data-page="recordMatch" href="#recordMatch">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 7h16v14H4V7Zm4 0V3m8 4V3m-8 9h8m-8 4h5"></path></svg></span><span class="nav-label">تسجيل مباراة</span>
 </a>
 <a class="nav-item admin-only hidden" data-page="evenings" href="#evenings"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM8 8h.01M16 8h.01M12 12h.01M8 16h.01M16 16h.01"/></svg></span><span class="nav-label">سهرة اللعب</span></a>
 <a class="nav-item" data-page="matchHistory" href="#matchHistory">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 5h16v16H4V5Zm3-3v6m10-6v6M4 11h16"></path></svg></span><span class="nav-label">سجل المباريات</span>
 </a>
-<a class="nav-item" data-page="leagueTable" href="#leagueTable">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></span><span class="nav-label">جدول الدوري</span>
-</a>
+<a class="nav-item" data-page="matchDetails" href="#matchDetails"><span class="nav-icon" aria-hidden="true">↳</span><span class="nav-label">تفاصيل المباراة</span></a>
+</div></details>
+<details class="nav-group" open><summary>اللاعبون</summary><div class="nav-group-links">
 <a class="nav-item" data-page="squads" href="#squads"><span class="nav-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16v18H4zM4 12h16M8 3v4h8V3M8 21v-4h8v4"/></svg></span><span class="nav-label">التشكيلات</span></a>
-<span class="nav-group-label">اللاعبون والتحليل</span>
 <a class="nav-item" data-page="playerProfile" href="#playerProfile">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m16-13a4 4 0 0 1 0 8m4 5v-2a4 4 0 0 0-3-3.9M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"></path></svg></span><span class="nav-label">ملفات اللاعبين</span>
 </a>
 <a class="nav-item" data-page="footballStats" href="#footballStats">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"></path></svg></span><span class="nav-label">أداء لاعبي كرة القدم</span>
+</a>
+</div></details>
+<details class="nav-group" open><summary>الدوري والتحليل</summary><div class="nav-group-links">
+<a class="nav-item" data-page="leagueTable" href="#leagueTable">
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></span><span class="nav-label">جدول الدوري</span>
 </a>
 <a class="nav-item" data-page="statistics" href="#statistics">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 20V12h4v8m2 0V7h4v13m2 0V3h4v17"></path></svg></span><span class="nav-label">الإحصائيات</span>
@@ -127,23 +134,24 @@
 <a class="nav-item" data-page="rivalries" href="#rivalries">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"></path></svg></span><span class="nav-label">المنافسات</span>
 </a>
-<span class="nav-group-label">سجل المنافسة</span>
-<a class="nav-item" data-page="seasons" href="#seasons">
-<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 5h16v16H4V5Zm3-3v6m10-6v6M4 11h16"></path></svg></span><span class="nav-label">المواسم</span>
-</a>
 <a class="nav-item" data-page="awards" href="#awards">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 2v6m-4 2h8"></path></svg></span><span class="nav-label">الجوائز</span>
 </a>
 <a class="nav-item" data-page="achievements" href="#achievements">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M8 3h8v6a4 4 0 0 1-8 0V3Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 2v6m-4 2h8"></path></svg></span><span class="nav-label">الإنجازات</span>
 </a>
-<span class="nav-group-label">مجتمع الدوري</span>
+</div></details>
+<details class="nav-group" open><summary>الإدارة</summary><div class="nav-group-links">
+<a class="nav-item" data-page="seasons" href="#seasons">
+<span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 5h16v16H4V5Zm3-3v6m10-6v6M4 11h16"></path></svg></span><span class="nav-label">المواسم</span>
+</a>
 <a class="nav-item" data-page="questions" href="#questions">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 4h16v12H9l-5 4V4Zm4 5h8m-8 3h5"></path></svg></span><span class="nav-label">أسئلة الدوري</span>
 </a>
 <a class="nav-item" data-page="settings" href="#settings">
 <span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1M5.6 18.4l2.1-2.1m8.6-8.6 2.1-2.1M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"></path></svg></span><span class="nav-label">الإعدادات</span>
 </a>
+</div></details>
 <a class="nav-item nav-external" href="../groups-chat/index.html"><span class="nav-icon"><svg aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4 4h16v12H9l-5 4V4Zm4 5h8m-8 3h5"></path></svg></span><span>دردشة الدوري</span></a>
 </nav>
 <div class="sidebar-footer">
@@ -237,11 +245,11 @@
 <div class="entry-modes" role="group" aria-label="طريقة تسجيل المباراة">
 <button id="matchQuickTab" type="button" aria-pressed="true" onclick="League.setMatchEntryMode('match','quick')">تسجيل سريع</button>
 <button id="matchDetailedTab" type="button" aria-pressed="false" onclick="League.setMatchEntryMode('match','detailed')">تسجيل تفصيلي</button></div>
-<p id="matchQuickHint" class="entry-hint">اختر الفريقين وسجّل النتيجة. تفاصيل الأهداف اختيارية ويمكن إضافتها لاحقًا.</p>
-<div class="entry-teams"><div class="match-player-select"><label for="matchPlayer1">الفريق الأول</label><select id="matchPlayer1" aria-describedby="matchPlayer1Error" onchange="League.onMatchEntryChange('match')"><option value="">اختر الفريق</option></select><span class="entry-field-error" id="matchPlayer1Error"></span></div><div class="match-player-select"><label for="matchPlayer2">الفريق الثاني</label><select id="matchPlayer2" aria-describedby="matchPlayer2Error" onchange="League.onMatchEntryChange('match')"><option value="">اختر الفريق</option></select><span class="entry-field-error" id="matchPlayer2Error"></span></div></div>
-<p class="entry-hint" id="matchEntryHint" aria-live="polite">اختر فريقين مختلفين للمتابعة.</p>
-<div class="entry-scores"><div class="score-input-group"><label for="matchGoals1" id="matchScoreLabel1">أهداف الفريق الأول</label><div class="entry-score-control"><button type="button" aria-label="إنقاص أهداف الفريق الأول" onclick="League.changeMatchScore('match',1,-1)">−</button><input id="matchGoals1" type="number" inputmode="numeric" min="0" max="99" step="1" value="0" aria-describedby="matchGoals1Error" oninput="League.onMatchEntryChange('match')"/><button type="button" aria-label="زيادة أهداف الفريق الأول" onclick="League.changeMatchScore('match',1,1)">+</button></div><span class="entry-field-error" id="matchGoals1Error"></span></div><div class="score-input-group"><label for="matchGoals2" id="matchScoreLabel2">أهداف الفريق الثاني</label><div class="entry-score-control"><button type="button" aria-label="إنقاص أهداف الفريق الثاني" onclick="League.changeMatchScore('match',2,-1)">−</button><input id="matchGoals2" type="number" inputmode="numeric" min="0" max="99" step="1" value="0" aria-describedby="matchGoals2Error" oninput="League.onMatchEntryChange('match')"/><button type="button" aria-label="زيادة أهداف الفريق الثاني" onclick="League.changeMatchScore('match',2,1)">+</button></div><span class="entry-field-error" id="matchGoals2Error"></span></div></div>
-<div class="match-preview"><div class="preview-result" id="previewResult" aria-live="polite" dir="auto">الفريق الأول 0 — 0 الفريق الثاني</div></div>
+<p id="matchQuickHint" class="entry-hint">اختر اللاعبين وسجّل النتيجة. تفاصيل الأهداف اختيارية ويمكن إضافتها لاحقًا.</p>
+<div class="entry-teams"><div class="match-player-select"><label for="matchPlayer1">اللاعب الأول</label><select id="matchPlayer1" aria-describedby="matchPlayer1Error" onchange="League.onMatchEntryChange('match')"><option value="">اختر اللاعب</option></select><span class="entry-field-error" id="matchPlayer1Error"></span></div><div class="match-player-select"><label for="matchPlayer2">اللاعب الثاني</label><select id="matchPlayer2" aria-describedby="matchPlayer2Error" onchange="League.onMatchEntryChange('match')"><option value="">اختر اللاعب</option></select><span class="entry-field-error" id="matchPlayer2Error"></span></div></div>
+<p class="entry-hint" id="matchEntryHint" aria-live="polite">اختر لاعبين مختلفين للمتابعة.</p>
+<div class="entry-scores"><div class="score-input-group"><label for="matchGoals1" id="matchScoreLabel1">أهداف اللاعب الأول</label><div class="entry-score-control"><button type="button" aria-label="إنقاص أهداف اللاعب الأول" onclick="League.changeMatchScore('match',1,-1)">−</button><input id="matchGoals1" type="number" inputmode="numeric" min="0" max="99" step="1" value="0" aria-describedby="matchGoals1Error" oninput="League.onMatchEntryChange('match')"/><button type="button" aria-label="زيادة أهداف اللاعب الأول" onclick="League.changeMatchScore('match',1,1)">+</button></div><span class="entry-field-error" id="matchGoals1Error"></span></div><div class="score-input-group"><label for="matchGoals2" id="matchScoreLabel2">أهداف اللاعب الثاني</label><div class="entry-score-control"><button type="button" aria-label="إنقاص أهداف اللاعب الثاني" onclick="League.changeMatchScore('match',2,-1)">−</button><input id="matchGoals2" type="number" inputmode="numeric" min="0" max="99" step="1" value="0" aria-describedby="matchGoals2Error" oninput="League.onMatchEntryChange('match')"/><button type="button" aria-label="زيادة أهداف اللاعب الثاني" onclick="League.changeMatchScore('match',2,1)">+</button></div><span class="entry-field-error" id="matchGoals2Error"></span></div></div>
+<div class="match-preview"><div class="preview-result" id="previewResult" aria-live="polite" dir="auto">اللاعب الأول 0 — 0 اللاعب الثاني</div></div>
 <div class="form-row-two"><div class="form-group"><label for="matchDate">تاريخ المباراة</label><input id="matchDate" type="date" aria-describedby="matchDateError"/><span class="entry-field-error" id="matchDateError"></span></div>
 <div class="form-group"><label for="matchSeason">الموسم</label><select id="matchSeason" aria-describedby="matchSeasonError"></select><span class="entry-field-error" id="matchSeasonError"></span></div></div>
 <label id="matchDeferWrap" class="entry-defer" hidden><input id="matchDeferDetails" type="checkbox" onchange="League.toggleDeferredDetails('match')"/>حفظ النتيجة فقط، وإضافة تفاصيل الأهداف لاحقًا</label>
@@ -252,7 +260,7 @@
 
 <div class="qa-setup-banner hidden" id="goalEventsSetupBanner"></div><div class="form-error hidden" id="matchFormError" role="alert"></div>
 <div class="entry-primary-actions"><button class="btn-primary" id="saveMatchButton" onclick="League.saveMatch()" type="button">حفظ المباراة</button><button type="button" class="btn-secondary entry-add-details" id="matchAddDetails" onclick="League.setMatchEntryMode('match','detailed')">إضافة تفاصيل الأهداف اختياريًا</button></div>
-<div class="entry-reset"><button class="btn-secondary" id="newMatchButton" onclick="League.clearMatchForm()" type="button">بدء مباراة جديدة</button><button class="btn-secondary" onclick="League.cancelMatchEntry()" type="button">إلغاء</button></div></div></div></div>
+<div class="entry-reset"><button class="btn-secondary" id="newMatchButton" onclick="League.clearMatchForm()" type="button">مسح النموذج</button><button class="btn-secondary" onclick="League.cancelMatchEntry()" type="button">إلغاء والعودة</button></div></div></div></div>
 <!-- MATCH HISTORY PAGE -->
 <div class="page hidden" id="page-matchHistory">
 <div class="page-header">
@@ -260,17 +268,17 @@
 <div class="page-subtitle" id="historyCount">لم تُسجّل مباريات بعد</div>
 </div>
 <div class="filter-bar">
-<input aria-label="البحث في سجل المباريات" id="historySearch" oninput="League.renderHistory()" placeholder="🔍 ابحث عن لاعب…" type="text"/>
-<select aria-label="تصفية حسب اللاعب" id="historyFilterPlayer" onchange="League.renderHistory()">
+<div class="form-group"><label for="historySearch">البحث عن لاعب</label><input aria-label="البحث في سجل المباريات" id="historySearch" oninput="League.renderHistory()" placeholder="🔍 ابحث عن لاعب…" type="text"/></div>
+<div class="form-group"><label for="historyFilterPlayer">اللاعب</label><select aria-label="تصفية حسب اللاعب" id="historyFilterPlayer" onchange="League.renderHistory()">
 <option value="">كل اللاعبين</option>
-</select>
-<select aria-label="تصفية حسب الموسم" id="historyFilterSeason" onchange="League.renderHistory()">
+</select></div>
+<div class="form-group"><label for="historyFilterSeason">الموسم</label><select aria-label="تصفية حسب الموسم" id="historyFilterSeason" onchange="League.renderHistory()">
 <option value="">كل المواسم</option>
-</select>
-<select aria-label="ترتيب المباريات" id="historySort" onchange="League.renderHistory()">
+</select></div>
+<div class="form-group"><label for="historySort">ترتيب المباريات</label><select aria-label="ترتيب المباريات" id="historySort" onchange="League.renderHistory()">
 <option value="newest">الأحدث أولًا</option>
 <option value="oldest">الأقدم أولًا</option>
-</select>
+</select></div>
 </div>
 <div class="match-list" id="matchList">
 <div class="empty-state">لم تُسجّل مباريات بعد. سجّل مباراتك الأولى!</div>
@@ -302,7 +310,7 @@
 </select>
 </div>
 <div class="fb-search-row">
-<input aria-label="البحث عن لاعب كرة قدم أو صاحب فريق" id="fbPlayerSearch" oninput="League.renderFootballStats()" placeholder="🔍 اسم اللاعب أو صاحب الفريق…" type="text"/>
+<div class="form-group"><label for="fbPlayerSearch">البحث عن لاعب كرة قدم أو صاحب تشكيلة</label><input aria-label="البحث عن لاعب كرة قدم أو صاحب فريق" id="fbPlayerSearch" oninput="League.renderFootballStats()" placeholder="🔍 اسم اللاعب أو صاحب الفريق…" type="text"/></div>
 </div>
 <div class="fb-leaderboards" id="fbLeaderboards"></div>
 <div class="panel mt-16">
@@ -315,7 +323,7 @@
 <div class="page hidden" id="page-leagueTable">
 <div class="page-header">
 <h2 class="page-title">جدول الدوري</h2>
-<div class="page-subtitle">الترتيب الحالي</div>
+<div class="page-subtitle" id="tableSeasonTitle">الترتيب الحالي</div>
 </div>
 <div class="season-filter-row">
 <label for="tableSeasonFilter">الموسم:</label>
@@ -324,11 +332,12 @@
 </select>
 </div>
 <p class="table-scroll-hint">اسحب الجدول أفقيًا لعرض جميع الإحصائيات</p>
-<div class="table-container standings-scroll" tabindex="0" role="region" aria-label="جدول ترتيب الدوري">
+<p class="table-column-help" id="tableColumnsHelp">له: الأهداف المسجلة · عليه: الأهداف المستقبلة · الفارق: الفرق بينهما.</p><p class="table-sort-help">الترتيب حسب النقاط، ثم فارق الأهداف، ثم الأهداف المسجلة.</p><div id="tableEmptyState"></div>
+<div class="table-container standings-scroll" tabindex="0" role="region" aria-label="جدول ترتيب الدوري" aria-describedby="tableColumnsHelp">
 <table class="league-table" id="leagueTable">
 <thead>
 <tr>
-<th>#</th>
+<th scope="col" aria-sort="ascending">المركز ↑</th>
 <th>اللاعب</th>
 <th>لعب</th>
 <th>فوز</th>
@@ -365,15 +374,15 @@
 <div class="page-subtitle">قارن بين لاعبين</div>
 </div>
 <div class="h2h-select-row">
-<select aria-label="اللاعب الأول للمقارنة" id="h2hPlayer1" onchange="League.renderH2H()">
+<div class="form-group"><label for="h2hPlayer1">اللاعب الأول</label><select aria-label="اللاعب الأول للمقارنة" id="h2hPlayer1" onchange="League.renderH2H()">
 <option value="">اللاعب الأول</option>
 </select>
-<div class="vs-badge big">ضد</div>
-<select aria-label="اللاعب الثاني للمقارنة" id="h2hPlayer2" onchange="League.renderH2H()">
+</div><div class="vs-badge big">ضد</div>
+<div class="form-group"><label for="h2hPlayer2">اللاعب الثاني</label><select aria-label="اللاعب الثاني للمقارنة" id="h2hPlayer2" onchange="League.renderH2H()">
 <option value="">اللاعب الثاني</option>
 </select>
 </div>
-<div id="h2hContent">
+</div><div id="h2hContent">
 <div class="empty-state">اختر لاعبين للمقارنة</div>
 </div>
 </div>
@@ -385,8 +394,8 @@
 </div>
 <div class="seasons-actions admin-only">
 <div class="form-group inline">
-<input aria-label="اسم الموسم الجديد" id="newSeasonName" placeholder="اسم الموسم (مثال: الموسم الثالث)" type="text"/>
-<button class="btn-primary" id="createSeasonButton" onclick="League.createSeason()" type="button">+ إنشاء موسم</button>
+<label for="newSeasonName">اسم الموسم الجديد</label><input aria-describedby="newSeasonNameError" aria-label="اسم الموسم الجديد" id="newSeasonName" placeholder="اسم الموسم (مثال: الموسم الثالث)" type="text"/>
+<span class="entry-field-error" id="newSeasonNameError"></span><button class="btn-primary" id="createSeasonButton" onclick="League.createSeason()" type="button">+ إنشاء موسم</button>
 </div>
 </div>
 <div id="seasonsList"></div>
@@ -465,34 +474,18 @@
 <h2 class="page-title">الإعدادات</h2>
 <div class="page-subtitle">إدارة بيانات الدوري</div>
 </div>
+<div id="settingsPermission" hidden></div>
+<div class="settings-sections admin-only" id="settingsOperations" data-busy-region>
+<section class="settings-section" aria-labelledby="dataManagementTitle"><div class="settings-section-heading"><h3 id="dataManagementTitle">إدارة البيانات</h3><p>احتفظ بنسخة من نتائج الدوري، أو استعد نسخة محفوظة.</p></div>
 <div class="settings-grid">
-<div class="settings-card admin-only">\n<div class="settings-icon">📤</div>
-<h3>تصدير البيانات</h3>
-<p>نزّل نسخة احتياطية للمواسم والنتائج والأهداف وإحصائيات المباريات.</p>
-<button class="btn-primary" onclick="League.exportData()" type="button">تنزيل نسخة احتياطية</button>
-</div>
-<div class="settings-card admin-only"><div class="settings-icon">♙</div><h3>حسابات اللاعبين</h3><p>إنشاء حسابات اللاعبين وإدارة بيانات الدخول بأمان.</p><a class="btn-secondary" href="https://supabase.com/dashboard/project/hyqedsydyqbcgusjthcj/auth/users" rel="noopener noreferrer" target="_blank">إدارة الحسابات ↖</a></div>
-<div class="settings-card admin-only">
-<div class="settings-icon">📥</div>
-<h3>استيراد البيانات</h3>
-<p>استعد سجلات البطولة من نسخة احتياطية. تبقى حسابات اللاعبين والأسئلة والدردشة محفوظة.</p>
-<input accept=".json" aria-label="ملف النسخة الاحتياطية" hidden="" id="importFile" onchange="League.importData(event)" type="file"/>
-<button class="btn-primary" onclick="document.getElementById('importFile').click()" type="button">استيراد نسخة احتياطية</button>
-</div>
-<div class="settings-card danger admin-only">
-<div class="settings-icon">🔄</div>
-<h3>تصفير الموسم</h3>
-<p>حذف كل مباريات الموسم النشط مع الاحتفاظ بحسابات اللاعبين.</p>
-<button class="btn-danger" onclick="League.confirmResetSeason()" type="button">تصفير الموسم</button>
-</div>
-<div class="settings-card danger admin-only">
-<div class="settings-icon">⚠️</div>
-<h3>تصفير البطولة</h3>
-<p>حذف كل المواسم والمباريات والأهداف، مع الاحتفاظ بحسابات اللاعبين والمحادثات.</p>
-<button class="btn-danger" onclick="League.confirmResetAll()" type="button">تصفير البطولة</button>
-</div>
-</div>
-</div>
+<article class="settings-card"><h4>تنزيل نسخة احتياطية</h4><p>المواسم والمباريات والأهداف وإحصائيات المباريات في ملف JSON.</p><button id="exportDataButton" class="btn-primary" onclick="League.exportData()" type="button">تنزيل نسخة احتياطية</button><p class="operation-status" id="exportStatus" role="status" aria-live="polite">جاهز لتنزيل النسخة.</p></article>
+<article class="settings-card"><h4>استيراد نسخة احتياطية</h4><p>الاستيراد يستبدل بيانات البطولة الحالية. ستراجع النطاق قبل التنفيذ.</p><label for="importFile">ملف النسخة الاحتياطية</label><input accept=".json,application/json" id="importFile" onchange="League.selectImportFile(event)" type="file" aria-describedby="importStatus"/><button id="importDataButton" class="btn-secondary" onclick="League.importData()" type="button" disabled>مراجعة النسخة واستيرادها</button><p class="operation-status" id="importStatus" role="status" aria-live="polite">اختر ملف JSON للمراجعة.</p></article>
+</div></section>
+<section class="settings-section" aria-labelledby="accountsTitle"><div class="settings-section-heading"><h3 id="accountsTitle">حسابات اللاعبين</h3><p>إدارة الحسابات متاحة للمدير من لوحة الحسابات الخارجية.</p></div><article class="settings-card"><a id="accountsButton" class="btn-secondary" onclick="League.openAccounts(event)" href="https://supabase.com/dashboard/project/hyqedsydyqbcgusjthcj/auth/users" rel="noopener noreferrer" target="_blank">إدارة الحسابات <span aria-hidden="true">↗</span></a><p class="operation-status" id="accountsStatus" role="status">تفتح في نافذة جديدة، وقد تتطلب تسجيل دخول منفصلًا.</p></article></section>
+<section class="settings-section settings-danger" aria-labelledby="dangerZoneTitle"><div class="settings-section-heading"><h3 id="dangerZoneTitle"><span aria-hidden="true">⚠</span> منطقة الإجراءات الخطرة</h3><p>هذه الإجراءات تحذف بيانات البطولة نهائيًا. نزّل نسخة احتياطية أولًا، ثم راجع النطاق واكتب عبارة التأكيد.</p></div><div class="settings-grid">
+<article class="settings-card"><h4>تصفير الموسم</h4><p>حذف مباريات الموسم الحالي وتفاصيل أهدافها، مع بقاء الموسم واللاعبين والتشكيلات.</p><button id="resetSeasonButton" class="btn-danger" onclick="League.confirmResetSeason()" type="button"><span aria-hidden="true">⚠</span> تصفير الموسم</button><p class="operation-status" id="resetSeasonStatus" role="status">لم يتم تنفيذ أي إجراء.</p></article>
+<article class="settings-card"><h4>تصفير البطولة</h4><p>حذف جميع المواسم والمباريات وتفاصيلها، وإنشاء موسم أول فارغ. تبقى الحسابات والتشكيلات والأسئلة والمحادثات.</p><button id="resetAllButton" class="btn-danger" onclick="League.confirmResetAll()" type="button"><span aria-hidden="true">⚠</span> تصفير البطولة</button><p class="operation-status" id="resetAllStatus" role="status">لم يتم تنفيذ أي إجراء.</p></article>
+</div></section></div></div>
 </main>
 </div>
 <!-- EDIT MATCH MODAL -->
@@ -501,11 +494,11 @@
 <div class="entry-modes" role="group" aria-label="طريقة تسجيل المباراة">
 <button id="editQuickTab" type="button" aria-pressed="true" onclick="League.setMatchEntryMode('edit','quick')">تسجيل سريع</button>
 <button id="editDetailedTab" type="button" aria-pressed="false" onclick="League.setMatchEntryMode('edit','detailed')">تسجيل تفصيلي</button></div>
-<p id="editQuickHint" class="entry-hint">اختر الفريقين وسجّل النتيجة. تفاصيل الأهداف اختيارية ويمكن إضافتها لاحقًا.</p>
-<div class="entry-teams"><div class="match-player-select"><label for="editPlayer1">الفريق الأول</label><select id="editPlayer1" aria-describedby="editPlayer1Error" onchange="League.onMatchEntryChange('edit')"><option value="">اختر الفريق</option></select><span class="entry-field-error" id="editPlayer1Error"></span></div><div class="match-player-select"><label for="editPlayer2">الفريق الثاني</label><select id="editPlayer2" aria-describedby="editPlayer2Error" onchange="League.onMatchEntryChange('edit')"><option value="">اختر الفريق</option></select><span class="entry-field-error" id="editPlayer2Error"></span></div></div>
-<p class="entry-hint" id="editEntryHint" aria-live="polite">اختر فريقين مختلفين للمتابعة.</p>
-<div class="entry-scores"><div class="score-input-group"><label for="editGoals1" id="editScoreLabel1">أهداف الفريق الأول</label><div class="entry-score-control"><button type="button" aria-label="إنقاص أهداف الفريق الأول" onclick="League.changeMatchScore('edit',1,-1)">−</button><input id="editGoals1" type="number" inputmode="numeric" min="0" max="99" step="1" value="0" aria-describedby="editGoals1Error" oninput="League.onMatchEntryChange('edit')"/><button type="button" aria-label="زيادة أهداف الفريق الأول" onclick="League.changeMatchScore('edit',1,1)">+</button></div><span class="entry-field-error" id="editGoals1Error"></span></div><div class="score-input-group"><label for="editGoals2" id="editScoreLabel2">أهداف الفريق الثاني</label><div class="entry-score-control"><button type="button" aria-label="إنقاص أهداف الفريق الثاني" onclick="League.changeMatchScore('edit',2,-1)">−</button><input id="editGoals2" type="number" inputmode="numeric" min="0" max="99" step="1" value="0" aria-describedby="editGoals2Error" oninput="League.onMatchEntryChange('edit')"/><button type="button" aria-label="زيادة أهداف الفريق الثاني" onclick="League.changeMatchScore('edit',2,1)">+</button></div><span class="entry-field-error" id="editGoals2Error"></span></div></div>
-<div class="match-preview"><div class="preview-result" id="editPreviewResult" aria-live="polite" dir="auto">الفريق الأول 0 — 0 الفريق الثاني</div></div>
+<p id="editQuickHint" class="entry-hint">اختر اللاعبين وسجّل النتيجة. تفاصيل الأهداف اختيارية ويمكن إضافتها لاحقًا.</p>
+<div class="entry-teams"><div class="match-player-select"><label for="editPlayer1">اللاعب الأول</label><select id="editPlayer1" aria-describedby="editPlayer1Error" onchange="League.onMatchEntryChange('edit')"><option value="">اختر اللاعب</option></select><span class="entry-field-error" id="editPlayer1Error"></span></div><div class="match-player-select"><label for="editPlayer2">اللاعب الثاني</label><select id="editPlayer2" aria-describedby="editPlayer2Error" onchange="League.onMatchEntryChange('edit')"><option value="">اختر اللاعب</option></select><span class="entry-field-error" id="editPlayer2Error"></span></div></div>
+<p class="entry-hint" id="editEntryHint" aria-live="polite">اختر لاعبين مختلفين للمتابعة.</p>
+<div class="entry-scores"><div class="score-input-group"><label for="editGoals1" id="editScoreLabel1">أهداف اللاعب الأول</label><div class="entry-score-control"><button type="button" aria-label="إنقاص أهداف اللاعب الأول" onclick="League.changeMatchScore('edit',1,-1)">−</button><input id="editGoals1" type="number" inputmode="numeric" min="0" max="99" step="1" value="0" aria-describedby="editGoals1Error" oninput="League.onMatchEntryChange('edit')"/><button type="button" aria-label="زيادة أهداف اللاعب الأول" onclick="League.changeMatchScore('edit',1,1)">+</button></div><span class="entry-field-error" id="editGoals1Error"></span></div><div class="score-input-group"><label for="editGoals2" id="editScoreLabel2">أهداف اللاعب الثاني</label><div class="entry-score-control"><button type="button" aria-label="إنقاص أهداف اللاعب الثاني" onclick="League.changeMatchScore('edit',2,-1)">−</button><input id="editGoals2" type="number" inputmode="numeric" min="0" max="99" step="1" value="0" aria-describedby="editGoals2Error" oninput="League.onMatchEntryChange('edit')"/><button type="button" aria-label="زيادة أهداف اللاعب الثاني" onclick="League.changeMatchScore('edit',2,1)">+</button></div><span class="entry-field-error" id="editGoals2Error"></span></div></div>
+<div class="match-preview"><div class="preview-result" id="editPreviewResult" aria-live="polite" dir="auto">اللاعب الأول 0 — 0 اللاعب الثاني</div></div>
 <div class="form-row-two"><div class="form-group"><label for="editDate">تاريخ المباراة</label><input id="editDate" type="date" aria-describedby="editDateError"/><span class="entry-field-error" id="editDateError"></span></div>
 <div class="form-group"><label for="editSeason">الموسم</label><select id="editSeason" aria-describedby="editSeasonError"></select><span class="entry-field-error" id="editSeasonError"></span></div></div>
 <label id="editDeferWrap" class="entry-defer" hidden><input id="editDeferDetails" type="checkbox" onchange="League.toggleDeferredDetails('edit')"/>حفظ النتيجة فقط، وإضافة تفاصيل الأهداف لاحقًا</label>
@@ -514,8 +507,9 @@
 <div class="goal-events-list" id="editGoalEventsList"></div>
 <div class="goal-events-summary" id="editGoalEventsSummary"></div><div class="match-awards-preview" id="editMatchAwardsPreview"></div></fieldset></details>
 <button type="button" class="btn-secondary entry-add-details" id="editAddDetails" onclick="League.setMatchEntryMode('edit','detailed')">إضافة تفاصيل الأهداف اختياريًا</button>
-<div class="form-error hidden" id="editError" role="alert"></div></div><div class="modal-footer"><button class="btn-primary" id="saveEditButton" onclick="League.saveEditMatch()" type="button">حفظ المباراة</button><button class="btn-secondary" onclick="League.closeEditModal()" type="button">إلغاء</button></div></div></div>
+<div class="form-error hidden" id="editError" role="alert"></div></div><div class="modal-footer"><button class="btn-primary" id="saveEditButton" onclick="League.saveEditMatch()" type="button">حفظ المباراة</button><button class="btn-secondary" onclick="League.closeEditModal()" type="button">إلغاء والعودة</button></div></div></div>
 <div class="modal-overlay hidden" id="matchReviewModal" data-busy-region><div class="modal match-entry"><div class="modal-header"><h3>مراجعة المباراة قبل الحفظ</h3><button type="button" class="modal-close" aria-label="العودة لتعديل البيانات" onclick="League.closeMatchReview()">✕</button></div><div class="modal-body"><div id="matchReviewSummary"></div><div id="matchReviewError" class="form-error hidden" role="alert"></div></div><div class="modal-footer"><button id="confirmMatchSaveButton" class="btn-primary" type="button" onclick="League.confirmMatchSave()">حفظ المباراة</button><button class="btn-secondary" type="button" onclick="League.closeMatchReview()">تعديل البيانات</button></div></div></div>
+<div class="modal-overlay hidden" id="dangerConfirmModal"><section class="modal" aria-labelledby="dangerConfirmTitle"><div class="modal-header"><h3 id="dangerConfirmTitle">مراجعة الإجراء</h3><button class="modal-close" type="button" aria-label="إغلاق التأكيد" onclick="League.closeDangerConfirm()">×</button></div><div class="modal-body"><div id="dangerConfirmScope"></div><p class="danger-warning">هذا الإجراء لا يمكن التراجع عنه. تأكد من حفظ نسخة احتياطية.</p><div class="form-group"><label for="dangerConfirmInput" id="dangerConfirmLabel"></label><input id="dangerConfirmInput" autocomplete="off" spellcheck="false" aria-describedby="dangerConfirmStatus" oninput="League.updateDangerConfirm()"/></div><p id="dangerConfirmStatus" class="operation-status" role="status" aria-live="polite">راجع النطاق ثم اكتب عبارة التأكيد.</p></div><div class="modal-footer"><button id="dangerConfirmExecute" type="button" class="btn-danger" disabled onclick="League.executeDangerConfirm()">تنفيذ الإجراء</button><button id="dangerConfirmCancel" type="button" class="btn-secondary" data-dialog-cancel onclick="League.closeDangerConfirm()">إلغاء والعودة</button></div></section></div>
 <!-- CONFIRM MODAL -->
 <div class="modal-overlay hidden" id="confirmModal">
 <div class="modal small">
@@ -527,18 +521,18 @@
 </div>
 <div class="modal-footer">
 <button class="btn-danger" id="confirmYes" type="button">تأكيد</button>
-<button class="btn-secondary" data-dialog-cancel="" onclick="League.closeConfirmModal()" type="button">إلغاء</button>
+<button class="btn-secondary" id="confirmCancel" data-dialog-cancel="" onclick="League.closeConfirmModal()" type="button">إلغاء</button>
 </div>
 </div>
 </div>
 <!-- TOAST -->
 <div class="modal-overlay hidden" id="squadPlayerModal" dir="rtl" lang="ar" data-busy-region>
 <div class="modal"><div class="modal-header"><h3 id="squadPlayerTitle">إضافة لاعب</h3><button class="modal-close" type="button" aria-label="إغلاق" onclick="League.closeSquadPlayer()">✕</button></div>
-<form class="modal-body" id="squadPlayerForm">
+<form class="modal-body" id="squadPlayerForm" novalidate>
 <div class="form-group"><label for="squadPlayerName">اسم لاعب كرة القدم</label><input id="squadPlayerName" maxlength="100" required placeholder="مثال: ليونيل ميسي" autocomplete="off" dir="auto" oninput="League.refreshSquadPhotoInitials()"/></div>
 <div class="roster-editor-fields"><div class="form-group"><label for="squadPlayerPosition">المركز</label><select id="squadPlayerPosition"><optgroup label="حراسة المرمى"><option value="GK">GK — حارس مرمى</option></optgroup><optgroup label="الدفاع"><option value="LB">LB — ظهير أيسر</option><option value="CB">CB — قلب دفاع</option><option value="RB">RB — ظهير أيمن</option></optgroup><optgroup label="الوسط"><option value="LMF">LMF — وسط أيسر</option><option value="DMF">DMF — وسط دفاعي</option><option value="CMF">CMF — وسط مركزي</option><option value="AMF">AMF — وسط هجومي</option><option value="RMF">RMF — وسط أيمن</option></optgroup><optgroup label="الهجوم"><option value="LWF">LWF — جناح أيسر</option><option value="SS">SS — مهاجم ثانٍ</option><option value="CF">CF — رأس حربة</option><option value="RWF">RWF — جناح أيمن</option></optgroup></select></div><div class="form-group"><label for="squadPlayerRole">مكان اللاعب</label><select id="squadPlayerRole"><option value="starter">أساسي</option><option value="substitute">احتياط</option></select></div></div>
 <div class="roster-editor-fields"><div class="form-group"><label for="squadPlayerNumber">رقم القميص <span>(اختياري)</span></label><input type="number" id="squadPlayerNumber" min="0" max="99" step="1" inputmode="numeric" placeholder="—"/></div><div class="form-group"><label for="squadPlayerRating">التقييم <span>(اختياري)</span></label><input type="number" id="squadPlayerRating" min="0" max="120" step="0.1" inputmode="decimal" placeholder="—"/></div></div>
-<div class="form-group squad-photo-field"><label>صورة اللاعب <span>(اختياري)</span></label>
+<div class="form-group squad-photo-field"><label for="squadPlayerPhotoFile">صورة اللاعب <span>(اختياري)</span></label>
 <div class="squad-photo-editor">
 <div class="squad-photo-preview" id="squadPhotoPreview" aria-label="معاينة صورة اللاعب"><span id="squadPhotoInitials" aria-hidden="true">؟</span><img id="squadPhotoPreviewImage" alt="" hidden/></div>
 <div class="squad-photo-controls">
@@ -547,7 +541,7 @@
 <button class="btn-ghost" type="button" id="removeSquadPhoto" onclick="League.clearSquadPhoto()">إزالة الصورة</button>
 <small id="squadPhotoHint">JPG أو PNG أو WebP. تُقصّ الصورة مربعة وتُضغط تلقائيًا قبل الرفع.</small>
 </div></div>
-<details class="squad-photo-link"><summary>استخدام رابط HTTPS بدل الرفع</summary><input type="url" id="squadPlayerPhoto" maxlength="2048" dir="ltr" placeholder="https://…" aria-describedby="squadPhotoHint" oninput="League.previewSquadPhotoLink()"/></details>
+<details class="squad-photo-link"><summary>استخدام رابط HTTPS بدل الرفع</summary><label for="squadPlayerPhoto">رابط الصورة</label><input type="url" id="squadPlayerPhoto" maxlength="2048" dir="ltr" placeholder="https://…" aria-describedby="squadPhotoHint" oninput="League.previewSquadPhotoLink()"/></details>
 </div>
 <p class="match-stats-hint">الحالة «أساسي» تدخل اللاعب ضمن الـ11 الأساسيين. يجب أن تكون التشكيلة الأساسية 11 لاعبًا بالضبط. اللاعب الاحتياط يبقى متاحًا للمسجّل والأسيست.</p><div id="squadPlayerError" class="form-error hidden"></div>
 <div class="form-actions"><button type="submit" class="btn-primary" id="saveSquadPlayer">حفظ اللاعب</button><button type="button" class="btn-secondary" onclick="League.closeSquadPlayer()">إلغاء</button></div>

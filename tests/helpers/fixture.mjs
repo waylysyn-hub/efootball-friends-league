@@ -84,6 +84,16 @@ export function fixtureClient({ profile = null, empty = false, overlappingSquads
       };return query;
     },
     async rpc(name,args){calls.push({rpc:name,args});if(client.hold)await client.hold({rpc:name});if(client.fail==='rpc')return {error:{status:503}};
+      if(name==='restore_league_competition'){
+        if(signedIn!=='Wael')return {error:{status:403}};
+        const backup=args.backup;
+        db.seasons=backup.seasons.map(row=>({...row}));
+        db.matches=backup.matches.map(row=>({...row,season_id:row.season}));
+        db.match_goal_events=backup.goalEvents.map(row=>({...row,match_id:row.matchId}));
+        db.match_stats=backup.matchStats.map(row=>({...row,match_id:row.matchId}));
+        db.achievements=[];db.standings=[];
+        return {data:null,error:null};
+      }
       if(name==='start_league_evening'){
         const existing=db.league_evenings.find(row=>row.id===args.evening_id);
         if(existing)return {data:{...existing},error:null};

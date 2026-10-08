@@ -13,29 +13,27 @@ import { renderQuestions } from './questions.js';
 import { renderSquads } from './squads.js';
 import { renderEvenings } from './evenings.js';
 import { closeDialog, escapeHtml, isBusy, openDialog, showError as showInlineError, setupDrawer, toast, withBusy } from '../../shared/ui.js';
+import { stateHTML, renderSettings } from './view-states.js';
 
-export function navigateTo(page, el) {
+export function navigateTo(page, el, { replace = false } = {}) {
   if (!isAdmin() && ['recordMatch', 'evenings'].includes(page)) {
     showToast("هذه الصفحة متاحة لمدير الدوري فقط.", true);
     page = 'dashboard';
     el = document.querySelector('.nav-item[data-page="dashboard"]');
   }
-  const target = document.getElementById('page-' + page);
-  if (target) history.replaceState(null, '', '#' + page);
-  if (!target) {
-    page = 'dashboard';
-  }
+  if (!document.getElementById('page-' + page)) { page = 'dashboard'; el = null; replace = true; }
+  if (location.hash !== '#' + page) history[replace ? 'replaceState' : 'pushState']({ page, matchId: state.matchId }, '', '#' + page);
   const pageEl = document.getElementById('page-' + page) || document.getElementById('page-dashboard');
 
   document.querySelectorAll('.page').forEach(p => {
-    if (p !== pageEl) p.classList.add('hidden');
+    if (p !== pageEl) { p.classList.add('hidden'); p.classList.remove('active'); }
   });
   pageEl.classList.remove('hidden');
   pageEl.classList.add('active');
 
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   el ||= document.querySelector('.nav-item[data-page="' + page + '"]');
-  if (el) el.classList.add('active');
+  if (el) { el.classList.add('active'); const group = el.closest('details'); if (group) group.open = true; }
   document.querySelectorAll('.nav-item[data-page]').forEach(link => link.setAttribute('aria-current', link === el ? 'page' : 'false'));
 
   const titles = {
@@ -54,18 +52,25 @@ export function navigateTo(page, el) {
   const topSeason = document.getElementById('topbarSeason');
   if (topSeason) topSeason.textContent = activeSeason ? displaySeason(activeSeason.name) : "لا يوجد موسم";
 
+  const drawerWasOpen = document.getElementById('sidebar').classList.contains('open');
   closeSidebar();
   if (page !== 'questions') state.questionId = null;
   state.page = page;
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  const heading = pageEl.querySelector('.page-title');
+  if (heading) { heading.tabIndex = -1; if (!drawerWasOpen) heading.focus({ preventScroll: true }); }
   try {
     renderPage(page);
   } catch (e) {
     console.error('renderPage failed:', page, e);
-    showToast("تعذّر تحميل هذه الصفحة.", true);
+    let status = pageEl.querySelector('.page-render-error');
+    if (!status) { status = document.createElement('div'); status.className = 'page-render-error'; pageEl.querySelector('.page-header').after(status); }
+    status.innerHTML = stateHTML({ kind: 'error' });
   }
 }
 
 export function renderPage(page) {
+  document.querySelector('#page-' + page + ' .page-render-error')?.remove();
   switch(page) {
     case 'dashboard': renderDashboard(); break;
     case 'matchHistory': renderHistory(); break;
@@ -75,6 +80,7 @@ export function renderPage(page) {
     case 'playerProfile': {
       const first = state.selectedProfile || state.user || getPlayers()[0];
       if (first) selectProfilePlayer(first);
+      else document.getElementById('profileContent').innerHTML = stateHTML({ title: 'لا يوجد لاعبون بعد.', description: 'تواصل مع مدير الدوري لإضافة الحسابات.' });
       break;
     }
     case 'seasons': renderSeasons(); break;
@@ -82,6 +88,7 @@ export function renderPage(page) {
     case 'achievements': {
       const first = state.selectedAchievements || state.user || getPlayers()[0];
       if (first) selectAchievementsPlayer(first);
+      else document.getElementById('achievementsContent').innerHTML = stateHTML({ title: 'لا يوجد لاعبون بعد.', description: 'تظهر إنجازات اللاعبين هنا بعد تسجيلهم.' });
       break;
     }
     case 'rivalries': renderRivalries(); break;
@@ -91,6 +98,7 @@ export function renderPage(page) {
     case 'questions': renderQuestions(); break;
     case 'squads': renderSquads(); break;
     case 'evenings': renderEvenings(); break;
+    case 'settings': renderSettings(); break;
   }
 }
 
@@ -123,16 +131,17 @@ export function formatDate(dateStr) {
 }
 
 let cancelConfirmation = null;
-export function showConfirm(title, message, onConfirm, onCancel = null, confirmLabel = 'تأكيد') {
+export function showConfirm(title, message, onConfirm, onCancel = null, confirmLabel = 'تأكيد', cancelLabel = 'إلغاء والعودة', afterConfirm = null) {
   cancelConfirmation = onCancel;
   document.getElementById('confirmTitle').textContent = title;
   document.getElementById('confirmMessage').textContent = message;
+  document.getElementById('confirmCancel').textContent = cancelLabel;
   openDialog('confirmModal', closeConfirmModal);
   const button = document.getElementById('confirmYes');
   button.textContent = confirmLabel;
   button.onclick = () => withBusy('confirm', button, async () => {
     if (!state.user) throw new Error('Session ended');
-    await onConfirm(); cancelConfirmation = null; closeDialog('confirmModal');
+    await onConfirm(); cancelConfirmation = null; closeDialog('confirmModal'); afterConfirm?.();
   });
  }
 

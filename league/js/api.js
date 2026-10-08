@@ -1,6 +1,7 @@
 import { sb, state } from './state.js';
 import { getPlayers, populateAllPlayerDropdowns } from './profiles.js';
 import { updateGoalEventsSetupBanner } from './matches.js';
+import { setDataStatus } from './view-states.js';
 
 export function isQaTableMissing(err) {
   if (!err) return false;
@@ -91,7 +92,8 @@ export async function fetchPlayers() {
 
 export function fetchAllData() {
   if (fetchInFlight) return fetchInFlight;
-  fetchInFlight = loadSnapshot().finally(() => { fetchInFlight = null; });
+  setDataStatus('loading');
+  fetchInFlight = loadSnapshot().then(value => { setDataStatus('ready'); return value; }, error => { setDataStatus('error'); throw error; }).finally(() => { fetchInFlight = null; });
   return fetchInFlight;
 }
 
