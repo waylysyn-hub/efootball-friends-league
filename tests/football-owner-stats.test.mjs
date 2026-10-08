@@ -128,7 +128,8 @@ test('football names remain escaped and season changes cannot show stale details
   assert.ok(app.document.getElementById('fbPlayerDetail').classList.contains('hidden'));
   app.window.League.navigateTo('awards');
   app.document.getElementById('awardsSeasonFilter').value = 'empty-season'; app.window.League.renderAwards();
-  for (const metric of ['goals','assists']) assert.equal(app.document.querySelector(`[data-football-award="${metric}"] .award-winner`).textContent, '—');
+  assert.equal(app.document.querySelectorAll('[data-football-award]').length, 0);
+  assert.match(app.document.getElementById('awardsContent').textContent, /لا توجد بيانات لهذا الموسم/);
   assert.deepEqual(app.errors, []);
 });
 

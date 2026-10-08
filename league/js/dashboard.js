@@ -1,3 +1,4 @@
+import { emptyCompetition, stateHTML } from './view-states.js';
 import { displayName, displaySeason } from '../../shared/locale.js';
 import { getActiveSeason } from './seasons.js';
 import { computeLeagueTable, computePlayerStats } from './standings.js';
@@ -16,29 +17,29 @@ export function renderDashboard() {
 
   // Leader
   const leader = table[0];
-  setStatCard('sc-leader', leader?.played ? leader.player : '—', leader ? leader.points + ' نقطة' : "0 نقطة");
+  setStatCard('sc-leader', leader?.played ? leader.player : 'لم يُحسم بعد', leader ? leader.points + ' نقطة' : "0 نقطة");
 
   // Top scorer
   const scorers = getPlayers().map(p => ({ player: p, goals: computePlayerStats(p).goalsFor }))
                          .sort((a, b) => b.goals - a.goals);
-  setStatCard('sc-scorer', (scorers[0]?.goals || 0) > 0 ? scorers[0].player : '—',
+  setStatCard('sc-scorer', (scorers[0]?.goals || 0) > 0 ? scorers[0].player : 'لم يُحسم بعد',
               (scorers[0]?.goals || 0) + ' هدف');
 
   // Best defense (fewest conceded among those who played)
   const defenders = getPlayers().map(p => { const s = computePlayerStats(p); return { player: p, ga: s.goalsAgainst, played: s.played }; })
     .filter(p => p.played > 0).sort((a, b) => a.ga - b.ga);
-  setStatCard('sc-defense', defenders[0] ? defenders[0].player : '—',
+  setStatCard('sc-defense', defenders[0] ? defenders[0].player : 'لم يُحسم بعد',
               defenders[0] ? defenders[0].ga + ' هدف مستقبَل' : "0 هدف مستقبَل");
 
   // Best attack
   const attackers = [...scorers];
-  setStatCard('sc-attack', (attackers[0]?.goals || 0) > 0 ? attackers[0].player : '—',
+  setStatCard('sc-attack', (attackers[0]?.goals || 0) > 0 ? attackers[0].player : 'لم يُحسم بعد',
               (attackers[0]?.goals || 0) + ' هدف مسجّل');
 
   // Most wins
   const winPlayers = getPlayers().map(p => { const s = computePlayerStats(p); return { player: p, wins: s.wins }; })
                              .sort((a, b) => b.wins - a.wins);
-  setStatCard('sc-wins', (winPlayers[0]?.wins || 0) > 0 ? winPlayers[0].player : '—',
+  setStatCard('sc-wins', (winPlayers[0]?.wins || 0) > 0 ? winPlayers[0].player : 'لم يُحسم بعد',
               (winPlayers[0]?.wins || 0) + ' فوز');
 
   // Total matches
@@ -48,7 +49,7 @@ export function renderDashboard() {
   const recent = [...state.db.matches].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
   const recentEl = document.getElementById('dashRecentMatches');
   if (recent.length === 0) {
-    recentEl.innerHTML = "<div class=\"empty-state\">لا توجد مباريات بعد</div>";
+    recentEl.innerHTML = emptyCompetition('لا توجد مباريات في هذا الموسم بعد.');
   } else {
     recentEl.innerHTML = recent.map(m => {
       const season = state.db.seasons.find(s => s.id === m.season);
@@ -65,7 +66,7 @@ export function renderDashboard() {
   // Mini standings
   const standingsEl = document.getElementById('dashMiniStandings');
   if (table.every(t => t.played === 0)) {
-    standingsEl.innerHTML = "<div class=\"empty-state\">لا توجد بيانات بعد</div>";
+    standingsEl.innerHTML = emptyCompetition();
   } else {
     standingsEl.innerHTML = table.map((r, i) => `
       <div class="mini-standings-row">

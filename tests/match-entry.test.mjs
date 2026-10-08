@@ -93,7 +93,7 @@ test('field errors reject missing/duplicate teams, fractions, negatives and inva
   const app=await setup(t),{document:d,window:w}=app;
   w.League.saveMatch(); assert.equal(d.getElementById('matchPlayer1').getAttribute('aria-invalid'),'true');
   fill(app); assert.equal(d.querySelector('#matchPlayer2 option[value="Wael"]').disabled,true);
-  d.getElementById('matchPlayer2').value='Wael'; w.League.saveMatch(); assert.match(d.getElementById('matchPlayer2Error').textContent,/لاعبين أو فريقين مختلفين/);
+  d.getElementById('matchPlayer2').value='Wael'; w.League.saveMatch(); assert.match(d.getElementById('matchPlayer2Error').textContent,/اختر لاعبين مختلفين/);
   fill(app); for(const value of ['','-1','1.5','100']) {d.getElementById('matchGoals1').value=value; w.League.saveMatch(); assert.equal(d.getElementById('matchGoals1').getAttribute('aria-invalid'),'true');}
   fill(app); w.League.setMatchEntryMode('match','detailed'); w.League.saveMatch(); assert.equal(d.querySelector('.ge-scorer').getAttribute('aria-invalid'),'true'); complete(app);
   for(const value of ['0','-1','1.5','121']) {d.querySelector('.ge-minute').value=value; w.League.saveMatch(); assert.match(d.querySelector('.ge-minute').nextElementSibling.textContent,/1 إلى 120/);}
@@ -140,7 +140,7 @@ test('editing partial historical details fills only missing rows and preserves s
 
 test('new/cancel confirmation preserves drafts, navigation and realtime do not silently reset them', async t => {
   const app=await setup(t),{document:d,window:w}=app; fill(app,3,2); w.League.setMatchEntryMode('match','detailed'); complete(app);
-  w.League.clearMatchForm(); assert.match(d.getElementById('confirmMessage').textContent,/ستفقد المعلومات/); w.League.closeConfirmModal(); assert.equal(d.getElementById('matchGoals1').value,'3');
+  w.League.clearMatchForm(); assert.match(d.getElementById('confirmMessage').textContent,/لديك بيانات غير محفوظة/); w.League.closeConfirmModal(); assert.equal(d.getElementById('matchGoals1').value,'3');
   w.League.navigateTo('dashboard'); w.League.navigateTo('recordMatch'); await w.League.refresh(); assert.equal(d.querySelectorAll('#goalEventsList .ge-row').length,5);
   w.League.clearMatchForm(); await d.getElementById('confirmYes').onclick(); assert.equal(d.getElementById('matchPlayer1').value,''); assert.equal(d.getElementById('matchQuickTab').getAttribute('aria-pressed'),'true');
 });

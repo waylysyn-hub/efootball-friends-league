@@ -1,4 +1,5 @@
-import { displayName } from '../../shared/locale.js';
+import { displayName, displaySeason } from '../../shared/locale.js';
+import { emptyCompetition } from './view-states.js';
 import { state } from './state.js';
 import { getPlayers, nickChip } from './profiles.js';
 import { populateSeasonDropdowns } from './seasons.js';
@@ -98,6 +99,9 @@ export function renderLeagueTable() {
   const table = computeLeagueTable(filter);
   const tbody = document.getElementById('leagueTableBody');
   if (!tbody) return;
+  document.getElementById('tableSeasonTitle').textContent = filter === 'all' ? 'الترتيب الإجمالي · كل المواسم' : displaySeason(state.db.seasons.find(s => s.id === filter)?.name || 'موسم غير متاح');
+  document.getElementById('tableEmptyState').innerHTML = !table.length || !table.some(r => r.played) ? emptyCompetition() : '';
+  document.getElementById('leagueTable').closest('.table-container').hidden = !table.length;
 
   tbody.innerHTML = table.map((r, i) => {
     const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
@@ -106,7 +110,7 @@ export function renderLeagueTable() {
                   r.goalDiff < 0 ? `<span class="gd-neg">${r.goalDiff}</span>` : '0';
     return `
       <tr class="${rankClass}">
-        <td><span class="rank-badge ${badge}">${i + 1}</span></td>
+        <td><span class="rank-badge ${badge}" aria-label="المركز ${i + 1}">${i + 1}</span></td>
         <td><div class="lt-player">${esc(displayName(r.player))}${nickChip(r.player) ? `<div class="lt-nick">${nickChip(r.player)}</div>` : ''}</div></td>
         <td>${r.played}</td>
         <td>${r.wins}</td>

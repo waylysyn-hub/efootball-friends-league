@@ -49,7 +49,7 @@ function filterOpponents(prefix) {
   }
 }
 function scoreHTML(data) {
-  return `<span>${esc(displayName(data.Player1) || 'الفريق الأول')}</span> <bdi>${esc(data.Goals1 || '—')}</bdi> — <bdi>${esc(data.Goals2 || '—')}</bdi> <span>${esc(displayName(data.Player2) || 'الفريق الثاني')}</span>`;
+  return `<span>${esc(displayName(data.Player1) || 'اللاعب الأول')}</span> <bdi>${esc(data.Goals1 || '—')}</bdi> — <bdi>${esc(data.Goals2 || '—')}</bdi> <span>${esc(displayName(data.Player2) || 'اللاعب الثاني')}</span>`;
 }
 function goalCountText(count) {
   if (count === 1) return 'هدف واحد مسجّل';
@@ -62,7 +62,7 @@ function paint(prefix) {
   filterOpponents(prefix);
   el(prefix === 'match' ? 'previewResult' : 'editPreviewResult').innerHTML = scoreHTML(data);
   for (const side of [1, 2]) {
-    el(prefix + 'ScoreLabel' + side).textContent = 'أهداف ' + (displayName(data['Player' + side]) || (side === 1 ? 'الفريق الأول' : 'الفريق الثاني'));
+    el(prefix + 'ScoreLabel' + side).textContent = 'أهداف ' + (displayName(data['Player' + side]) || (side === 1 ? 'اللاعب الأول' : 'اللاعب الثاني'));
   }
   const detailed = draft.mode === 'detailed';
   el(prefix + 'QuickTab').setAttribute('aria-pressed', String(!detailed));
@@ -73,7 +73,7 @@ function paint(prefix) {
   el(prefix + 'DeferWrap').hidden = !detailed;
   el(prefix + 'DetailsFields').disabled = !validPair(data) || el(prefix + 'DeferDetails').checked || !state.goalsReady || !state.squadsReady;
   el(prefix + 'Season').disabled = !isAdmin();
-  el(prefix + 'EntryHint').textContent = !validPair(data) ? 'اختر فريقين مختلفين للمتابعة.' : '';
+  el(prefix + 'EntryHint').textContent = !validPair(data) ? 'اختر لاعبين مختلفين للمتابعة.' : '';
   updateGoalEventsUI(listId(prefix));
 }
 function reset(prefix, match = null) {
@@ -111,13 +111,13 @@ export function clearMatchEntry() {
 export function clearMatchForm() {
   if (busy() || !requireAdmin()) return;
   const clear = () => { reset('match'); el('matchEntrySuccess').hidden = true; el('matchPlayer1').focus(); };
-  if (dirty('match')) showConfirm('بدء مباراة جديدة', 'هل تريد مسح بيانات المباراة الحالية؟ ستفقد المعلومات التي أدخلتها.', clear);
+  if (dirty('match')) showConfirm('مسح النموذج', 'لديك بيانات غير محفوظة. هل تريد مسح النموذج؟', clear, null, 'مسح البيانات', 'متابعة التعديل', () => el('matchPlayer1').focus());
   else clear();
 }
 export function cancelMatchEntry() {
   if (busy()) return;
   const cancel = () => { reset('match'); navigateTo('matchHistory'); };
-  if (dirty('match')) showConfirm('إلغاء تسجيل المباراة', 'هل تريد مسح بيانات المباراة الحالية؟ ستفقد المعلومات التي أدخلتها.', cancel);
+  if (dirty('match')) showConfirm('إلغاء تسجيل المباراة', 'لديك بيانات غير محفوظة. هل تريد مسح النموذج والعودة إلى السجل؟', cancel, null, 'مسح البيانات والعودة', 'متابعة التعديل');
   else cancel();
 }
 export function beginMatchWithPlayers(p1, p2, season) {
@@ -175,7 +175,7 @@ export function onMatchEntryChange(prefix = 'match') {
     renderGoalEventsForm(listId(prefix), events);
   }
   clearErrors(prefix);
-  if (data.Player1 && playerId(data.Player1) === playerId(data.Player2)) fieldError(prefix + 'Player2', 'يجب اختيار لاعبين أو فريقين مختلفين للمباراة.');
+  if (data.Player1 && playerId(data.Player1) === playerId(data.Player2)) fieldError(prefix + 'Player2', 'اختر لاعبين مختلفين للمتابعة.');
   for (const side of [1, 2]) if (!validScore(data['Goals' + side])) fieldError(prefix + 'Goals' + side, 'أدخل عددًا صحيحًا من 0 إلى 99.');
   draft.last = data;
   syncRows(prefix, events, previous);
@@ -218,16 +218,16 @@ export function openEditModal(id) {
 export function closeEditModal() {
   if (busy()) return;
   const close = () => { closeDialog('editMatchModal'); drafts.edit = null; };
-  if (dirty('edit')) showConfirm('إلغاء التعديلات', 'هل تريد مسح بيانات المباراة الحالية؟ ستفقد المعلومات التي أدخلتها.', close);
+  if (dirty('edit')) showConfirm('إلغاء التعديلات', 'لديك بيانات غير محفوظة. هل تريد إلغاء التعديلات؟ تبقى المباراة المحفوظة كما هي.', close, null, 'إلغاء التعديلات', 'متابعة التعديل');
   else close();
 }
 function validate(prefix) {
   const data = read(prefix); clearErrors(prefix);
   for (const side of [1, 2]) {
-    if (!playerId(data['Player' + side])) fieldError(prefix + 'Player' + side, 'اختر الفريق من قائمة لاعبي الدوري.');
+    if (!playerId(data['Player' + side])) fieldError(prefix + 'Player' + side, 'اختر اللاعب من قائمة لاعبي الدوري.');
     if (!validScore(data['Goals' + side])) fieldError(prefix + 'Goals' + side, 'أدخل عددًا صحيحًا من 0 إلى 99، دون كسور.');
   }
-  if (data.Player1 && playerId(data.Player1) === playerId(data.Player2)) fieldError(prefix + 'Player2', 'يجب اختيار لاعبين أو فريقين مختلفين للمباراة.');
+  if (data.Player1 && playerId(data.Player1) === playerId(data.Player2)) fieldError(prefix + 'Player2', 'اختر لاعبين مختلفين للمتابعة.');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data.Date) || Number.isNaN(Date.parse(data.Date))) fieldError(prefix + 'Date', 'اختر تاريخًا صحيحًا للمباراة.');
   if (!state.db.seasons.some(row => row.id === data.Season)) fieldError(prefix + 'Season', 'اختر موسمًا موجودًا قبل الحفظ.');
   const detailed = drafts[prefix]?.mode === 'detailed' && !el(prefix + 'DeferDetails').checked;
@@ -265,7 +265,7 @@ export function saveMatchForm(editing) {
   const replaces = editing && getMatchGoalEvents(el('editMatchId').value).length > 0 && missing;
   review = { prefix, draft: drafts[prefix], ...values };
   el('matchReviewSummary').innerHTML = `<p class="entry-review-score" dir="rtl">${scoreHTML(data)}</p>
-    <dl class="entry-review-list"><div><dt>الموسم</dt><dd>${esc(displaySeason(season.name))}</dd></div><div><dt>التاريخ</dt><dd>${esc(formatDate(data.Date))}</dd></div>
+    <dl class="entry-review-list"><div><dt>اللاعب الأول</dt><dd>${esc(displayName(data.Player1))}</dd></div><div><dt>اللاعب الثاني</dt><dd>${esc(displayName(data.Player2))}</dd></div><div><dt>الموسم</dt><dd>${esc(displaySeason(season.name))}</dd></div><div><dt>التاريخ</dt><dd>${esc(formatDate(data.Date))}</dd></div>
     <div><dt>عدد الأهداف</dt><dd>${Number(data.Goals1) + Number(data.Goals2)}</dd></div><div><dt>تفاصيل الأهداف</dt><dd>${events.length ? goalCountText(events.length) : missing ? 'لم تتم الإضافة' : 'لا توجد أهداف في هذه المباراة.'}</dd></div><div><dt>الأسيست المسجّل</dt><dd>${events.filter(row => row.assist).length}</dd></div></dl>
     ${missing ? `<p class="entry-note">سيُحفظ اللقاء بنتيجته فقط، ويمكن إضافة تفاصيل الأهداف لاحقًا من سجل المباريات.${replaces ? ' تفاصيل الأهداف المحفوظة سابقًا ستُحذف عند تأكيد الحفظ.' : ''}</p>` : ''}`;
   el('matchReviewError').classList.add('hidden');

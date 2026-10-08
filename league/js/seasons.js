@@ -1,8 +1,9 @@
+import { emptyCompetition, stateHTML } from './view-states.js';
 import { displaySeason } from '../../shared/locale.js';
 import { sb, state } from './state.js';
 import { isAdmin, requireAdmin } from './admin.js';
 import { esc, showConfirm, showToast } from './ui.js';
-import { withBusy } from '../../shared/ui.js';
+import { withBusy, fieldError, clearFieldErrors } from '../../shared/ui.js';
 import { fetchAllData } from './api.js';
 import { updateSidebarPlayer } from './auth-ui.js';
 
@@ -43,8 +44,9 @@ export async function createSeason() {
   if (!requireAdmin()) return;
   const input = document.getElementById('newSeasonName');
   const name = input.value.trim();
-  if (!name || name.length > 80) return showToast("أدخل اسمًا للموسم لا يتجاوز 80 حرفًا.", true);
-  if (state.db.seasons.some(season => season.name.toLowerCase() === name.toLowerCase())) return showToast("يوجد موسم بهذا الاسم بالفعل.", true);
+  clearFieldErrors(input.parentElement);
+  if (!name || name.length > 80) return fieldError(input, "أدخل اسمًا للموسم لا يتجاوز 80 حرفًا.");
+  if (state.db.seasons.some(season => season.name.toLowerCase() === name.toLowerCase())) return fieldError(input, "يوجد موسم بهذا الاسم بالفعل.");
   return withBusy('create-season', document.getElementById('createSeasonButton'), async () => {
     if (state.pendingSeason?.name !== name) state.pendingSeason = { id: crypto.randomUUID(), name, active: false, created: Date.now() };
     const draft = state.pendingSeason;
@@ -109,7 +111,7 @@ export function renderSeasons() {
   const cont = document.getElementById('seasonsList');
   if (!cont) return;
   if (state.db.seasons.length === 0) {
-    cont.innerHTML = "<div class=\"empty-state\">لا توجد مواسم بعد. يمكن لمدير الدوري إنشاء موسم جديد.</div>";
+    cont.innerHTML = stateHTML({ title: 'لا توجد مواسم بعد.', description: 'يمكن لمدير الدوري إنشاء موسم جديد من الحقل أعلاه.' });
     return;
   }
   cont.innerHTML = state.db.seasons.map(s => {

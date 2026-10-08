@@ -5,6 +5,7 @@ import { matchAwardsHTML, matchGoalSummaryHTML, hasMissingGoalDetails } from './
 import { esc, showConfirm, showToast } from './ui.js';
 import { isAdmin, requireAdmin } from './admin.js';
 import { updateSidebarPlayer } from './auth-ui.js';
+import { emptyCompetition, stateHTML } from './view-states.js';
 export * from './match-entry.js';
 
 export function renderHistory() {
@@ -26,14 +27,21 @@ export function renderHistory() {
 
   const container = document.getElementById('matchList');
   if (matches.length === 0) {
-    container.innerHTML = `<div class="match-list-empty">
-      <span class="empty-icon">⚽</span>
-      <p>لا توجد مباريات مطابقة. جرّب تغيير البحث أو سجّل مباراة جديدة.</p>
-    </div>`;
+    const seasonHasMatches = state.db.matches.some(m => !filterSeason || filterSeason === 'all' || m.season === filterSeason);
+    container.innerHTML = search || filterPlayer || (filterSeason !== 'all' && filterSeason && !seasonHasMatches && state.db.matches.length)
+      ? stateHTML({ kind: 'filtered', title: 'لا توجد مباريات مطابقة.', action: 'clear-history', label: 'مسح الفلاتر' })
+      : emptyCompetition('لا توجد مباريات في هذا الموسم بعد.');
     return;
   }
 
   container.innerHTML = matches.map(m => matchCardHTML(m)).join('');
+}
+
+export function clearHistoryFilters() {
+  for (const id of ['historySearch', 'historyFilterPlayer']) document.getElementById(id).value = '';
+  document.getElementById('historyFilterSeason').value = 'all';
+  document.getElementById('historySort').value = 'newest'; renderHistory();
+  document.getElementById('historySearch').focus();
 }
 
 export function matchCardHTML(m) {
@@ -48,12 +56,10 @@ export function matchCardHTML(m) {
   return `
     <div class="match-card" id="match-card-${m.id}">
       <div class="match-card-header">
-        <span>📅 ${date}</span>
-        <span>|</span>
-        <span>🏆 ${esc(seasonName)}</span>
-        <span>|</span>
+        <time datetime="${esc(m.date || '')}">${esc(date)}</time>
+        <span>${esc(seasonName)}</span>
         ${resultBadge}
-        ${hasMissingGoalDetails(m) ? '<span class="entry-missing-badge">تفاصيل ناقصة</span>' : ''}
+        ${hasMissingGoalDetails(m) ? '<span class="entry-missing-badge">تفاصيل ناقصة</span>' : '<span class="entry-complete-badge">تفاصيل الأهداف مكتملة</span>'}
       </div>
       <div class="match-card-result">
         <div class="match-player">${matchPlayerLabel(m.player1)}</div>
@@ -63,10 +69,10 @@ export function matchCardHTML(m) {
       ${matchGoalSummaryHTML(m.id)}
       ${matchAwardsHTML(m.id)}
       <div class="match-card-actions">
-        <button class="btn-sm" onclick="League.openMatchDetails('${m.id}')">📄 التفاصيل</button>
+        <button type="button" class="btn-sm" onclick="League.openMatchDetails('${m.id}')">تفاصيل المباراة</button>
         ${isAdmin() ? `
-        <button class="btn-sm edit" onclick="League.openEditModal('${m.id}')">✏️ تعديل</button>
-        <span class="match-delete-wrap"><button class="btn-sm delete match-delete" onclick="League.deleteMatch('${m.id}')">🗑️ حذف</button></span>` : ''}
+        <button type="button" class="btn-sm edit" onclick="League.openEditModal('${m.id}')">تعديل</button>
+        <span class="match-delete-wrap"><button type="button" class="btn-sm delete match-delete" onclick="League.deleteMatch('${m.id}')">حذف</button></span>` : ''}
       </div>
     </div>`;
 }

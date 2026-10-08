@@ -1,3 +1,4 @@
+import { emptyCompetition, stateHTML } from './view-states.js';
 import { displayName, matchesPlayerSearch } from '../../shared/locale.js';
 import { populateSeasonDropdowns } from './seasons.js';
 import { state } from './state.js';
@@ -18,10 +19,7 @@ export function renderFootballStats() {
 
   if (!state.goalsReady) {
     contLb.innerHTML = '';
-    contTbl.innerHTML = `<div class="qa-setup-banner">
-      <h3>تفاصيل الأهداف غير متاحة</h3>
-      <p>تواصل مع مدير الدوري لإكمال الإعداد، ثم حدّث الصفحة.</p>
-    </div>`;
+    contTbl.innerHTML = stateHTML({ kind: 'error', title: 'تعذر تحميل تفاصيل الأهداف.', description: 'يمكنك تحديث البيانات أو التواصل مع مدير الدوري لإكمال الإعداد.' });
     closeFootballPlayerDetail();
     return;
   }
@@ -55,7 +53,7 @@ export function renderFootballStats() {
     </div>`;
 
   if (!players.length) {
-    contTbl.innerHTML = "<div class=\"empty-state\">لا توجد إحصائيات بعد. سجّل المباريات مع تفاصيل أهدافها.</div>";
+    contTbl.innerHTML = search ? stateHTML({ kind: 'filtered', action: 'clear-football', label: 'مسح الفلاتر' }) : emptyCompetition('لا توجد تفاصيل أهداف لهذا الموسم بعد.');
     closeFootballPlayerDetail();
     return;
   }
@@ -145,11 +143,11 @@ export function renderH2H() {
   if (!cont) return;
 
   if (!p1 || !p2) {
-    cont.innerHTML = "<div class=\"empty-state\">اختر لاعبين للمقارنة</div>";
+    cont.innerHTML = stateHTML({ title: 'اختر لاعبين للمقارنة', description: 'ستظهر نتائج المواجهات بين اللاعبين المختارين هنا.' });
     return;
   }
   if (p1 === p2) {
-    cont.innerHTML = "<div class=\"empty-state\">اختر لاعبين مختلفين</div>";
+    cont.innerHTML = stateHTML({ title: 'اختر لاعبين مختلفين للمتابعة.' });
     return;
   }
 
@@ -229,7 +227,7 @@ export function renderH2H() {
           </div>`;
         }).join('')}
       </div>
-    </div>` : "<div class=\"empty-state\">لا توجد مواجهات بين هذين اللاعبين بعد</div>"}`;
+    </div>` : emptyCompetition('لا توجد مواجهات بين هذين اللاعبين بعد.')}`;
 }
 
 export function renderRivalries() {
@@ -266,7 +264,7 @@ export function renderRivalries() {
 
   const pairArr = Object.values(pairs).filter(p => p.count > 0);
   if (pairArr.length === 0) {
-    cont.innerHTML = "<div class=\"empty-state\">لم تُسجّل مباريات بعد. ستظهر المنافسات تلقائيًا.</div>";
+    cont.innerHTML = emptyCompetition('لم تُسجّل مباريات بعد. ستظهر المنافسات تلقائيًا.');
     return;
   }
 
@@ -308,6 +306,8 @@ export function renderStatistics() {
   const filter = document.getElementById('statsSeasonFilter')?.value || 'all';
   const cont = document.getElementById('statsContent');
   if (!cont) return;
+
+  if (!state.db.matches.some(m => filter === 'all' || m.season === filter)) { cont.innerHTML = emptyCompetition(); return; }
 
   const stats = getPlayers().map(p => {
     const s = computePlayerStats(p, filter);
@@ -367,4 +367,10 @@ export function renderStatistics() {
         ${barChart(stats, maxSessionG, 'sessionGoals', '')}
       </div>` : ''}
     </div>`;
+}
+
+export function clearFootballFilters() {
+  document.getElementById('fbPlayerSearch').value = '';
+  document.getElementById('fbStatsSeasonFilter').value = 'all'; renderFootballStats();
+  document.getElementById('fbPlayerSearch').focus();
 }
