@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-28",
+  "base_commit": "b5a77494e9db5c42ce99b45252192c00b0093dd6",
+  "branch": "improve/premium-runtime-audit-20261028",
+  "environment": "Synthetic QA clients and isolated PGlite; no production writes",
+  "command": "npm run test:browser -- --workers=3 --reporter=list,json,html",
+  "browser": "Chromium 153.0.8010.0 (local @sparticuz/chromium 153.0.0 binary; Playwright 1.63.0)",
+  "statistics": {
+    "startTime": "2026-10-28T07:43:39.139Z",
+    "duration": 336529.83400000003,
+    "expected": 430,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "errors": [],
+  "projects": {
+    "1920px": {
+      "passed": 43,
+      "failed": 0,
+      "skipped": 0
+    },
+    "1366px": {
+      "passed": 43,
+      "failed": 0,
+      "skipped": 0
+    },
+    "1024px": {
+      "passed": 43,
+      "failed": 0,
+      "skipped": 0
+    },
+    "768px": {
+      "passed": 43,
+      "failed": 0,
+      "skipped": 0
+    },
+    "430px": {
+      "passed": 43,
+      "failed": 0,
+      "skipped": 0
+    },
+    "390px": {
+      "passed": 43,
+      "failed": 0,
+      "skipped": 0
+    },
+    "360px": {
+      "passed": 43,
+      "failed": 0,
+      "skipped": 0
+    },
+    "320px-entry": {
+      "passed": 43,
+      "failed": 0,
+      "skipped": 0
+    },
+    "375px-entry": {
+      "passed": 43,
+      "failed": 0,
+      "skipped": 0
+    },
+    "414px-entry": {
+      "passed": 43,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "responsive_harness": {
+    "screens": 250,
+    "horizontal_overflow": 0,
+    "reported_script_errors": 0
+  },
+  "implementation_commits": [
+    "bf0748035906a4ab2676f1f7d6071a8453ede129",
+    "36421a800c0ec9af9dc16536dfb3e6aeb247f966"
+  ],
+  "node_tests": {
+    "passed": 114,
+    "failed": 0,
+    "skipped": 0
+  }
+}

@@ -1,10 +1,12 @@
 import { displayName, playerInitials } from '../../shared/locale.js';
-import { applyAdminUI } from './admin.js';
+import { applyAdminUI, clearSettingsSession } from './admin.js';
 import { closeSidebar, navigateTo, showError } from './ui.js';
-import { closeDialog, errorMessage, withBusy } from '../../shared/ui.js';
+import { closeDialog, errorMessage, withBusy, fieldError, clearFieldErrors } from '../../shared/ui.js';
 import { clearMatchEntry } from './match-entry.js';
 import { clearSquadSession } from './squads.js';
-import { sb, state } from './state.js';
+import { clearQuestionsSession } from './questions.js';
+import { emptyDatabase, sb, state } from './state.js';
+import { setDataStatus } from './view-states.js';
 import { fetchAllData } from './api.js';
 import { stopRealtime, subscribeRealtime } from './realtime.js';
 import { populateSeasonDropdowns } from './seasons.js';
@@ -24,8 +26,9 @@ export async function handleLogin() {
   const username = document.getElementById('loginUsername').value;
   const passwordInput = document.getElementById('loginPassword');
   const error = document.getElementById('loginError');
-  if (!username) return showError(error, "اختر حسابك للمتابعة.");
-  if (!passwordInput.value) return showError(error, "أدخل كلمة المرور.");
+  clearFieldErrors(document.getElementById('loginForm'));
+  if (!username) return fieldError('loginUsername', "اختر حسابك للمتابعة.", error);
+  if (!passwordInput.value) return fieldError(passwordInput, "أدخل كلمة المرور.", error);
   return withBusy('login', document.getElementById('loginButton'), async () => {
     state.signingIn = true;
     error.classList.add('hidden');
@@ -40,6 +43,7 @@ export async function handleLogin() {
     } catch (failure) {
       state.profile = null;
       state.user = null;
+      if (failure?.code === 'invalid_credentials') fieldError(passwordInput, 'تحقق من اسم اللاعب وكلمة المرور.');
       showError(error, errorMessage(failure, failure?.code === 'invalid_credentials'
         ? "اسم اللاعب أو كلمة المرور غير صحيح. حاول مجددًا."
         : "تعذّر الدخول أو تحميل الدوري. حاول مجددًا."));
@@ -55,12 +59,21 @@ export async function handleLogout() {
 }
 
 export function clearSession() {
+  state.sessionVersion++;
+  clearSettingsSession();
   clearMatchEntry();
   clearSquadSession();
+  clearQuestionsSession();
   state.profile = null;
   state.user = null;
   state.questionId = null;
   state.matchId = null;
+  state.selectedProfile = null;
+  state.selectedAchievements = null;
+  state.selectedSquad = null;
+  state.pendingSeason = null;
+  state.db = emptyDatabase();
+  setDataStatus('ready');
   stopRealtime();
   closeDialog('editMatchModal');
   closeDialog('squadPlayerModal');
@@ -78,8 +91,9 @@ export function enterApp() {
   populateSeasonDropdowns();
   subscribeRealtime();
   const page = location.hash.slice(1);
+  if (page === 'matchDetails') state.matchId = history.state?.matchId || null;
   const target = [...document.querySelectorAll('.nav-item[data-page]')].find(link => link.dataset.page === page);
-  navigateTo(target ? page : 'dashboard', target);
+  navigateTo(target ? page : 'dashboard', target, { replace: true });
 }
 
 export function updateSidebarPlayer() {

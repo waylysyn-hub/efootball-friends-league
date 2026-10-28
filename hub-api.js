@@ -1,4 +1,5 @@
 import { footballIdentity } from './shared/football-identity.js';
+import { readAllRows } from './shared/data.js';
 import { displaySeason } from './shared/locale.js';
 /**
  * Tournament Hub — loads real data from Supabase (Friends League).
@@ -60,12 +61,12 @@ export async function loadTournamentData(seasonId = null) {
   try {
     const [seasonsRes, playersRes, matchesRes, goalEventsRes, matchStatsRes, standingsRes] =
       await Promise.all([
-        sb.from('seasons').select('*').order('created', { ascending: true }),
-        sb.from('players').select('name').order('name'),
-        sb.from('matches').select('*'),
-        sb.from('match_goal_events').select('*'),
-        sb.from('match_stats').select('*'),
-        sb.from('standings').select('*').order('rank', { ascending: true }),
+        readAllRows(options => sb.from('seasons').select('*', options).order('created').order('id')),
+        readAllRows(options => sb.from('players').select('name', options).order('name')),
+        readAllRows(options => sb.from('matches').select('*', options).order('id')),
+        readAllRows(options => sb.from('match_goal_events').select('*', options).order('id')),
+        readAllRows(options => sb.from('match_stats').select('*', options).order('id')),
+        readAllRows(options => sb.from('standings').select('*', options).order('season').order('player')),
       ]);
 
     if (seasonsRes.error) throw seasonsRes.error;

@@ -1,3 +1,5 @@
+import { fieldError, clearFieldErrors, withBusy } from '../../shared/ui.js';
+import { stateHTML } from './view-states.js';
 import { displayName } from '../../shared/locale.js';
 import { sb, state } from './state.js';
 import { isAdmin, requireAdmin } from './admin.js';
@@ -5,6 +7,7 @@ import { esc, formatDate, showConfirm, showError, showToast } from './ui.js';
 import { isQaTableMissing, mapAnswer, mapQuestion } from './api.js';
 
 const pendingPosts = new Map();
+export function clearQuestionsSession() { pendingPosts.clear(); }
 async function postOnce(table, content) {
   const signature = JSON.stringify(content);
   let draft = pendingPosts.get(table);
@@ -17,7 +20,7 @@ async function postOnce(table, content) {
     const existing = await sb.from(table).select().eq('id', draft.row.id).single();
     if (!existing.error && Object.entries(content).every(([key,value]) => existing.data?.[key] === value)) result = existing;
   }
-  if (!result.error) pendingPosts.delete(table);
+  if (!result.error && pendingPosts.get(table) === draft) pendingPosts.delete(table);
   return result;
 }
 
@@ -31,12 +34,12 @@ export function renderQuestions() {
   if (!cont) return;
 
   if (!sb) {
-    cont.innerHTML = "<div class=\"empty-state\">الأسئلة غير متاحة مؤقتًا. حاول بعد قليل.</div>";
+    cont.innerHTML = stateHTML({ kind: 'error', title: 'تعذر تحميل الأسئلة.' });
     return;
   }
 
   if (!state.qaReady) {
-    cont.innerHTML = "<div class=\"empty-state\"><span class=\"empty-icon\">◇</span><h3>الأسئلة غير جاهزة بعد</h3><p>تواصل مع مدير الدوري لإكمال الإعداد.</p></div>";
+    cont.innerHTML = stateHTML({ kind: 'error', title: 'الأسئلة غير جاهزة بعد', description: 'أعد المحاولة أو تواصل مع مدير الدوري لإكمال الإعداد.' });
     return;
   }
 
@@ -73,13 +76,13 @@ export function renderQuestions() {
       <div class="panel qa-ask-panel">
         <div class="panel-header">اسأل لاعبي الدوري</div>
         <div class="panel-body" data-busy-region>
-          <label for="qaAskBody">سؤالك</label><textarea id="qaAskBody" maxlength="2000" rows="3" placeholder="اكتب سؤالك للاعبي الدوري…"></textarea>
+          <label for="qaAskBody">سؤالك</label><textarea id="qaAskBody" aria-describedby="qaAskError" maxlength="2000" rows="3" placeholder="اكتب سؤالك للاعبي الدوري…"></textarea>
           <div id="qaAskError" class="login-error hidden"></div>
           <button id="postQuestionButton" type="button" class="btn-primary" onclick="League.submitQuestion()">نشر السؤال</button>
         </div>
       </div>
       <h3 class="qa-section-title">مفتوحة (${open.length})</h3>
-      <div class="qa-list">${open.length ? open.map(card).join('') : "<div class=\"empty-state\">لا توجد أسئلة مفتوحة بعد.</div>"}</div>
+      <div class="qa-list">${open.length ? open.map(card).join('') : stateHTML({ title: 'لا توجد أسئلة مفتوحة بعد.', description: 'اكتب سؤالك في الحقل أعلاه لبدء النقاش.' })}</div>
       ${closed.length ? `<h3 class="qa-section-title">مغلقة (${closed.length})</h3>
         <div class="qa-list">${closed.map(card).join('')}</div>` : ''}
       ${isAdmin() && closed.length ? `
@@ -124,7 +127,7 @@ export function renderQuestionDetail(id) {
         ${markBtn}
       </div>
     </div>`;
-  }).join('') : "<div class=\"empty-state\">لا توجد إجابات بعد. كن أول من يجيب!</div>";
+  }).join('') : stateHTML({ title: 'لا توجد إجابات بعد.', description: 'أضف إجابتك لبدء النقاش.' });
 
   cont.innerHTML = `
     <div class="qa-detail-view">
@@ -149,7 +152,7 @@ export function renderQuestionDetail(id) {
       <div class="panel qa-answer-panel">
         <div class="panel-header">شارك في النقاش</div>
         <div class="panel-body" data-busy-region>
-          <label for="qaAnswerBody">إجابتك</label><textarea id="qaAnswerBody" maxlength="4000" rows="3" placeholder="اكتب إجابتك…"></textarea>
+          <label for="qaAnswerBody">إجابتك</label><textarea id="qaAnswerBody" aria-describedby="qaAnswerError" maxlength="4000" rows="3" placeholder="اكتب إجابتك…"></textarea>
           <div id="qaAnswerError" class="login-error hidden"></div>
           <button id="postAnswerButton" type="button" class="btn-primary" onclick="League.submitAnswer('${q.id}')">نشر الإجابة</button>
         </div>
@@ -159,54 +162,60 @@ export function renderQuestionDetail(id) {
 
 export async function submitQuestion() {
   const err = document.getElementById('qaAskError');
+  clearFieldErrors(err?.parentElement);
   const body = (document.getElementById('qaAskBody')?.value || '').trim();
   if (!sb) return showError(err, "تعذّر الاتصال. حدّث الصفحة.");
   if (!state.user) return showError(err, "سجّل الدخول أولًا.");
-  if (!body) return showError(err, "اكتب سؤالًا أولًا.");
-  if (body.length < 3 || body.length > 2000) return showError(err, "يجب أن يتراوح السؤال بين 3 و2000 حرف.");
+  if (!body) return fieldError('qaAskBody', 'اكتب سؤالًا أولًا.', err);
+  if (body.length < 3 || body.length > 2000) return fieldError('qaAskBody', 'يجب أن يتراوح السؤال بين 3 و2000 حرف.', err);
 
-  const author = state.user;
-  const { data, error } = await postOnce('questions', { author, body });
-  if (state.user !== author) return;
-  if (error) {
-    if (isQaTableMissing(error)) return showError(err, "الأسئلة غير متاحة. تواصل مع مدير الدوري.");
-    return showError(err, "تعذّر نشر السؤال.");
-  }
+  const author = state.user, session = state.sessionVersion;
+  return withBusy('submitQuestion', document.getElementById('postQuestionButton'), async () => {
+    const { data, error } = await postOnce('questions', { author, body });
+    if (state.user !== author || state.sessionVersion !== session) return;
+    if (error) {
+      if (isQaTableMissing(error)) return showError(err, "الأسئلة غير متاحة. تواصل مع مدير الدوري.");
+      return showError(err, "تعذّر نشر السؤال.");
+    }
 
-  state.db.questions = state.db.questions.filter(question => question.id !== data.id);
-  state.db.questions.unshift(mapQuestion(data));
+    state.db.questions = state.db.questions.filter(question => question.id !== data.id);
+    state.db.questions.unshift(mapQuestion(data));
 
-  err?.classList.add('hidden');
-  showToast("تم نشر السؤال!");
-  state.questionId = null;
-  renderQuestions();
+    err?.classList.add('hidden');
+    showToast("تم نشر السؤال!");
+    state.questionId = null;
+    renderQuestions();
+  });
 }
 
 export async function submitAnswer(questionId) {
   const err = document.getElementById('qaAnswerError');
+  clearFieldErrors(err?.parentElement);
   const body = (document.getElementById('qaAnswerBody')?.value || '').trim();
   const q = state.db.questions.find(x => x.id === questionId);
   if (!sb) return showError(err, "تعذّر الاتصال. حدّث الصفحة.");
   if (!state.user) return showError(err, "سجّل الدخول أولًا.");
   if (!q) return;
   if (q.closed) return showError(err, "هذا السؤال مغلق.");
-  if (!body) return showError(err, "اكتب إجابة أولًا.");
-  if (body.length < 2 || body.length > 4000) return showError(err, "يجب أن تتراوح الإجابة بين حرفين و4000 حرف.");
+  if (!body) return fieldError('qaAnswerBody', 'اكتب إجابة أولًا.', err);
+  if (body.length < 2 || body.length > 4000) return fieldError('qaAnswerBody', 'يجب أن تتراوح الإجابة بين حرفين و4000 حرف.', err);
 
-  const author = state.user;
-  const { data, error } = await postOnce('answers', { question_id: questionId, author, body });
-  if (state.user !== author) return;
-  if (error) {
-    if (isQaTableMissing(error)) return showError(err, "الأسئلة غير متاحة. تواصل مع مدير الدوري.");
-    return showError(err, "تعذّر نشر الإجابة.");
-  }
+  const author = state.user, session = state.sessionVersion;
+  return withBusy('submitAnswer', document.getElementById('postAnswerButton'), async () => {
+    const { data, error } = await postOnce('answers', { question_id: questionId, author, body });
+    if (state.user !== author || state.sessionVersion !== session) return;
+    if (error) {
+      if (isQaTableMissing(error)) return showError(err, "الأسئلة غير متاحة. تواصل مع مدير الدوري.");
+      return showError(err, "تعذّر نشر الإجابة.");
+    }
 
-  state.db.answers = state.db.answers.filter(answer => answer.id !== data.id);
-  state.db.answers.push(mapAnswer(data));
+    state.db.answers = state.db.answers.filter(answer => answer.id !== data.id);
+    state.db.answers.push(mapAnswer(data));
 
-  err?.classList.add('hidden');
-  showToast("تم نشر الإجابة!");
-  renderQuestionDetail(questionId);
+    err?.classList.add('hidden');
+    showToast("تم نشر الإجابة!");
+    renderQuestionDetail(questionId);
+  });
 }
 
 export function deleteQuestion(id) {

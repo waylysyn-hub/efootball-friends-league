@@ -1,3 +1,4 @@
+import { fieldError, clearFieldErrors } from '../../shared/ui.js';
 import { sb, state } from './state.js';
 import { isAdmin, requireAdmin } from './admin.js';
 import { getPlayers } from './profiles.js';
@@ -71,11 +72,11 @@ export function renderEvenings() {
   } else {
     draft ||= { title: `سهرة ${new Date().toLocaleDateString(AR_LOCALE, { day: 'numeric', month: 'long' })}`, players: [] };
     draft.players = draft.players.filter(name => getPlayers().includes(name));
-    content.innerHTML = `<form id="eveningForm" class="panel evening-form" data-busy-region aria-labelledby="newEveningTitle">
+    content.innerHTML = `<form novalidate id="eveningForm" class="panel evening-form" data-busy-region aria-labelledby="newEveningTitle">
       <h3 id="newEveningTitle">مين حاضر الليلة؟</h3><p class="evening-note">اختر لاعبين على الأقل، ثم ابدأ السهرة لإجراء قرعة عشوائية. إذا كان العدد فرديًا، يحصل لاعب واحد على استراحة.</p>
       <div class="form-group"><label for="eveningTitle">اسم السهرة</label><input id="eveningTitle" maxlength="80" required value="${esc(draft.title)}" autocomplete="off"></div>
       <fieldset class="evening-attendees"><legend>اللاعبون الحاضرون</legend><div class="evening-selection-actions"><button type="button" class="btn-ghost" id="eveningSelectAll">اختيار الكل</button><button type="button" class="btn-ghost" id="eveningClear">إلغاء الاختيار</button></div>
-      <div class="evening-roster">${getPlayers().map(name => `<label class="evening-player"><input type="checkbox" name="eveningAttendee" value="${esc(name)}" ${draft.players.includes(name) ? 'checked' : ''}><span>${esc(displayName(name))}</span><span class="evening-present" aria-hidden="true">حاضر</span></label>`).join('')}</div></fieldset>
+      <div class="evening-roster">${getPlayers().map((name, index) => `<label class="evening-player"><input id="eveningAttendee-${index}" type="checkbox" name="eveningAttendee" value="${esc(name)}" ${draft.players.includes(name) ? 'checked' : ''}><span>${esc(displayName(name))}</span><span class="evening-present" aria-hidden="true">حاضر</span></label>`).join('')}</div></fieldset>
       <div id="eveningCount" class="evening-note" role="status" aria-live="polite"></div><p class="evening-note">الموسم: ${esc(seasonLabel)}</p>
       <div id="eveningError" class="form-error hidden" role="alert"></div><button id="drawEveningButton" class="btn-primary" type="submit">ابدأ السهرة واعمل القرعة</button>
     </form>`;
@@ -101,8 +102,9 @@ export async function startEvening() {
   const errorEl = document.getElementById('eveningError');
   if (!draft || !errorEl) return;
   const title = draft.title.trim();
-  if (!title || title.length > 80) return showError(errorEl, 'أدخل اسمًا للسهرة من حرف واحد إلى 80 حرفًا.');
-  if (draft.players.length < 2) return showError(errorEl, 'اختر لاعبين على الأقل لإجراء القرعة.');
+  clearFieldErrors(document.getElementById('eveningForm'));
+  if (!title || title.length > 80) return fieldError('eveningTitle', 'أدخل اسمًا للسهرة من حرف واحد إلى 80 حرفًا.', errorEl);
+  if (draft.players.length < 2) return fieldError(document.querySelector('[name=eveningAttendee]'), 'اختر لاعبين على الأقل لإجراء القرعة.', errorEl);
   request ||= { evening_id: crypto.randomUUID(), evening_title: title, attendees: [...draft.players], target_season: getActiveSeason()?.id || null };
   const submitted = request, user = state.user;
   await withBusy('start-evening', document.getElementById('drawEveningButton'), async () => {

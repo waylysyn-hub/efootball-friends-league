@@ -382,6 +382,7 @@ function initNav() {
       const page = btn.dataset.page;
       $$('#nav .hub-nav-link[data-page]').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
+      $$('#nav .hub-nav-link[data-page]').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
 
       const target = HUB_SECTIONS[page];
       if (!target) return;
@@ -389,8 +390,7 @@ function initNav() {
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       else if (page === 'tournaments') window.scrollTo({ top: 0, behavior: 'smooth' });
 
-      $('#sidebar')?.classList.remove('open');
-      $('#overlay')?.classList.remove('show');
+      // setupDrawer owns closing, inert state and restoration of keyboard focus.
     });
   });
 }

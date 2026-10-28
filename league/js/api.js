@@ -1,6 +1,12 @@
 import { sb, state } from './state.js';
 import { getPlayers, populateAllPlayerDropdowns } from './profiles.js';
 import { updateGoalEventsSetupBanner } from './matches.js';
+import { setDataStatus } from './view-states.js';
+import { readAllRows } from '../../shared/data.js';
+
+// Legacy backups legitimately use epoch zero. A truthy fallback would replace
+// that value on every refresh, changing chronology and confirmation signatures.
+const epoch = (value, fallback = Date.now()) => value != null && value !== '' && Number.isFinite(Number(value)) ? Number(value) : fallback;
 
 export function isQaTableMissing(err) {
   if (!err) return false;
@@ -15,7 +21,7 @@ export function isMatchStatsTableMissing(err) { return isQaTableMissing(err); }
 export function isGoalEventsTableMissing(err) { return isQaTableMissing(err); }
 
 export function mapSeason(row) {
-  return { id: row.id, name: row.name, active: !!row.active, created: Number(row.created) || Date.now() };
+  return { id: row.id, name: row.name, active: !!row.active, created: epoch(row.created) };
 }
 
 export function mapMatch(row) {
@@ -25,7 +31,7 @@ export function mapMatch(row) {
     player1Id: row.player1_id || null, player2Id: row.player2_id || null,
     goals1: row.goals1, goals2: row.goals2,
     date: row.date, season: row.season_id,
-    timestamp: Number(row.timestamp) || (row.created_at ? new Date(row.created_at).getTime() : Date.now())
+    timestamp: epoch(row.timestamp, row.created_at ? new Date(row.created_at).getTime() : Date.now())
   };
 }
 
@@ -36,7 +42,7 @@ export function mapQuestion(row) {
     body: row.body,
     closed: !!row.closed,
     correctAnswerId: row.correct_answer_id || null,
-    timestamp: Number(row.timestamp) || (row.created_at ? new Date(row.created_at).getTime() : Date.now())
+    timestamp: epoch(row.timestamp, row.created_at ? new Date(row.created_at).getTime() : Date.now())
   };
 }
 
@@ -46,7 +52,7 @@ export function mapAnswer(row) {
     questionId: row.question_id,
     author: row.author,
     body: row.body,
-    timestamp: Number(row.timestamp) || (row.created_at ? new Date(row.created_at).getTime() : Date.now())
+    timestamp: epoch(row.timestamp, row.created_at ? new Date(row.created_at).getTime() : Date.now())
   };
 }
 
@@ -80,9 +86,11 @@ export function setDefaultDate() {
 }
 
 let fetchInFlight = null;
+const snapshotKey = () => JSON.stringify([state.sessionVersion, state.user, state.profile?.role]);
+const tableOrder = { players: ['name'], standings: ['season', 'player'], achievements: ['player', 'achievement_id'] };
 export async function fetchPlayers() {
   if (!sb) throw new Error('Connection unavailable');
-  const { data, error } = await sb.from('players').select('id, name, role, created').order('name');
+  const { data, error } = await readAllRows(options => sb.from('players').select('id, name, role, created', options).order('name'));
   if (error) throw error;
   state.db.accounts = Object.fromEntries((data || []).map(player => [player.name, player]));
   populateAllPlayerDropdowns();
@@ -90,19 +98,32 @@ export async function fetchPlayers() {
 }
 
 export function fetchAllData() {
-  if (fetchInFlight) return fetchInFlight;
-  fetchInFlight = loadSnapshot().finally(() => { fetchInFlight = null; });
-  return fetchInFlight;
+  const key = snapshotKey();
+  if (fetchInFlight?.key === key) return fetchInFlight.promise;
+  const request = { key, promise: null };
+  setDataStatus('loading');
+  request.promise = loadSnapshot(key).then(value => {
+    if (snapshotKey() === key) setDataStatus('ready');
+    return value;
+  }, error => {
+    if (snapshotKey() === key) setDataStatus('error');
+    throw error;
+  }).finally(() => { if (fetchInFlight === request) fetchInFlight = null; });
+  fetchInFlight = request;
+  return request.promise;
 }
 
-async function loadSnapshot() {
+async function loadSnapshot(key) {
   if (!sb) throw new Error('Connection unavailable');
   const tables = ['players', 'seasons', 'matches', 'questions', 'answers', 'match_stats', 'match_goal_events', 'squad_players', 'standings', 'achievements'];
   const eveningUser = state.profile?.role === 'admin' ? state.user : null;
   if (eveningUser) tables.push('league_evenings');
-  const results = await Promise.all(tables.map(table =>
-    sb.from(table).select(table === 'players' ? 'id, name, role, created' : '*')
-  ));
+  const results = await Promise.all(tables.map(table => readAllRows(options => {
+    let query = sb.from(table).select(table === 'players' ? 'id, name, role, created' : '*', options);
+    for (const column of tableOrder[table] || ['id']) query = query.order(column);
+    return query;
+  })));
+  if (snapshotKey() !== key) return false;
   const data = {};
   results.forEach((result, index) => {
     const table = tables[index];
@@ -132,4 +153,5 @@ async function loadSnapshot() {
   };
   if (getPlayers().join('\n') !== previousRoster) populateAllPlayerDropdowns();
   updateGoalEventsSetupBanner();
+  return true;
 }

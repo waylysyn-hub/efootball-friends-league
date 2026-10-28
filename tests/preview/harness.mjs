@@ -33,10 +33,12 @@ document.getElementById('load').onclick=async()=>{
 document.getElementById('matrix').onclick=async()=>{
  const results=[];document.getElementById('matrix').disabled=true;
  try{
- for(const width of [1920,1366,1024,768,430,390,360])for(const screen of [...document.getElementById('screen').options].map(o=>o.value)){
+ for(const width of [1920,1366,1024,768,430,390,375,360,320,414])for(const screen of [...document.getElementById('screen').options].map(o=>o.value)){
   status.textContent=`Checking ${screen} · ${width}px`;try{results.push(await show(screen,width));}catch(error){results.push({screen,width,errors:[error.message]});}
  }
  report.textContent=JSON.stringify(results,null,2);const failures=results.filter(r=>r.overflow||r.errors.length);status.textContent=`${results.length} screens checked · ${failures.length} failures`;
  }finally{document.getElementById('matrix').disabled=false;}
 };
+const params=new URLSearchParams(location.search);
+for(const id of ['screen','width'])if([...document.getElementById(id).options].some(o=>o.value===params.get(id)))document.getElementById(id).value=params.get(id);
 document.getElementById('load').click();

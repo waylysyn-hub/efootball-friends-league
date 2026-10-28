@@ -12,6 +12,7 @@ The existing root SQL filenames remain stable so bookmarked installation instruc
 | `supabase-security-migration.sql` | Private identity helpers, least-privilege grants and RLS | After all table-creation migrations |
 | `supabase-derived-data-migration.sql` | Database-derived standings and achievements | After security |
 | `supabase-consistency-migration.sql` | Atomic match writes, season switch, competition restore, chat creation/invite response and Q&A guards | After derived-data; before newer migrations |
+| `migrations/20260916114754_safeupdate_compatibility.sql` | pg-safeupdate-compatible function patches | After consistency, before squads |
 | `migrations/20260920075946_squad_goal_selection.sql` | Saved squads and scorer/assist validation | After consistency |
 | `migrations/20260922115643_admin_evening_draw.sql` | Admin-only game nights | After squad migration |
 | `migrations/20260923055900_quick_match_entry.sql` | Score-only match entry and deferred goal details | After evening migration |
@@ -19,8 +20,9 @@ The existing root SQL filenames remain stable so bookmarked installation instruc
 | `migrations/20260930063126_squad_presentation.sql` | Squad presentation metadata | After stable identifiers |
 | `migrations/20260930070000_squad_lineup_role.sql` | Starter/substitute status independent from football position | After squad presentation |
 | `migrations/20260930071000_squad_player_images.sql` | Managed WebP player images, Storage bucket and owner/admin RLS | After lineup role |
-| `migrations/20261001062141_squad_safety_review.sql` | Fail-closed squad deletion, legacy history and referenced-image protection | After detailed positions |
-| `migrations/20260930102000_efootball_squad_positions.sql` | Detailed eFootball positions, exact-XI cap and safe squad deletion RPC | After player images |
+| `migrations/20260930074500_fix_squad_photo_path_constraint.sql` | Correct managed-image path constraint | After player images |
+| `migrations/20260930102000_efootball_squad_positions.sql` | Detailed eFootball positions, exact-XI cap and safe squad deletion RPC | After image-path correction |
+| `migrations/20261001062141_squad_safety_review.sql` | Fail-closed squad deletion, legacy history and referenced-image protection | Last, after detailed positions |
 
 Installing the consistency migration is additive: it creates functions/triggers and does not invoke the reset/restore functions or remove existing rows. Those RPCs remain subject to caller identity and RLS. Its public functions use `security invoker`, an empty search path, explicit authenticated-only EXECUTE grants, and qualified object names.
 
@@ -41,13 +43,17 @@ Apply `migrations/20260922115643_admin_evening_draw.sql` next. `league_evenings`
 
 ## Squad presentation and player images
 
-The current squad UI requires the three 2026-09-30 migrations in timestamp order. Substitute status is stored in `lineup_role`; `SUB` is not a football position. Player images use the public `squad-player-images` bucket for public delivery, while insert/select-for-management/delete operations are restricted by Storage RLS to the mapped squad owner or league admin. Browser-selected images are normalized to WebP before upload; the bucket enforces WebP and a 2 MiB object limit.
+The current squad UI requires all five 2026-09-30 migrations in timestamp order, followed by the 2026-10-01 safety review. Substitute status is stored in `lineup_role`; `SUB` is not a football position. Player images use the public `squad-player-images` bucket for public delivery, while insert/select-for-management/delete operations are restricted by Storage RLS to the mapped squad owner or league admin. Browser-selected images are normalized to WebP before upload; the bucket enforces WebP and a 2 MiB object limit.
 
 
 ## Detailed eFootball squad model
 
-The final squad migration replaces broad active position codes with `GK`, `RB`, `LB`, `CB`, `RMF`, `LMF`, `CMF`, `AMF`, `DMF`, `LWF`, `RWF`, `SS`, and `CF`. Starter/substitute remains a separate field. A per-owner transaction lock plus trigger prevents concurrent requests from creating a twelfth active starter. Legacy overflow starters are retained as substitutes, not deleted. Permanent deletion is exposed only through `public.delete_squad_player(uuid)` and is refused when historical goal events still reference the player's UUID.
+The detailed-position migration replaces broad active position codes with `GK`, `RB`, `LB`, `CB`, `RMF`, `LMF`, `CMF`, `AMF`, `DMF`, `LWF`, `RWF`, `SS`, and `CF`. Starter/substitute remains a separate field. A per-owner transaction lock plus trigger prevents concurrent requests from creating a twelfth active starter. Legacy overflow starters are retained as substitutes, not deleted. Permanent deletion is exposed only through `public.delete_squad_player(uuid)` and is refused when historical goal events still reference the player's UUID.
 
 ## Squad safety review
 
 Apply `migrations/20261001062141_squad_safety_review.sql` after the detailed-position migration. It changes only the deletion function and adds a restrictive Storage DELETE policy; no application rows or stored objects are modified. Unmapped or expired sessions cannot delete a squad player. Historical UUID references and unresolved same-owner name snapshots block deletion. Referenced photo objects cannot be removed by owner/admin cleanup. The frontend keeps immutable photo URLs and reconciles ambiguous saves using the original player UUID; canceling an unconfirmed write retains the uploaded object rather than risking a broken saved photo. A complete XI still requires eleven active starters; individual edits remain saved as an explicitly incomplete squad until that count is reached.
+
+## Verified installation sequence
+
+[SETUP.md](../SETUP.md) lists every timestamped migration in order for both fresh and populated projects. Tests apply the image-path correction and safety review twice in PGlite, alongside the other repeatability and preservation checks. No SQL file was changed and no production migration was executed during the October audit.

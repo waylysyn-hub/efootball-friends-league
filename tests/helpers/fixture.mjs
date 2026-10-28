@@ -32,7 +32,7 @@ export function fixtureClient({ profile = null, empty = false, overlappingSquads
   let signedIn = profile;
   const calls = [], listeners = [], channels = [], storageObjects = new Map();
   const client = {
-    db,calls,channels,fail:null,hold:null,
+    db,calls,channels,fail:null,hold:null,rowLimit:1000,
     storage:{
       from(bucket){
         return {
@@ -59,15 +59,15 @@ export function fixtureClient({ profile = null, empty = false, overlappingSquads
     },
     emitAuth(event,name){if(name!==undefined)signedIn=name;listeners.forEach(fn=>fn(event,signedIn?{user:{id:'fixture-user'}}:null));},
     from(table){
-      const filters=[],orders=[]; let operation='select',value,one=false,max=Infinity,columns='*';
+      const filters=[],orders=[]; let operation='select',value,one=false,max=client.rowLimit,start=0,columns='*',countRequested=false;
       const query={
-        select(c='*'){columns=c;return query;},eq(k,v){filters.push(row=>row[k]===v);return query;},neq(k,v){filters.push(row=>row[k]!==v);return query;},in(k,values){filters.push(row=>values.includes(row[k]));return query;},
-        order(key,{ascending=true}={}){orders.push([key,ascending]);return query;},limit(n){max=n;return query;},or(){return query;},
+        select(c='*',options={}){columns=c;countRequested=options.count==='exact';return query;},eq(k,v){filters.push(row=>row[k]===v);return query;},neq(k,v){filters.push(row=>row[k]!==v);return query;},in(k,values){filters.push(row=>values.includes(row[k]));return query;},
+        order(key,{ascending=true}={}){orders.push([key,ascending]);return query;},limit(n){max=Math.min(n,client.rowLimit);return query;},range(from,to){start=from;max=Math.min(to-from+1,client.rowLimit);return query;},or(){return query;},
         single(){one=true;return query;},maybeSingle(){one=true;return query;},insert(v){operation='insert';value=v;return query;},update(v){operation='update';value=v;return query;},delete(){operation='delete';return query;},
         async then(resolve,reject){
           try {
-            calls.push({table,operation,columns,value});
-            if(client.hold) await client.hold({table,operation});
+            calls.push({table,operation,columns,value,rangeStart:start});
+            if(client.hold) await client.hold({table,operation,rangeStart:start});
             if(client.fail===table || client.fail===operation) return resolve({data:null,error:{status:503}});
             let rows=table==='player_accounts' ? (signedIn?[{name:signedIn}]:[]) : [...(db[table] || [])];
             rows=rows.filter(row=>filters.every(fn=>fn(row)));
@@ -76,14 +76,26 @@ export function fixtureClient({ profile = null, empty = false, overlappingSquads
             if(operation==='delete')db[table]=db[table].filter(row=>!rows.includes(row));
             if(table==='chat_group_members' && columns.includes('chat_groups')) rows=rows.map(row=>({...row,chat_groups:db.chat_groups.find(group=>group.id===row.group_id)}));
             for(const [key,ascending] of orders.reverse()) rows.sort((a,b)=>(String(a[key]).localeCompare(String(b[key])))*(ascending?1:-1));
-            rows=rows.slice(0,max);
+            const count=countRequested?rows.length:null;
+            rows=rows.slice(start,start+max);
             if(client.after) await client.after({table,operation,rows});
-            resolve({data:one ? rows[0] || null : rows.map(row=>({...row})),error:null});
+            // HTTP responses are fresh values, including single-row reads.
+            resolve({data:one ? (rows[0] ? {...rows[0]} : null) : rows.map(row=>({...row})),error:null,count});
           }catch(e){reject(e);}
         },
       };return query;
     },
     async rpc(name,args){calls.push({rpc:name,args});if(client.hold)await client.hold({rpc:name});if(client.fail==='rpc')return {error:{status:503}};
+      if(name==='restore_league_competition'){
+        if(signedIn!=='Wael')return {error:{status:403}};
+        const backup=args.backup;
+        db.seasons=backup.seasons.map(row=>({...row}));
+        db.matches=backup.matches.map(row=>({...row,season_id:row.season}));
+        db.match_goal_events=backup.goalEvents.map(row=>({...row,match_id:row.matchId}));
+        db.match_stats=backup.matchStats.map(row=>({...row,match_id:row.matchId}));
+        db.achievements=[];db.standings=[];
+        return {data:null,error:null};
+      }
       if(name==='start_league_evening'){
         const existing=db.league_evenings.find(row=>row.id===args.evening_id);
         if(existing)return {data:{...existing},error:null};

@@ -1,8 +1,9 @@
+import { stateHTML } from './view-states.js';
 import { displaySeason } from '../../shared/locale.js';
 import { sb, state } from './state.js';
 import { isAdmin, requireAdmin } from './admin.js';
 import { esc, showConfirm, showToast } from './ui.js';
-import { withBusy } from '../../shared/ui.js';
+import { withBusy, fieldError, clearFieldErrors } from '../../shared/ui.js';
 import { fetchAllData } from './api.js';
 import { updateSidebarPlayer } from './auth-ui.js';
 
@@ -12,7 +13,7 @@ export function getActiveSeason() {
 
 export function populateSeasonDropdowns() {
   const dropdowns = ['matchSeason', 'historyFilterSeason', 'tableSeasonFilter',
-                     'awardsSeasonFilter', 'statsSeasonFilter', 'fbStatsSeasonFilter', 'editSeason'];
+                     'awardsSeasonFilter', 'statsSeasonFilter', 'fbStatsSeasonFilter', 'editSeason', 'dashboardSeasonFilter'];
   dropdowns.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -20,7 +21,7 @@ export function populateSeasonDropdowns() {
     el.innerHTML = '';
 
     if (id === 'historyFilterSeason' || id === 'tableSeasonFilter' ||
-        id === 'awardsSeasonFilter' || id === 'statsSeasonFilter' || id === 'fbStatsSeasonFilter') {
+        id === 'awardsSeasonFilter' || id === 'statsSeasonFilter' || id === 'fbStatsSeasonFilter' || id === 'dashboardSeasonFilter') {
       const all = document.createElement('option');
       all.value = 'all';
       all.textContent = id === 'tableSeasonFilter' || id === 'statsSeasonFilter' ? "كل المواسم" : "كل المواسم (الإجمالي)";
@@ -35,7 +36,7 @@ export function populateSeasonDropdowns() {
     });
 
     if ([...el.options].some(option => option.value === prev)) el.value = prev;
-    else if (id === 'matchSeason' || id === 'editSeason') el.value = getActiveSeason()?.id || '';
+    else if (id === 'matchSeason' || id === 'editSeason' || id === 'dashboardSeasonFilter') el.value = getActiveSeason()?.id || (id === 'dashboardSeasonFilter' ? 'all' : '');
   });
 }
 
@@ -43,8 +44,9 @@ export async function createSeason() {
   if (!requireAdmin()) return;
   const input = document.getElementById('newSeasonName');
   const name = input.value.trim();
-  if (!name || name.length > 80) return showToast("أدخل اسمًا للموسم لا يتجاوز 80 حرفًا.", true);
-  if (state.db.seasons.some(season => season.name.toLowerCase() === name.toLowerCase())) return showToast("يوجد موسم بهذا الاسم بالفعل.", true);
+  clearFieldErrors(input.parentElement);
+  if (!name || name.length > 80) return fieldError(input, "أدخل اسمًا للموسم لا يتجاوز 80 حرفًا.");
+  if (state.db.seasons.some(season => season.name.toLowerCase() === name.toLowerCase())) return fieldError(input, "يوجد موسم بهذا الاسم بالفعل.");
   return withBusy('create-season', document.getElementById('createSeasonButton'), async () => {
     if (state.pendingSeason?.name !== name) state.pendingSeason = { id: crypto.randomUUID(), name, active: false, created: Date.now() };
     const draft = state.pendingSeason;
@@ -82,7 +84,7 @@ export function deleteSeason(id) {
     async () => {
       if (!sb) return showToast("الاتصال بالخادم غير جاهز. تواصل مع مدير الدوري.", true);
       const { error } = await sb.from('seasons').delete().eq('id', id);
-      if (error) return showToast("تعذّر حذف الموسم.", true);
+      if (error) throw error;
 
       state.db.matches = state.db.matches.filter(m => m.season !== id);
       const keptIds = new Set(state.db.matches.map(m => m.id));
@@ -109,7 +111,7 @@ export function renderSeasons() {
   const cont = document.getElementById('seasonsList');
   if (!cont) return;
   if (state.db.seasons.length === 0) {
-    cont.innerHTML = "<div class=\"empty-state\">لا توجد مواسم بعد. يمكن لمدير الدوري إنشاء موسم جديد.</div>";
+    cont.innerHTML = stateHTML({ title: 'لا توجد مواسم بعد.', description: 'يمكن لمدير الدوري إنشاء موسم جديد من الحقل أعلاه.' });
     return;
   }
   cont.innerHTML = state.db.seasons.map(s => {
