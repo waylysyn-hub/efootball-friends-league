@@ -1,0 +1,124 @@
+{
+  "date": "2026-10-28",
+  "base_commit": "b5a77494e9db5c42ce99b45252192c00b0093dd6",
+  "branch": "improve/premium-runtime-audit-20261028",
+  "review_start_commit": "8da497da4e3359059207fde28732429871981ae0",
+  "validated_code_commit": "0a9d69974bdedf07690cef514fc94d11de060ad4",
+  "reviewed_implementation_file_count": 58,
+  "environment": {
+    "node": "v24.22.1",
+    "playwright": "1.63.0",
+    "browser": "Chromium 153.0.8010.0 (@sparticuz/chromium 153.0.0, scratch only)",
+    "data": "Synthetic QA clients and isolated PGlite; no production mutations"
+  },
+  "installation": {
+    "command": "npm ci",
+    "result": "passed"
+  },
+  "independent_baseline": {
+    "node": {
+      "command": "npm test",
+      "passed": 114,
+      "failed": 0,
+      "skipped": 0
+    },
+    "browser": {
+      "command": "CI=1 PLAYWRIGHT_JSON_OUTPUT_FILE=... PLAYWRIGHT_HTML_OPEN=never npm run test:browser -- --reporter=list,json,html",
+      "statistics": {
+        "startTime": "2026-10-28T08:18:11.134Z",
+        "duration": 454357.776,
+        "expected": 430,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "errors": []
+    }
+  },
+  "demonstrated_pre_fix_failures": {
+    "session_and_realtime": 3,
+    "failed_delete_confirmation": 2,
+    "note": "Fresh single-row fixture responses expose both token-renewal failures"
+  },
+  "final_node": {
+    "command": "npm test",
+    "passed": 121,
+    "failed": 0,
+    "skipped": 0
+  },
+  "final_browser": {
+    "command": "CI=1 PLAYWRIGHT_JSON_OUTPUT_FILE=... PLAYWRIGHT_HTML_OPEN=never npm run test:browser -- --reporter=list,json,html",
+    "statistics": {
+      "startTime": "2026-10-28T08:28:43.840Z",
+      "duration": 482358.591,
+      "expected": 470,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "errors": [],
+    "projects": {
+      "1920px": 47,
+      "1366px": 47,
+      "1024px": 47,
+      "768px": 47,
+      "430px": 47,
+      "390px": 47,
+      "360px": 47,
+      "320px-entry": 47,
+      "375px-entry": 47,
+      "414px-entry": 47
+    }
+  },
+  "responsive_harness": {
+    "command": "Vite QA mode + Chromium /__qa__ matrix; temporary loopback port 4176",
+    "screens": 250,
+    "views": 25,
+    "widths": [
+      1920,
+      1366,
+      1024,
+      768,
+      430,
+      414,
+      390,
+      375,
+      360,
+      320
+    ],
+    "horizontal_overflow": 0,
+    "reported_script_errors": 0,
+    "matrix": "independent-responsive-matrix.json"
+  },
+  "documented_sql_order": {
+    "command": "node --test .qa-output/documented-sql-order.mjs",
+    "description": "Temporary copy of the unchanged SQL contract suite, additionally applying safeupdate immediately after consistency and before timestamped migrations",
+    "engine": "PGlite",
+    "passed": 28,
+    "failed": 0,
+    "skipped": 0
+  },
+  "diff_check": "passed",
+  "source_files_sha256": {
+    "league/js/app.js": "7441dda0727ba1a0c79da2347dadfdcf06464bb5e271a08a4e8d73c5de74dc03",
+    "league/js/matches.js": "c23ec59e682beabd2975f32e0dbdc37aebf4588eaa15aa501dcbd9edc93c5574",
+    "league/js/realtime.js": "69bd18763d8c1646ca5bedb78cecdd45a82c645fe7537b7292a5cf3170dd59ca",
+    "league/js/seasons.js": "8f29af3617bd9ec1067bd460515d5b7987646657adbd89429c46676d13a90047",
+    "tests/browser/review.spec.mjs": "bdbe51c19e7c862aab7c737d763b0a72d1f886088c35acb1c7794b5159474130",
+    "tests/helpers/fixture.mjs": "01692622f0003d3f71658dc4a6b62d8949fca873cebade15981ff5bbf5ca7808",
+    "tests/independent-review.test.mjs": "3442a196f180ba855d343f5a792fc5a2c6def5860680634bad02f8b08fb5cf67"
+  },
+  "ci": {
+    "status_at_record_creation": "Not yet triggered; will start after PR creation",
+    "source_of_latest_results": "PR Checks and delivery report",
+    "native_postgresql_safeupdate": "Not claimed as a local test"
+  },
+  "limitations": [
+    "No authorized hosted/local Supabase staging available",
+    "Real Auth/JWT, Storage HTTP, PostgREST and Realtime websocket behavior require staging",
+    "Production migration state not inspected",
+    "No physical Safari/Android/screen-reader test",
+    "Pagination is not a serializable transaction; whole snapshots remain memory-resident",
+    "Client destructive-scope preflight is not an atomic revision lock"
+  ]
+}

@@ -1,5 +1,7 @@
 # Validation record — 28 October 2026
 
+This is the original implementation validation record. See the subsequent [independent Arabic review](INDEPENDENT_REVIEW_AR.md), [new execution summary](independent-validation.json) and [fresh responsive matrix](independent-responsive-matrix.json) for the follow-up verification and fixes.
+
 Current implementation base: `b5a77494e9db5c42ce99b45252192c00b0093dd6`. The application remains static HTML/CSS/native ES modules with Supabase Auth, Postgres, RLS, RPC and Realtime. All writes exercised during this audit used synthetic clients or an isolated PGlite database. No production data or schema was changed.
 
 ## Executed checks

@@ -1,5 +1,7 @@
 # eFootball Friends League — project audit and implementation
 
+This records the original local implementation stage. The subsequent [independent review and publication report](INDEPENDENT_REVIEW_AR.md) documents additional demonstrated fixes, fresh validation and GitHub review boundaries.
+
 28 October 2026 · implementation commits `36421a800c0ec9af9dc16536dfb3e6aeb247f966` and `bf0748035906a4ab2676f1f7d6071a8453ede129`
 
 ## 1. Project Audit

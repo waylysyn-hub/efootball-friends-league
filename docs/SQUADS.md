@@ -41,7 +41,7 @@ Squad ownership and IDs cannot be changed through client table updates. Players 
 ## Verification
 
 - `npm test`: SQL/RLS/transaction tests plus frontend behavior, including owner isolation, UUID-only and direct-table rejection, renamed/reused names, backup round trips, exact counts, no assist, historical/partial edits, archived players, form retention and retry identity.
-- `npm run test:browser`: seven full regression viewport projects, plus match-entry coverage at 320, 375 and 414 pixels. Quick/review/edit and detailed 3–2 flows check overflow, touch targets, optional-minute validation and score-reduction cancellation. Screenshots are saved for mobile and desktop review.
+- `npm run test:browser`: the full regression suite runs at all ten widths, including 320, 375 and 414 pixels. Quick/review/edit and detailed 3–2 flows check overflow, touch targets, optional-minute validation and score-reduction cancellation. Screenshots are saved for mobile and desktop review.
 - GitHub's native PostgreSQL job also runs with `pg-safeupdate` enabled.
 
 Only synthetic test players are used by these automated tests.
