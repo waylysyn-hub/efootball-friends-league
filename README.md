@@ -44,3 +44,11 @@ Use **التشكيلات** to manage each friend's football players. Goal entry 
 ### Private game nights
 
 The administrator opens **سهرة اللعب** (`league/index.html#evenings`), selects the present league players and starts a saved random draw. Each attendee appears once; an odd count gives one player a rest. **تجهيز المباراة** fills the existing result form without creating a result. End the evening to archive its draw and start another. Only the mapped administrator can read, create or close evenings, enforced by database grants and RLS. See [EVENINGS.md](docs/EVENINGS.md).
+
+## October runtime and UX audit
+
+The dashboard season selector scopes all metrics, standings and recent results consistently. Footballer highlights identify the squad owner; stable UUID aggregation and historical snapshots remain intact. Settings require a typed scope confirmation, preserve failed imports and show persistent results. Browser history restores individual match details, and mobile drawers and nested dialogs preserve keyboard focus.
+
+Whole-table reads paginate past PostgREST limits and commit a replacement snapshot only after every request succeeds. Session changes invalidate pending snapshots and clear private state. Match drafts survive in-app navigation and failed requests; leaving a dirty form triggers the browser's standard unsaved-changes prompt. Drafts are held in the current tab, not persisted after a deliberate reload.
+
+`npm run dev:qa` now isolates every app entrypoint, including ordinary navigation links without fixture parameters. Use the [current validation record](docs/VALIDATION.md) and [full audit](docs/PROJECT_AUDIT.md) for executed checks, findings, file groups and remaining release gates.

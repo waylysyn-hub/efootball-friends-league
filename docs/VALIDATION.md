@@ -1,52 +1,55 @@
-# Validation record — 15 September 2026
+# Validation record — 28 October 2026
 
-This branch is a review candidate. Production password login and migration rollout remain release gates; fixture sessions are not evidence of real account authentication.
+Current implementation base: `b5a77494e9db5c42ce99b45252192c00b0093dd6`. The application remains static HTML/CSS/native ES modules with Supabase Auth, Postgres, RLS, RPC and Realtime. All writes exercised during this audit used synthetic clients or an isolated PGlite database. No production data or schema was changed.
 
-## Observed passing checks
+## Executed checks
 
-- Static security regression checks: public-safe profile selection, private auth mapping, database admin enforcement, database-derived standings/achievements, no plaintext-password queries/storage, no service-role keys, no `document.write` bootstrap, explicit script order, valid relative assets and consistent CSS tokens.
-- Node/PGlite suite: **25 passing tests** (15 frontend scenarios, 9 nested SQL scenarios and their parent test). The PostgreSQL tests run real grants, RLS, constraints, triggers and functions in an isolated engine, including a repeat installation of the additive migration.
-- Browser fixture matrix: **161 screen/width combinations**, zero reported application JavaScript errors or document-level horizontal overflow. The same-origin frame has the exact specified viewport width; it is not a scaled CSS approximation. Desktop heights are 1080 at 1920px and 768 at 1366px; smaller widths use 768/844px heights.
-- Widths: **1920, 1366, 1024, 768, 430, 390, 360**. Each runs 23 views: Hub; League login, dashboard, table, history, detail, record, edit dialog, profile, statistics, football-player performance, achievements, awards, head-to-head, rivalries, seasons, Q&A and settings; Chat login, groups, conversation, invitations and create-group dialog.
-- Visual inspection exposed an incorrectly positioned Chat dialog and uneven Hub heading layout; both were corrected. The mobile match form was inspected for stacked controls and readable score inputs.
-- The full suite was rerun after the final retry/session fixes, local Cairo font and semantic Hub headings: **25/25 passed**. The responsive matrix was rerun after font loading: **161/161 passed**; measurements wait for the document fonts to settle.
+| Check | Result |
+| --- | --- |
+| `npm ci` | Passed; committed dependency versions and lockfile retained |
+| Baseline `npm test` on current main | 95 passed, 0 failed |
+| Baseline `npm run test:browser -- --workers=2` | 240 passed |
+| Detached PR #25 at 390px | 31 passed, 3 reproduced failures; see audit |
+| Targeted updated match-entry/UX browser checks at 1366/390px | 28 passed |
+| New audit browser checks at 1366/390px | 16 passed |
+| Final `npm test` | **114 passed, 0 failed, 0 skipped** |
+| Final `npm run test:browser -- --workers=3 --reporter=list,json,html` | **430 passed, 0 failed, 0 skipped, 0 flaky** |
+| Interactive QA harness, automated in Chromium | **250 screen/viewport combinations; 0 horizontal overflow; 0 reported script errors** |
+| `git diff --check` | Passed |
 
-## Functional coverage
+The final browser run took about 5m37s. [Machine-readable browser results](browser-validation.json) contain the run timestamp, tool versions and counts. [Measured screen matrix](responsive-matrix.json) records every harness screen. Its 25 views run at 1920, 1366, 1024, 768, 430, 390, 375, 360, 320 and 414px; the full browser suite runs 43 scenarios at each of the same ten widths.
 
-- Six-player dropdown, simulated Supabase sign-in, session restore, logout and cross-tab account changes; admin controls use the resolved profile and normal users are redirected from recording results.
-- Empty roster/competition, safe rendering of every League view, Hub navigation/retry and escaping of Q&A/message text.
-- Failed match saves preserve inputs; simultaneous submissions coalesce; retries reuse the same match ID. Match/goal writes and invalid restores roll back atomically in Postgres.
-- Database-derived scores/achievements refresh on match edits and season changes; restored competition retains private identities, Q&A and messages.
-- Every normal player is denied admin RPCs/direct match inserts/derived writes and role escalation. Anonymous users cannot read auth mappings; authenticated users cannot select UUID columns.
-- Q&A ownership, answer linkage and closure checks; group privacy, owner membership, involved-only invitations, idempotent acceptance and message-author enforcement.
-- Chat failure retains text, retry preserves the message ID, late responses do not appear in another group, and realtime includes messages from the same author in another tab.
-- A Q&A retry recovers an already committed post after a lost response; a late initial loader cannot reopen the League after session expiry.
+The standard Playwright browser download returned invalid ZIP files in this environment. Verification used Chromium **153.0.8010.0** from the registry package `@sparticuz/chromium@153.0.0`, outside repository dependencies, with the pinned Playwright **1.63.0** suite. No test was removed or skipped. Existing text assertions were updated to the final Arabic copy, and an ambiguous label locator was scoped to its form.
 
-## Browser suite
+## Coverage
 
-`npm run test:browser` provides 35 Playwright smoke cases (five scenarios × seven widths). CI runs Chromium plus the security/integration suite. It checks app/roster readiness, the major League views, Hub navigation, conversation sending, dialogs and safe overflow. These tests always use synthetic clients; there are no test passwords or production writes.
+The suites cover account restoration and login-form UI, every main League/Hub/Chat view, normal-user admin restrictions, keyboard drawers, direct routes and match-specific browser history, nested dialogs, filter retention, empty/loading/error/retry states, typed destructive scopes, double submission, lost responses, Q&A validation, and competition backup retention.
 
-The interactive harness uses the same fixtures and was exercised through the available browser. Its measured matrix is distinct from the Playwright CLI/CI results. GitHub Actions also passed the full 35-case Chromium suite and the security/integration job on the initial review head ([run 34443958801](https://github.com/waylysyn-hub/efootball-friends-league/actions/runs/34443958801)).
+Match coverage includes quick 0–0/1–0/3–2, detailed 3–2, owner-scoped scorer/assist selection, no assist, invalid numeric/minute input, score synchronization, empty-row removal, confirmation before losing entered details, review, save, edit, deferred details, retry UUIDs and dirty-draft warnings. Squad coverage retains all identities across pitch/list/filter/bench/archive, exact 11-starter status, reserve goalkeepers, physical left/right and midfield depth, image uploads/reloads/external URLs/fallbacks and protected deletion. Game nights cover distinct attendance, odd counts, saved draws, retries, match preparation, closure, history and admin-only database access.
 
-## Review screenshots and measured output
+New regressions also exercise 1,105 matches/goals, a lower 137-row API cap, failure on a later page, stable restored epoch-zero timestamps, stale responses across sign-out and account changes, season-consistent dashboard cards, owned footballer highlights and QA navigation without fixture parameters.
 
-The following screenshots use synthetic fixture data, captured on 15 September 2026 with the final shared Cairo font. They contain no production conversations. Full width results are saved in [responsive-matrix.json](responsive-matrix.json).
+PGlite executes real PostgreSQL grants, RLS, constraints, triggers and RPCs, including repeat installation, atomic rollback, stable historical UUIDs/snapshots, same-name footballer isolation, Storage policy predicates and preservation of accounts/chat during competition restore. The image-path correction now runs twice in the default suite too. Both documented installation sequences are checked against every timestamped migration.
 
-- [League dashboard, 1366 × 768](screenshots/league-desktop.jpg)
-- [Tournament Hub, 1366 × 768](screenshots/hub-desktop.jpg)
-- [Chat conversation, 390 × 844](screenshots/chat-mobile.jpg)
+## Runtime and review evidence
 
-## Remaining release gates and scope limits
+`npm run dev:qa` starts successfully at **http://127.0.0.1:4173/**. All QA app entrypoints use synthetic clients, including ordinary links without `fixture=`. The default bind is loopback. A plain static server or `npm run dev:live` uses actual Supabase configuration and was not used for write testing.
 
-1. Install `supabase-consistency-migration.sql` in staging and validate existing-project rollout before deploying the frontend. It has **not** been applied to production. The new UI depends on its RPCs.
-2. Verify an actual Wael password login, an actual normal-player login, session restore and sign-out against the configured Supabase project. No credentials were requested, changed, stored or committed during this refactor.
-3. Live inspection confirmed all six public profiles, Wael's admin role, private mapping presence and enabled RLS. It did not prove password validity.
-4. Browser fixtures and PGlite do not reproduce Supabase Auth servers, websocket delivery, PostgREST schema caching, or real-device Safari/Android behavior. Physical-device keyboard/screen-reader checks remain useful before release.
-5. Competition JSON intentionally includes only seasons/results/goal events/aggregate match stats. It preserves accounts, Q&A and chat; it is not a disaster-recovery backup of the entire Supabase project.
-6. The original database schemas remain at their established root paths, indexed in `supabase/README.md`, to avoid duplicate migration trees or breaking existing setup links.
+The separate cloud browser could not reach the local port (`net::ERR_CONNECTION_REFUSED`). Chromium automation ran alongside its QA server inside the same execution namespace and exercised the actual authored pages. The harness used a temporary 4176 port for its independent run; the persistent preview command uses 4173. This is a local preview, not a published deployment.
 
-No production schema/data mutation, main-branch commit, merge or deployment was performed.
+All six current screenshots were visually inspected:
 
-## Login design follow-up — 16 September 2026
+- [Dashboard · 1366px](screenshots/audit-dashboard-1366.png)
+- [Dashboard · 390px](screenshots/audit-dashboard-390.png)
+- [Settings · 1366px](screenshots/audit-settings-1366.png)
+- [Detailed match entry · 390px](screenshots/audit-match-entry-390.png)
+- [Squad and bench · 320px](screenshots/audit-squads-320.png)
+- [Chat · 390px](screenshots/audit-chat-390.png)
 
-The League login received a new stadium composition, responsive access card and keyboard skip-link target. The existing security and Node/PGlite suite passed 25/25; the isolated login fixture passed all seven widths without horizontal overflow or reported JavaScript errors. [Design notes, asset provenance and fresh review screenshots](LOGIN_DESIGN.md) document the follow-up. This does not replace the release gates above.
+## Remaining verification boundaries
+
+No authorized staging credentials, Docker, psql or Supabase CLI were available. Actual Supabase password login, hosted Auth/Storage/PostgREST, websocket delivery, production schema-cache behavior, native PostgreSQL/pg-safeupdate stress and physical Safari/Android/screen-reader behavior were not verified in this session. Existing CI history is not presented as a new native-Postgres run.
+
+The production migration state is unknown. Apply and verify the complete [SETUP order](../SETUP.md) in an authorized staging environment before rollout; `20261001062141_squad_safety_review.sql` must remain last. No reset, push, merge or deployment was performed.
+
+See [PROJECT_AUDIT.md](PROJECT_AUDIT.md) for findings, implementation details, all changed-file groups and Git state. Earlier September validation and screenshots are historical evidence; the counts above describe this implementation.
