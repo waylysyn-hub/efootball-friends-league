@@ -118,8 +118,11 @@ async function init() {
   const unsubscribe = window.EFLAuth.subscribe(sb, async (profile, event) => {
     if (!profile) { clearSession(); return; }
     const changed = state.user !== profile.name || state.profile?.role !== profile.role;
-    if (changed) clearSession();
-    state.profile = profile; state.user = profile.name; applyAdminUI();
+    if (changed) { clearSession(); state.profile = profile; }
+    // A refreshed token does not replace the session identity held by pending
+    // saves and confirmations. Account/role changes still invalidate it above.
+    else Object.assign(state.profile, profile);
+    state.user = profile.name; applyAdminUI();
     if (changed && !state.signingIn) {
       try { await fetchAllData(); enterApp(); }
       catch { clearSession(); }

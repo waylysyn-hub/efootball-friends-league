@@ -84,7 +84,7 @@ export function deleteSeason(id) {
     async () => {
       if (!sb) return showToast("الاتصال بالخادم غير جاهز. تواصل مع مدير الدوري.", true);
       const { error } = await sb.from('seasons').delete().eq('id', id);
-      if (error) return showToast("تعذّر حذف الموسم.", true);
+      if (error) throw error;
 
       state.db.matches = state.db.matches.filter(m => m.season !== id);
       const keptIds = new Set(state.db.matches.map(m => m.id));

@@ -82,7 +82,7 @@ export function deleteMatch(id) {
   showConfirm("حذف المباراة", "هل تريد حذف هذه المباراة؟ لا يمكن التراجع عن الحذف.", async () => {
     if (!sb) return showToast("الاتصال بالخادم غير جاهز. تواصل مع مدير الدوري.", true);
     const { error } = await sb.from('matches').delete().eq('id', id);
-    if (error) return showToast("تعذّر حذف المباراة.", true);
+    if (error) throw error;
 
     state.db.matches = state.db.matches.filter(m => m.id !== id);
     state.db.matchStats = state.db.matchStats.filter(s => s.matchId !== id);

@@ -7,8 +7,7 @@ import { refreshGoalSquadOptions } from './goal-events.js';
 import { renderPage } from './ui.js';
 
 let channel = null;
-let refreshing = false;
-let refreshAgain = false;
+let refreshing = null;
 let timer;
 export function subscribeRealtime() {
   if (!sb || channel) return;
@@ -28,6 +27,7 @@ export function subscribeRealtime() {
 
 export function stopRealtime() {
   clearTimeout(timer);
+  refreshing = null;
   if (channel) sb.removeChannel(channel);
   channel = null;
 }
@@ -45,11 +45,12 @@ export function setSyncStatus(message) {
 
 export async function refreshFromRemote() {
   if (!state.user) return;
-  if (refreshing) { refreshAgain = true; return; }
-  refreshing = true;
   const session = state.sessionVersion;
+  if (refreshing?.session === session) { refreshing.again = true; return; }
+  const request = { session, again: false };
+  refreshing = request;
   try {
-    do { refreshAgain = false; await fetchAllData(); } while (refreshAgain && session === state.sessionVersion);
+    do { request.again = false; await fetchAllData(); } while (request.again && session === state.sessionVersion);
     if (!state.user || session !== state.sessionVersion) return;
     setSyncStatus('');
     refreshGoalSquadOptions();
@@ -60,5 +61,5 @@ export async function refreshFromRemote() {
     if (!editing && !formPage) { populateSeasonDropdowns(); renderPage(state.page); }
   } catch (error) {
     if (session === state.sessionVersion) setSyncStatus(errorMessage(error, "تعذّر تحديث الدوري. تُعرض آخر نتائج تم تحميلها."));
-  } finally { refreshing = false; }
+  } finally { if (refreshing === request) refreshing = null; }
 }

@@ -79,7 +79,8 @@ export function fixtureClient({ profile = null, empty = false, overlappingSquads
             const count=countRequested?rows.length:null;
             rows=rows.slice(start,start+max);
             if(client.after) await client.after({table,operation,rows});
-            resolve({data:one ? rows[0] || null : rows.map(row=>({...row})),error:null,count});
+            // HTTP responses are fresh values, including single-row reads.
+            resolve({data:one ? (rows[0] ? {...rows[0]} : null) : rows.map(row=>({...row})),error:null,count});
           }catch(e){reject(e);}
         },
       };return query;
