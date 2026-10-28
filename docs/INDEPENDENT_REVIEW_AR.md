@@ -72,6 +72,20 @@
 
 الفرع المستهدف للرفع والمراجعة: [`improve/premium-runtime-audit-20261028`](https://github.com/waylysyn-hub/efootball-friends-league/tree/improve/premium-runtime-audit-20261028)، والقاعدة `main`. commits التنفيذ الأصلي: `36421a8`، `bf07480`، `8da497d`. commit إصلاحات المراجعة: `0a9d69974bdedf07690cef514fc94d11de060ad4`؛ يليه commit التقرير والأدلة، ويمكن تتبعه من سجل الفرع.
 
+### نقل GitHub ومعرّفات commits
+
+نُفّذ أمر `git push -u origin improve/premium-runtime-audit-20261028` وتوقف بسبب غياب مصادقة Git في الطرفية: `could not read Username for https://github.com`. اتصال GitHub المصرح به يدعم الكتابة عبر Git Data API، لذلك أُعيد إنشاء مراحل commits بالترتيب نفسه. **تطابقت بصمة شجرة المحتوى كاملة في كل مرحلة**؛ يختلف معرّف commit بسبب بيانات الإنشاء والآباء الجديدة. السجل المحلي الأصلي محفوظ ولم يُستخدم reset أو force-push.
+
+| المعرّف المحلي الأصلي | المعرّف المقابل على GitHub |
+| --- | --- |
+| `36421a800c0ec9af9dc16536dfb3e6aeb247f966` | `15b6bb5c57c952f0e4d61ada4fa7fd999e212e1a` |
+| `bf0748035906a4ab2676f1f7d6071a8453ede129` | `992a0a27784fbfeaea02ae1967683febab653826` |
+| `8da497da4e3359059207fde28732429871981ae0` | `92b118576a674a1692d55ded83fe111d27fe5e7a` |
+| `0a9d69974bdedf07690cef514fc94d11de060ad4` | `722d2bbd527b3cc924df9a31a1717c36dbf567b1` |
+| `7583287d1ffe439efedfab3dd00d4c4bb1200eb2` | `248de2aa1a71938058b430e311910b8399631c32` |
+
+آخر commit للشيفرة المختبرة على GitHub هو `722d2bbd527b3cc924df9a31a1717c36dbf567b1`، وله شجرة الملفات نفسها لـ`0a9d699`. يتبع مراحل النقل commit توثيقي لبيان هذه المطابقة. حالة CI الخاصة بآخر commit تبقى في PR وتقرير التسليم.
+
 عنوان PR: `feat: premium league UX, runtime reliability and full QA hardening`. وصف PR وتبويب Checks يحددان commit وحالة CI الحالية. هذا الملف يسجل أدلة التحقق المحلي قبل النشر؛ تقرير التسليم يرفق رابط PR ورابط تشغيل CI ونتائجه الفعلية، دون استنتاج النجاح من الاختبارات المحلية.
 
 راجعت مجددًا بيانات وقوائم تغييرات [#25](https://github.com/waylysyn-hub/efootball-friends-league/pull/25) و[#19](https://github.com/waylysyn-hub/efootball-friends-league/pull/19) و[#10](https://github.com/waylysyn-hub/efootball-friends-league/pull/10)، مع patches الملعب وتسجيل المباراة:

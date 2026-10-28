@@ -120,5 +120,46 @@
     "No physical Safari/Android/screen-reader test",
     "Pagination is not a serializable transaction; whole snapshots remain memory-resident",
     "Client destructive-scope preflight is not an atomic revision lock"
-  ]
+  ],
+  "publication": {
+    "transport": "GitHub Git Data API after terminal Git HTTPS authentication failed",
+    "terminal_git_push_error": "fatal: could not read Username for 'https://github.com': No such device or address",
+    "original_local_history_preserved": true,
+    "force_push_used": false,
+    "commit_mapping": [
+      {
+        "original_sha": "36421a800c0ec9af9dc16536dfb3e6aeb247f966",
+        "published_sha": "15b6bb5c57c952f0e4d61ada4fa7fd999e212e1a",
+        "tree": "4fc0f70202412439db2891a3fb35df1b6ee27bed",
+        "message": "Improve league UX, complete snapshots and isolated QA"
+      },
+      {
+        "original_sha": "bf0748035906a4ab2676f1f7d6071a8453ede129",
+        "published_sha": "992a0a27784fbfeaea02ae1967683febab653826",
+        "tree": "4349ab8c9fe6e8243859964e314f34fcf2f79231",
+        "message": "Preserve legacy epoch timestamps during safety reviews"
+      },
+      {
+        "original_sha": "8da497da4e3359059207fde28732429871981ae0",
+        "published_sha": "92b118576a674a1692d55ded83fe111d27fe5e7a",
+        "tree": "793c34481a7ec164cf66a65d244cca977f39103c",
+        "message": "Document audit, migration order and verified runtime results"
+      },
+      {
+        "original_sha": "0a9d69974bdedf07690cef514fc94d11de060ad4",
+        "published_sha": "722d2bbd527b3cc924df9a31a1717c36dbf567b1",
+        "tree": "a71baec459bd729a1714d50e44380a3c26ccad64",
+        "message": "fix: preserve sessions and recover pending league operations"
+      },
+      {
+        "original_sha": "7583287d1ffe439efedfab3dd00d4c4bb1200eb2",
+        "published_sha": "248de2aa1a71938058b430e311910b8399631c32",
+        "tree": "b10a258bcfae9b158773eb94330d51e31252b7f2",
+        "message": "docs: record independent audit and fresh verification evidence"
+      }
+    ],
+    "all_replayed_trees_match": true,
+    "validated_github_code_commit": "722d2bbd527b3cc924df9a31a1717c36dbf567b1",
+    "note": "A documentation-only commit follows the mapped validation record. Latest CI results are linked in the PR and final delivery report."
+  }
 }
