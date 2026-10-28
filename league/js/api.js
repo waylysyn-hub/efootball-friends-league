@@ -4,6 +4,10 @@ import { updateGoalEventsSetupBanner } from './matches.js';
 import { setDataStatus } from './view-states.js';
 import { readAllRows } from '../../shared/data.js';
 
+// Legacy backups legitimately use epoch zero. A truthy fallback would replace
+// that value on every refresh, changing chronology and confirmation signatures.
+const epoch = (value, fallback = Date.now()) => value != null && value !== '' && Number.isFinite(Number(value)) ? Number(value) : fallback;
+
 export function isQaTableMissing(err) {
   if (!err) return false;
   const msg = (err.message || '').toLowerCase();
@@ -17,7 +21,7 @@ export function isMatchStatsTableMissing(err) { return isQaTableMissing(err); }
 export function isGoalEventsTableMissing(err) { return isQaTableMissing(err); }
 
 export function mapSeason(row) {
-  return { id: row.id, name: row.name, active: !!row.active, created: Number(row.created) || Date.now() };
+  return { id: row.id, name: row.name, active: !!row.active, created: epoch(row.created) };
 }
 
 export function mapMatch(row) {
@@ -27,7 +31,7 @@ export function mapMatch(row) {
     player1Id: row.player1_id || null, player2Id: row.player2_id || null,
     goals1: row.goals1, goals2: row.goals2,
     date: row.date, season: row.season_id,
-    timestamp: Number(row.timestamp) || (row.created_at ? new Date(row.created_at).getTime() : Date.now())
+    timestamp: epoch(row.timestamp, row.created_at ? new Date(row.created_at).getTime() : Date.now())
   };
 }
 
@@ -38,7 +42,7 @@ export function mapQuestion(row) {
     body: row.body,
     closed: !!row.closed,
     correctAnswerId: row.correct_answer_id || null,
-    timestamp: Number(row.timestamp) || (row.created_at ? new Date(row.created_at).getTime() : Date.now())
+    timestamp: epoch(row.timestamp, row.created_at ? new Date(row.created_at).getTime() : Date.now())
   };
 }
 
@@ -48,7 +52,7 @@ export function mapAnswer(row) {
     questionId: row.question_id,
     author: row.author,
     body: row.body,
-    timestamp: Number(row.timestamp) || (row.created_at ? new Date(row.created_at).getTime() : Date.now())
+    timestamp: epoch(row.timestamp, row.created_at ? new Date(row.created_at).getTime() : Date.now())
   };
 }
 

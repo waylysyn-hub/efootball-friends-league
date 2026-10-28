@@ -153,3 +153,17 @@ test('audit QA remains isolated through ordinary links without fixture parameter
   await expect(page.locator('#loginUsername option')).toHaveCount(7);
   expect(live).toEqual([]);
 });
+
+test('audit restored epoch-zero records do not trigger a false changed-scope warning', async ({ page }) => {
+  await page.goto('/league/index.html?fixture=admin#settings');
+  await expect(page.locator('#page-settings')).toBeVisible();
+  await page.evaluate(async()=>{
+    const c=window.EFLClient.get();c.db.seasons[0].created=0;c.db.matches[0].timestamp=0;
+    await window.League.refresh();
+  });
+  await page.locator('#resetSeasonButton').click();
+  await page.locator('#dangerConfirmInput').fill('تصفير الموسم');
+  await page.locator('#dangerConfirmExecute').click();
+  await expect(page.locator('#dangerConfirmStatus')).toContainText('بنجاح');
+  expect(await page.evaluate(()=>window.EFLClient.get().calls.filter(c=>c.table==='matches'&&c.operation==='delete').length)).toBe(1);
+});

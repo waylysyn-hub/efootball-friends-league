@@ -162,3 +162,18 @@ test('squad deletion has a cancellable confirmation and preserves the dialog on 
   assert.equal(d.getElementById('confirmModal').classList.contains('hidden'),false);
   assert.ok(client.db.squad_players.some(p=>p.id==='unused'));
 });
+
+test('restored zero timestamps remain stable through refresh and destructive-scope review', async t => {
+  const app = await mount('league/index.html', {profile:'Wael'}); t.after(() => app.close());
+  const {window:w,document:d,client} = app;
+  client.db.seasons[0].created=0; client.db.matches[0].timestamp=0;
+  await w.League.refresh();
+  const state=app.module('league/js/state.js').state;
+  assert.equal(state.db.seasons[0].created,0);
+  assert.equal(state.db.matches[0].timestamp,0);
+  w.League.navigateTo('settings'); w.League.confirmResetSeason();
+  d.getElementById('dangerConfirmInput').value='تصفير الموسم'; w.League.updateDangerConfirm();
+  await w.League.executeDangerConfirm();
+  assert.match(d.getElementById('dangerConfirmStatus').textContent,/بنجاح/);
+  assert.equal(client.calls.filter(c=>c.table==='matches'&&c.operation==='delete').length,1);
+});
