@@ -1,10 +1,15 @@
 
 
+export function emptyDatabase() {
+  return { accounts: {}, matches: [], seasons: [], questions: [], answers: [], matchStats: [], goalEvents: [], squads: [], evenings: [], standings: [], achievements: [] };
+}
+
 export const state = {
+  sessionVersion: 0,
   profile: null, user: null, page: 'dashboard', questionId: null, matchId: null,
   qaReady: false, statsReady: false, goalsReady: false, squadsReady: false, eveningsReady: false, signingIn: false,
   selectedProfile: null, selectedAchievements: null,
-  db: { accounts: {}, matches: [], seasons: [], questions: [], answers: [], matchStats: [], goalEvents: [], squads: [], evenings: [], standings: [], achievements: [] },
+  db: emptyDatabase(),
 };
 
 export const sb = window.EFLClient?.get() || null;

@@ -18,7 +18,9 @@ export function subscribeRealtime() {
   for (const table of tables) {
     channel.on('postgres_changes', { event: '*', schema: 'public', table }, scheduleRefresh);
   }
+  const subscribedChannel = channel;
   channel.subscribe(status => {
+    if (channel !== subscribedChannel) return;
     if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setSyncStatus("توقفت التحديثات المباشرة. اضغط تحديث للمحاولة مجددًا.");
     else if (status === 'SUBSCRIBED') setSyncStatus('');
   });
@@ -45,9 +47,10 @@ export async function refreshFromRemote() {
   if (!state.user) return;
   if (refreshing) { refreshAgain = true; return; }
   refreshing = true;
+  const session = state.sessionVersion;
   try {
-    do { refreshAgain = false; await fetchAllData(); } while (refreshAgain);
-    if (!state.user) return;
+    do { refreshAgain = false; await fetchAllData(); } while (refreshAgain && session === state.sessionVersion);
+    if (!state.user || session !== state.sessionVersion) return;
     setSyncStatus('');
     refreshGoalSquadOptions();
     updateSidebarPlayer();
@@ -56,6 +59,6 @@ export async function refreshFromRemote() {
     const formPage = ['recordMatch', 'settings'].includes(state.page) || questionDraft || isBusy('submitQuestion') || isBusy('submitAnswer');
     if (!editing && !formPage) { populateSeasonDropdowns(); renderPage(state.page); }
   } catch (error) {
-    setSyncStatus(errorMessage(error, "تعذّر تحديث الدوري. تُعرض آخر نتائج تم تحميلها."));
+    if (session === state.sessionVersion) setSyncStatus(errorMessage(error, "تعذّر تحديث الدوري. تُعرض آخر نتائج تم تحميلها."));
   } finally { refreshing = false; }
 }

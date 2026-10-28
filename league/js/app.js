@@ -3,8 +3,9 @@ import { fetchPlayers, fetchAllData } from './api.js';
 import { handleLogin, handleLogout, showLogin, clearSession, enterApp } from './auth-ui.js';
 import { applyAdminUI } from './admin.js';
 import { refreshFromRemote, stopRealtime } from './realtime.js';
-import { withBusy, showError, setupConnectivity } from '../../shared/ui.js';
+import { showError, setupConnectivity } from '../../shared/ui.js';
 import * as ui from './ui.js';
+import { renderDashboard } from './dashboard.js';
 import * as matches from './matches.js';
 import * as details from './match-details.js';
 import * as goals from './goal-events.js';
@@ -39,13 +40,9 @@ function ensureModernMatchEntryMarkup() {
 
 // One explicit compatibility namespace for existing HTML actions. Data and
 // authenticated state stay module-local; RLS remains the authorization boundary.
-const actions = { ...ui, ...matches, ...details, ...goals, ...seasons, ...profiles,
+const actions = { ...ui, renderDashboard, ...matches, ...details, ...goals, ...seasons, ...profiles,
   ...standings, ...statistics, ...achievements, ...questions, ...admin, ...squads, ...evenings, handleLogin, handleLogout,
   refresh: refreshFromRemote, retryLogin: loadRoster };
-for (const name of ['submitQuestion', 'submitAnswer']) {
-  const action = actions[name];
-  actions[name] = (...args) => withBusy(name, document.getElementById(name === 'submitQuestion' ? 'postQuestionButton' : 'postAnswerButton'), () => action(...args));
-}
 window.League = Object.freeze(actions);
 
 document.getElementById('loginForm').addEventListener('submit', event => { event.preventDefault(); handleLogin(); });
@@ -58,6 +55,10 @@ document.getElementById('loginPasswordToggle').addEventListener('click', event =
   event.currentTarget.setAttribute('aria-pressed', String(visible));
 });
 document.addEventListener('click', event => {
+  const action = event.target.closest('[data-state-action]')?.dataset.stateAction;
+  if (action === 'refresh') refreshFromRemote();
+  if (action === 'clear-history') matches.clearHistoryFilters();
+  if (action === 'clear-football') statistics.clearFootballFilters();
   const link = event.target.closest('.nav-item[data-page]');
   if (link) { event.preventDefault(); ui.navigateTo(link.dataset.page, link); }
   const row = event.target.closest('[data-football-player]');
@@ -69,11 +70,19 @@ document.addEventListener('keydown', event => {
     event.preventDefault(); statistics.showFootballPlayerDetail(event.target.dataset.footballPlayer, event.target.dataset.footballOwner, true, event.target.dataset.footballId || null);
   }
 });
-window.addEventListener('hashchange', () => {
-  if (state.user) ui.navigateTo(location.hash.slice(1) || 'dashboard');
-});
+function restoreRoute() {
+  if (!state.user) return;
+  state.matchId = history.state?.matchId || null;
+  ui.navigateTo(location.hash.slice(1) || 'dashboard', null, { replace: true });
+}
+window.addEventListener('hashchange', restoreRoute);
+window.addEventListener('popstate', restoreRoute);
 setupConnectivity(refreshFromRemote);
 window.addEventListener('pagehide', stopRealtime);
+window.addEventListener('beforeunload', event => {
+  if (!matches.hasUnsavedMatchDraft()) return;
+  event.preventDefault(); event.returnValue = '';
+});
 
 async function loadRoster() {
   const select = document.getElementById('loginUsername');
@@ -109,7 +118,7 @@ async function init() {
   const unsubscribe = window.EFLAuth.subscribe(sb, async (profile, event) => {
     if (!profile) { clearSession(); return; }
     const changed = state.user !== profile.name || state.profile?.role !== profile.role;
-    if (changed) { evenings.clearEvenings(); stopRealtime(); }
+    if (changed) clearSession();
     state.profile = profile; state.user = profile.name; applyAdminUI();
     if (changed && !state.signingIn) {
       try { await fetchAllData(); enterApp(); }

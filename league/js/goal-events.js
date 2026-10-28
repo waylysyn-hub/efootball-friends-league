@@ -142,12 +142,17 @@ export function addGoalEventRow(containerId) {
   onGoalRowsChange(containerId);
   document.getElementById(containerId).querySelector('.ge-row:last-child .ge-scorer')?.focus();
 }
+export function hasGoalDetails(event) {
+  return !!(event.scorer || event.assist || event.sourceEventId || event.minuteInvalid || event.minute || event.minuteInput);
+}
 export function removeGoalEventRow(containerId, idx) {
   const events = collectGoalEventsFromForm(containerId);
   if (!events[idx]) return;
-  showConfirm('حذف الهدف', 'سيُحذف هذا الهدف وتفاصيله وتُحدّث النتيجة تلقائيًا. هل تريد المتابعة؟', () => {
+  const remove = () => {
     events.splice(idx, 1); renderGoalEventsForm(containerId, events); onGoalRowsChange(containerId);
-  });
+  };
+  if (!hasGoalDetails(events[idx])) return remove();
+  showConfirm('حذف الهدف', 'سيُحذف هذا الهدف وتفاصيله وتُحدّث النتيجة تلقائيًا. هل تريد المتابعة؟', remove);
 }
 export function countGoalsByOwner(events, p1, p2) {
   return { c1: events.filter(e => e.owner === p1).length, c2: events.filter(e => e.owner === p2).length };
@@ -186,7 +191,7 @@ export function goalEventsSummaryHTML(containerId, events) {
   if (!events.length && g1 + g2 > 0 && canKeepLegacyScore(editingMatchId(containerId), p1, p2, g1, g2)) return '<div class="ms-total-line">مباراة سابقة دون تفاصيل أهداف. يمكنك حفظ التعديلات مع إبقاء النتيجة كما هي.</div>';
   const { c1, c2 } = countGoalsByOwner(events, p1, p2);
   const ok = c1 === g1 && c2 === g2 && events.every(e => e.scorer);
-  return `<div class="ms-total-line ${ok ? 'ok' : 'bad'}"><span>${ok ? '✓ الأهداف مكتملة' : 'أكمل تفاصيل الأهداف'}</span><strong dir="auto">${esc(displayName(p1) || 'الفريق الأول')} ${c1} / ${g1}</strong><strong dir="auto">${esc(displayName(p2) || 'الفريق الثاني')} ${c2} / ${g2}</strong></div>`;
+  return `<div class="ms-total-line ${ok ? 'ok' : 'bad'}"><span>${ok ? '✓ الأهداف مكتملة' : 'أكمل تفاصيل الأهداف'}</span><strong dir="auto">${esc(displayName(p1) || 'اللاعب الأول')} ${c1} / ${g1}</strong><strong dir="auto">${esc(displayName(p2) || 'اللاعب الثاني')} ${c2} / ${g2}</strong></div>`;
 }
 export function updateGoalEventsUI(containerId) {
   const events = collectGoalEventsFromForm(containerId);
@@ -320,11 +325,12 @@ export function computeFootballPlayerStats(seasonFilter = 'all') {
 
 export function aggregateFootballPlayerStats(events) {
   const map = Object.create(null);
+  const members = new Map(state.db.squads.map(player => [player.id, player]));
 
   const ensure = (rawName, owner, id) => {
     const key = fbPlayerKey(rawName, owner, id);
     if (!key) return null;
-    if (!map[key]) map[key] = { key, playerId: id || null, name: state.db.squads.find(p => p.id === id)?.name || rawName.trim(), owner, goals: 0, assists: 0, matchIds: new Set() };
+    if (!map[key]) map[key] = { key, playerId: id || null, name: members.get(id)?.name || rawName.trim(), owner, goals: 0, assists: 0, matchIds: new Set() };
     return map[key];
   };
 
